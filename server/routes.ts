@@ -338,13 +338,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Disconnect from Evolution API
       await evolutionApi.disconnectInstance(instance.instanceId);
       
-      // Update status in database
+      // Update status in database and clear QR code for fresh reconnection
       await storage.updateInstance(id, { 
         status: 'disconnected',
-        lastConnection: new Date()
+        lastConnection: new Date(),
+        qrCode: null // Clear QR code so user can get a fresh one
       });
       
-      res.json({ success: true });
+      res.json({ success: true, message: "Instance disconnected. Use 'Reconectar' to get a new QR code." });
     } catch (error: any) {
       console.error('Error disconnecting instance:', error.message);
       res.status(500).json({ message: error.message });

@@ -27,8 +27,9 @@ Preferred communication style: Simple, everyday language.
 - **Architecture**: Webhook-first with automatic fallback to polling ensures 100% QR code capture
 - **UI Status**: ✅ QR codes displaying correctly in frontend modal with proper base64 handling
 - **Instance Status**: ✅ Real-time status mapping from Evolution API (open → connected, close → disconnected, connecting → connecting)
-- **Instance Management**: ✅ Complete gear button functionality (disconnect, restart, test message)
+- **Instance Management**: ✅ Complete gear button functionality (disconnect, restart, test message, reconnect)
 - **Test Messages**: ✅ Working message system with phone number prompt and proper formatting
+- **Reconnection System**: ✅ Smart reconnection option for disconnected instances without recreating
 
 ## System Architecture
 

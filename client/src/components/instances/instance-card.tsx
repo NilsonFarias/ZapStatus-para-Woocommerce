@@ -147,6 +147,15 @@ export default function InstanceCard({
                   </DropdownMenuItem>
                 </>
               )}
+              {(instance.status === 'disconnected' || instance.status === 'pending') && (
+                <DropdownMenuItem 
+                  onClick={() => onShowQR(instance)}
+                  data-testid="menu-reconnect"
+                >
+                  <QrCode size={16} className="mr-2" />
+                  Reconectar
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem 
                 onClick={() => onRestart?.(instance)}
                 data-testid="menu-restart"

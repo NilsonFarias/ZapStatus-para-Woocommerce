@@ -67,28 +67,12 @@ export class EvolutionApiService {
   async getQRCode(instanceName: string): Promise<QRCodeResponse> {
     try {
       // First check if instance exists and its status
-      const instanceInfo = await this.client.get(`/instance/fetchInstances/${instanceName}`);
-      const instance = instanceInfo.data;
+      const instanceInfo = await this.getInstanceInfo(instanceName);
       
-      if (!instance) {
-        throw new Error('Instance not found');
-      }
+      console.log(`Instance ${instanceName} status: ${instanceInfo.status}`);
       
-      console.log(`Instance ${instanceName} status: ${instance.connectionStatus}`);
-      
-      // Try to get QR code
-      const response = await this.client.get(`/instance/connect/${instanceName}`);
-      
-      // If QR code is empty, the instance might be connecting or already connected
-      if (!response.data.qrcode && instance.connectionStatus === 'connecting') {
-        return {
-          qrcode: '',
-          message: 'Instance is connecting, please wait and try again...',
-          status: 'connecting'
-        };
-      }
-      
-      if (!response.data.qrcode && instance.connectionStatus === 'open') {
+      // If instance is already connected, return appropriate message
+      if (instanceInfo.status === 'open') {
         return {
           qrcode: '',
           message: 'Instance is already connected to WhatsApp',
@@ -96,7 +80,56 @@ export class EvolutionApiService {
         };
       }
       
-      return response.data;
+      // Try multiple attempts to get QR code
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts) {
+        try {
+          attempts++;
+          console.log(`Attempting to get QR code for ${instanceName}, attempt ${attempts}/${maxAttempts}`);
+          
+          const response = await this.client.get(`/instance/connect/${instanceName}`);
+          
+          // Check if QR code is available
+          if (response.data && response.data.qrcode) {
+            console.log(`QR code successfully retrieved for ${instanceName}`);
+            return {
+              qrcode: response.data.qrcode,
+              status: 'qr_ready'
+            };
+          }
+          
+          // If no QR code and not last attempt, wait and retry
+          if (attempts < maxAttempts) {
+            console.log(`No QR code yet, waiting 2 seconds before retry...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+          
+        } catch (requestError: any) {
+          console.log(`Request error on attempt ${attempts}: ${requestError.message}`);
+          if (attempts === maxAttempts) {
+            throw requestError;
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+      
+      // If QR code is still not available after all attempts
+      if (instanceInfo.status === 'connecting') {
+        return {
+          qrcode: '',
+          message: 'Instance is still connecting. Please wait a bit longer and try again.',
+          status: 'connecting'
+        };
+      }
+      
+      return {
+        qrcode: '',
+        message: 'QR code not available. The instance may need more time to initialize.',
+        status: 'waiting'
+      };
+      
     } catch (error: any) {
       console.error('Error getting QR code:', error.message);
       throw new Error(`Failed to get QR code: ${error.message}`);
@@ -105,8 +138,22 @@ export class EvolutionApiService {
 
   async getInstanceInfo(instanceName: string): Promise<InstanceInfo> {
     try {
-      const response = await this.client.get(`/instance/fetchInstances/${instanceName}`);
-      return response.data;
+      // Get all instances and find the specific one
+      const response = await this.client.get('/instance/fetchInstances');
+      const instances = response.data;
+      const instance = instances.find((inst: any) => inst.name === instanceName);
+      
+      if (!instance) {
+        throw new Error(`Instance ${instanceName} not found`);
+      }
+      
+      return {
+        instanceName: instance.name,
+        status: instance.connectionStatus,
+        profileName: instance.profileName,
+        profilePicUrl: instance.profilePicUrl,
+        phoneNumber: instance.number
+      };
     } catch (error: any) {
       console.error('Error getting instance info:', error.message);
       throw new Error(`Failed to get instance info: ${error.message}`);

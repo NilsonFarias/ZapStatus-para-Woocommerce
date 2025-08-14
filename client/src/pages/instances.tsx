@@ -17,6 +17,7 @@ export default function Instances() {
   const [selectedInstance, setSelectedInstance] = useState<WhatsappInstance | null>(null);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrCode, setQrCode] = useState<string>("");
+  const [qrMessage, setQrMessage] = useState<string>("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const { data: instances = [], isLoading } = useQuery<WhatsappInstance[]>({
@@ -51,16 +52,10 @@ export default function Instances() {
     onSuccess: (data) => {
       if (data.qrcode) {
         setQrCode(data.qrcode);
-      } else if (data.message) {
-        toast({
-          title: "Informação",
-          description: data.message,
-        });
+        setQrMessage("");
       } else {
-        toast({
-          title: "Informação",
-          description: "QR Code não disponível. A instância pode estar se conectando ou já conectada.",
-        });
+        setQrCode("");
+        setQrMessage(data.message || "QR Code não disponível. A instância pode estar se conectando ou já conectada.");
       }
     },
     onError: (error: any) => {
@@ -76,12 +71,14 @@ export default function Instances() {
     setSelectedInstance(instance);
     setQrModalOpen(true);
     setQrCode("");
+    setQrMessage("");
     await getQRMutation.mutateAsync(instance.id);
   };
 
   const handleRegenerateQR = () => {
     if (selectedInstance) {
       setQrCode("");
+      setQrMessage("");
       getQRMutation.mutate(selectedInstance.id);
     }
   };
@@ -181,6 +178,7 @@ export default function Instances() {
           instanceName={selectedInstance?.name}
           onRegenerate={handleRegenerateQR}
           isLoading={getQRMutation.isPending}
+          message={qrMessage}
         />
 
         <CreateInstanceModal

@@ -9,6 +9,7 @@ interface QRModalProps {
   instanceName?: string;
   onRegenerate?: () => void;
   isLoading?: boolean;
+  message?: string;
 }
 
 export default function QRModal({ 
@@ -17,7 +18,8 @@ export default function QRModal({
   qrCode, 
   instanceName, 
   onRegenerate,
-  isLoading = false 
+  isLoading = false,
+  message 
 }: QRModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,7 +45,9 @@ export default function QRModal({
             ) : (
               <div className="text-center">
                 <QrCode className="text-4xl text-slate-400 mb-2 mx-auto" size={48} />
-                <p className="text-slate-500">Clique em "Gerar QR Code" para começar</p>
+                <p className="text-slate-500">
+                  {message || "Clique em \"Gerar QR Code\" para começar"}
+                </p>
               </div>
             )}
           </div>

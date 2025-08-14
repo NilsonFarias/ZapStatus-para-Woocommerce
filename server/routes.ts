@@ -378,6 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/instances/:id/test-message", async (req, res) => {
     try {
       const { id } = req.params;
+      const { phoneNumber: targetPhone } = req.body;
       const instance = await storage.getInstance(id);
       
       if (!instance) {
@@ -388,11 +389,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Instance must be connected to send test message" });
       }
 
-      // Send test message via Evolution API
-      const testPhone = instance.phoneNumber || "5511999999999"; // Use instance phone or default
-      const testMessage = `🤖 Mensagem de teste do WhatsFlow\n\nInstância: ${instance.name}\nHorário: ${new Date().toLocaleString('pt-BR')}\n\nSua instância está funcionando perfeitamente! ✅`;
+      // Use provided phone number or instance's own number
+      let phoneNumber = targetPhone || instance.phoneNumber;
       
-      await evolutionApi.sendMessage(instance.instanceId, testPhone, testMessage);
+      if (!phoneNumber) {
+        return res.status(400).json({ 
+          message: "Número de telefone não fornecido. Forneça um número ou certifique-se de que a instância está conectada." 
+        });
+      }
+
+      // Format phone number for WhatsApp (remove formatting and ensure it has country code)
+      phoneNumber = phoneNumber.replace(/\D/g, ''); // Remove non-digits
+      if (!phoneNumber.startsWith('55') && phoneNumber.length === 11) {
+        phoneNumber = '55' + phoneNumber; // Add Brazil country code if missing
+      }
+
+      const testMessage = `Mensagem de teste do WhatsFlow
+
+Instancia: ${instance.name}
+Horario: ${new Date().toLocaleString('pt-BR')}
+
+Sua instancia esta funcionando perfeitamente!`;
+      
+      await evolutionApi.sendMessage(instance.instanceId, phoneNumber, testMessage);
       
       res.json({ success: true, message: "Test message sent successfully" });
     } catch (error: any) {

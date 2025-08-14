@@ -83,7 +83,8 @@ export default function Instances() {
   });
 
   const testMessageMutation = useMutation({
-    mutationFn: (instanceId: string) => apiRequest("POST", `/api/instances/${instanceId}/test-message`),
+    mutationFn: ({ instanceId, phoneNumber }: { instanceId: string; phoneNumber?: string }) => 
+      apiRequest("POST", `/api/instances/${instanceId}/test-message`, phoneNumber ? { phoneNumber } : {}),
     onSuccess: () => {
       toast({
         title: "Mensagem de teste enviada",
@@ -175,7 +176,17 @@ export default function Instances() {
   };
 
   const handleTestMessage = async (instance: WhatsappInstance) => {
-    await testMessageMutation.mutateAsync(instance.id);
+    const phoneNumber = prompt(
+      `Digite o número de WhatsApp para teste (com DDD):\n\nEx: 11999999999\n\nOu deixe vazio para usar o número da instância (${instance.phoneNumber || 'não disponível'})`
+    );
+    
+    // If user clicked cancel, do nothing
+    if (phoneNumber === null) return;
+    
+    await testMessageMutation.mutateAsync({ 
+      instanceId: instance.id, 
+      phoneNumber: phoneNumber.trim() || undefined 
+    });
   };
 
   const testEvolutionApiMutation = useMutation({

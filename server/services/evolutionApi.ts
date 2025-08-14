@@ -229,13 +229,21 @@ export class EvolutionApiService {
 
   async sendMessage(instanceName: string, phone: string, message: string): Promise<void> {
     try {
-      await this.client.post(`/message/sendText/${instanceName}`, {
+      console.log(`Sending message via ${instanceName} to ${phone}:`, message);
+      
+      const payload = {
         number: phone,
         text: message,
-      });
+      };
+      
+      console.log('Message payload:', JSON.stringify(payload, null, 2));
+      
+      const response = await this.client.post(`/message/sendText/${instanceName}`, payload);
+      
+      console.log('Message sent successfully:', response.status);
     } catch (error: any) {
-      console.error('Error sending message:', error.message);
-      throw new Error(`Failed to send message: ${error.message}`);
+      console.error('Error sending message:', error.response?.data || error.message);
+      throw new Error(`Failed to send message: ${error.response?.data?.message || error.message}`);
     }
   }
 

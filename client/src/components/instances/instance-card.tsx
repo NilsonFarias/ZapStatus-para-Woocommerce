@@ -14,13 +14,15 @@ export default function InstanceCard({ instance, onShowQR, onDelete }: InstanceC
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'connected':
-        return 'bg-success/10 text-success';
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
       case 'disconnected':
-        return 'bg-error/10 text-error';
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       case 'connecting':
-        return 'bg-warning/10 text-warning';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'pending':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       default:
-        return 'bg-slate/10 text-slate';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
     }
   };
 
@@ -32,6 +34,8 @@ export default function InstanceCard({ instance, onShowQR, onDelete }: InstanceC
         return 'Desconectado';
       case 'connecting':
         return 'Conectando';
+      case 'pending':
+        return 'Aguardando QR';
       default:
         return 'Aguardando QR';
     }
@@ -40,13 +44,15 @@ export default function InstanceCard({ instance, onShowQR, onDelete }: InstanceC
   const getIconColor = (status: string) => {
     switch (status) {
       case 'connected':
-        return 'bg-success/10 text-success';
+        return 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400';
       case 'disconnected':
-        return 'bg-error/10 text-error';
+        return 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400';
       case 'connecting':
-        return 'bg-warning/10 text-warning';
+        return 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-400';
+      case 'pending':
+        return 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400';
       default:
-        return 'bg-warning/10 text-warning';
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400';
     }
   };
 

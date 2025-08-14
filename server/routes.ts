@@ -169,12 +169,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const instance of instances) {
         try {
           const evolutionInfo = await evolutionApi.getInstanceInfo(instance.instanceId);
-          if (evolutionInfo.status !== instance.status) {
+          
+          // Map Evolution API status to our status system
+          let mappedStatus = 'pending';
+          if (evolutionInfo.status === 'open') {
+            mappedStatus = 'connected';
+          } else if (evolutionInfo.status === 'close') {
+            mappedStatus = 'disconnected';
+          } else if (evolutionInfo.status === 'connecting') {
+            mappedStatus = 'connecting';
+          }
+          
+          if (mappedStatus !== instance.status || evolutionInfo.phoneNumber !== instance.phoneNumber) {
             await storage.updateInstance(instance.id, { 
-              status: evolutionInfo.status,
+              status: mappedStatus,
               phoneNumber: evolutionInfo.phoneNumber || instance.phoneNumber
             });
-            instance.status = evolutionInfo.status;
+            instance.status = mappedStatus;
             instance.phoneNumber = evolutionInfo.phoneNumber || instance.phoneNumber;
           }
         } catch (err) {

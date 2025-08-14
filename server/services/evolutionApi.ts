@@ -258,10 +258,21 @@ export class EvolutionApiService {
 
   async restartInstance(instanceName: string): Promise<void> {
     try {
-      await this.client.put(`/instance/restart/${instanceName}`);
+      // First disconnect the instance
+      console.log(`Restarting instance ${instanceName}: disconnecting first...`);
+      await this.client.delete(`/instance/logout/${instanceName}`);
+      
+      // Wait a bit for the disconnect to process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Then reconnect
+      console.log(`Restarting instance ${instanceName}: reconnecting...`);
+      await this.client.get(`/instance/connect/${instanceName}`);
+      
+      console.log(`Instance ${instanceName} restarted successfully`);
     } catch (error: any) {
-      console.error('Error restarting instance:', error.message);
-      throw new Error(`Failed to restart instance: ${error.message}`);
+      console.error('Error restarting instance:', error.response?.data || error.message);
+      throw new Error(`Failed to restart instance: ${error.response?.data?.message || error.message}`);
     }
   }
 

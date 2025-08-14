@@ -736,10 +736,39 @@ Sua instancia esta funcionando perfeitamente!`;
 
         // Process the webhook based on event type (async)
         if (event.startsWith('order.')) {
-          const { order_id, id, status, customer_phone, customer_name } = data;
+          const { order_id, id, status, customer_phone, customer_name, billing, customer } = data;
           const orderId = order_id || id;
           
           if (orderId) {
+            // Extract customer info from WooCommerce format
+            let clientName = customer_name;
+            let clientPhone = customer_phone;
+            
+            // Try WooCommerce billing format
+            if (billing) {
+              if (!clientName && (billing.first_name || billing.last_name)) {
+                clientName = `${billing.first_name || ''} ${billing.last_name || ''}`.trim();
+              }
+              if (!clientPhone && billing.phone) {
+                clientPhone = billing.phone;
+                // Format Brazilian phone number
+                if (!clientPhone.startsWith('+')) {
+                  clientPhone = `+55${clientPhone}`;
+                }
+              }
+            }
+            
+            // Try WooCommerce customer format
+            if (customer && !clientName && (customer.first_name || customer.last_name)) {
+              clientName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+            }
+            
+            // Default values
+            clientName = clientName || 'Cliente';
+            clientPhone = clientPhone || '+5511999999999';
+            
+            console.log(`Processing order ${orderId} for ${clientName} (${clientPhone}) - Status: ${status}`);
+            
             // Get templates for this order status
             const templates = await storage.getTemplates(clientId, status);
             
@@ -748,21 +777,27 @@ Sua instancia esta funcionando perfeitamente!`;
             const activeInstance = instances.find(i => i.status === 'connected');
             
             if (activeInstance && templates.length > 0) {
+              console.log(`Found ${templates.length} templates and active instance for ${clientName}`);
+              
               // Schedule messages
               for (const template of templates) {
                 const message = template.content
-                  .replace('{{nome_cliente}}', customer_name || 'Cliente')
+                  .replace('{{nome_cliente}}', clientName)
                   .replace('{{numero_pedido}}', orderId)
                   .replace('{{status_pedido}}', status || 'atualizado');
                 
                 await messageQueue.scheduleMessage(
                   activeInstance.id,
                   template.id,
-                  customer_phone || '+5511999999999',
+                  clientPhone,
                   message,
                   template.delayMinutes || 0
                 );
+                
+                console.log(`Message scheduled for ${clientName} via template "${template.content.substring(0, 50)}..."`);
               }
+            } else {
+              console.log(`No templates or active instance found for client ${clientId}, status ${status}`);
             }
           }
         }

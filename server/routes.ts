@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
+import axios from "axios";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { evolutionApi } from "./services/evolutionApi";
@@ -518,6 +519,18 @@ Sua instancia esta funcionando perfeitamente!`;
   });
 
   // Settings endpoints
+  app.get("/api/settings/evolution-api-current", async (req, res) => {
+    try {
+      // Return current Evolution API configuration
+      res.json({
+        apiUrl: process.env.EVOLUTION_API_URL || '',
+        apiToken: process.env.EVOLUTION_API_KEY || ''
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/settings/evolution-api", async (req, res) => {
     try {
       const { apiUrl, apiToken } = req.body;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/use-auth";
@@ -39,7 +39,7 @@ export default function Settings() {
     email: user?.email || '',
     company: user?.company || '',
     phone: user?.phone || '',
-    evolutionApiUrl: import.meta.env.VITE_EVOLUTION_API_URL || 'https://your-evolution-api.com',
+    evolutionApiUrl: import.meta.env.VITE_EVOLUTION_API_URL || '',
     evolutionApiToken: import.meta.env.VITE_EVOLUTION_API_KEY || '',
     darkMode: false,
     emailNotifications: true,
@@ -47,6 +47,29 @@ export default function Settings() {
   });
   
   const [connectionStatus, setConnectionStatus] = useState<'testing' | 'connected' | 'error' | null>(null);
+  
+  // Load existing Evolution API credentials on component mount
+  useEffect(() => {
+    const loadEvolutionApiCredentials = async () => {
+      try {
+        const response = await fetch('/api/settings/evolution-api-current');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.apiUrl && data.apiToken) {
+            setFormData(prev => ({
+              ...prev,
+              evolutionApiUrl: data.apiUrl,
+              evolutionApiToken: data.apiToken
+            }));
+          }
+        }
+      } catch (error) {
+        console.log('No existing credentials found');
+      }
+    };
+    
+    loadEvolutionApiCredentials();
+  }, []);
 
   const handleSave = async () => {
     try {

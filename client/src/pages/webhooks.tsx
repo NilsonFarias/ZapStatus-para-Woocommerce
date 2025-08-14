@@ -296,15 +296,32 @@ export default function Webhooks() {
                   ))}
                 </div>
                 
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-start space-x-2">
-                    <CheckCircle className="text-blue-600 mt-0.5" size={16} />
-                    <div>
-                      <p className="text-sm font-medium text-blue-800">Configuração WooCommerce</p>
-                      <p className="text-sm text-blue-700 mt-1">
-                        Configure estes eventos no seu WooCommerce em: 
-                        <strong> WooCommerce → Configurações → Avançado → Webhooks</strong>
-                      </p>
+                <div className="mt-4 space-y-3">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <CheckCircle className="text-blue-600 mt-0.5" size={16} />
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">Configuração WooCommerce</p>
+                        <p className="text-sm text-blue-700 mt-1">
+                          Configure estes eventos no seu WooCommerce em: 
+                          <strong> WooCommerce → Configurações → Avançado → Webhooks</strong>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <AlertCircle className="text-green-600 mt-0.5" size={16} />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">Como verificar se está funcionando</p>
+                        <ul className="text-sm text-green-700 mt-1 space-y-1">
+                          <li>• Use o botão "Testar Webhook" acima</li>
+                          <li>• Verifique os logs abaixo após cada teste</li>
+                          <li>• Faça um pedido teste no WooCommerce</li>
+                          <li>• Monitore os logs em tempo real</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -314,10 +331,14 @@ export default function Webhooks() {
 
           {/* Recent Webhook Logs */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold text-slate-900">
-                Logs Recentes
+                Logs Recentes ({webhookLogs.length} eventos)
               </CardTitle>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-slate-600">Monitorando em tempo real</span>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -332,29 +353,38 @@ export default function Webhooks() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {/* Mock data for demonstration */}
-                    <TableRow data-testid="webhook-log-1">
-                      <TableCell className="text-sm text-slate-600">
-                        {new Date().toLocaleString('pt-BR')}
-                      </TableCell>
-                      <TableCell className="text-sm">order.status_changed</TableCell>
-                      <TableCell className="text-sm">Loja ABC</TableCell>
-                      <TableCell>
-                        <Badge className="bg-success/10 text-success">Sucesso</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">200 OK</TableCell>
-                    </TableRow>
-                    <TableRow data-testid="webhook-log-2">
-                      <TableCell className="text-sm text-slate-600">
-                        {new Date(Date.now() - 300000).toLocaleString('pt-BR')}
-                      </TableCell>
-                      <TableCell className="text-sm">order.created</TableCell>
-                      <TableCell className="text-sm">Loja XYZ</TableCell>
-                      <TableCell>
-                        <Badge className="bg-error/10 text-error">Erro</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">500 Internal Error</TableCell>
-                    </TableRow>
+                    {webhookLogs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-slate-500 py-8">
+                          <div>
+                            <AlertCircle className="mx-auto mb-2" size={24} />
+                            <p>Nenhum evento recebido ainda</p>
+                            <p className="text-sm mt-1">Use o botão "Testar Webhook" ou configure no WooCommerce</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      webhookLogs.map((log: any) => (
+                        <TableRow key={log.id} data-testid={`webhook-log-${log.id}`}>
+                          <TableCell className="text-sm text-slate-600">
+                            {new Date(log.timestamp).toLocaleString('pt-BR')}
+                          </TableCell>
+                          <TableCell className="text-sm font-medium">{log.event}</TableCell>
+                          <TableCell className="text-sm">Cliente Demo</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              log.status === 'success' || log.status === 'received' 
+                                ? "bg-green-100 text-green-800" 
+                                : "bg-red-100 text-red-800"
+                            }>
+                              {log.status === 'received' ? 'Sucesso' : 
+                               log.status === 'success' ? 'Sucesso' : 'Erro'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">{log.response}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

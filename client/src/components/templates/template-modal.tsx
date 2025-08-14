@@ -66,6 +66,7 @@ export default function TemplateModal({
       orderStatus,
       content,
       delayMinutes: finalDelayMinutes,
+      sequence: template?.sequence || 1,
       isActive: true,
     };
 

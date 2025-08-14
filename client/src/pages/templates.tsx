@@ -41,12 +41,14 @@ export default function Templates() {
 
   const { data: templates = [], isLoading } = useQuery<MessageTemplate[]>({
     queryKey: ['/api/templates', selectedClientId, selectedStatus],
+    queryFn: () => apiRequest("GET", `/api/templates?clientId=${selectedClientId}&orderStatus=${selectedStatus}`).then(res => res.json()),
   });
 
   const updateTemplateMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<MessageTemplate> }) =>
       apiRequest("PUT", `/api/templates/${id}`, updates).then(res => res.json()),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', selectedClientId, selectedStatus] });
       queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
       toast({
         title: "Template atualizado",
@@ -65,6 +67,7 @@ export default function Templates() {
   const deleteTemplateMutation = useMutation({
     mutationFn: (templateId: string) => apiRequest("DELETE", `/api/templates/${templateId}`),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', selectedClientId, selectedStatus] });
       queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
       toast({
         title: "Template removido",
@@ -86,6 +89,7 @@ export default function Templates() {
     mutationFn: (newTemplate: Partial<MessageTemplate>) => 
       apiRequest("POST", `/api/templates`, newTemplate).then(res => res.json()),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', selectedClientId, selectedStatus] });
       queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
       toast({
         title: "Template criado",

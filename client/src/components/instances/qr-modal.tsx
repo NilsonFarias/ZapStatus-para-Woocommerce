@@ -62,7 +62,7 @@ export default function QRModal({
                 <p className="text-slate-500 mb-3">Aguardando QR Code...</p>
                 <Progress value={progress} className="w-48 mx-auto mb-2" />
                 <p className="text-xs text-slate-400">
-                  Instâncias novas podem levar até 30 segundos
+                  Instâncias novas podem levar até 1 minuto
                 </p>
               </div>
             ) : (

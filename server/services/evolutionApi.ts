@@ -42,30 +42,19 @@ export class EvolutionApiService {
 
   async createInstance(instanceName: string): Promise<EvolutionInstance> {
     try {
+      console.log(`Creating Evolution API instance: ${instanceName}`);
+      
+      // Create instance using correct Evolution API format
       const response = await this.client.post('/instance/create', {
         instanceName,
         qrcode: true,
-        integration: 'WHATSAPP-BAILEYS',
-        webhook: {
-          webhook: {
-            enabled: false,
-            url: 'https://webhook.site/disabled',
-            events: []
-          }
-        },
-        settings: {
-          rejectCall: false,
-          msgCall: '',
-          groupsIgnore: false,
-          alwaysOnline: false,
-          readMessages: false,
-          readStatus: false,
-          syncFullHistory: false
-        }
+        integration: 'WHATSAPP-BAILEYS'
       });
       
-      // Wait for instance to initialize properly
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log(`Instance created successfully: ${instanceName}`);
+      
+      // Wait for instance to initialize
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       return response.data;
     } catch (error: any) {
@@ -99,9 +88,25 @@ export class EvolutionApiService {
         };
       }
       
-      // Check if instance has been connecting for too long (more than 10 minutes)
+      // Try to get QR code directly
+      try {
+        console.log(`Trying to get QR code for ${instanceName}...`);
+        const response = await this.client.get(`/instance/connect/${instanceName}`);
+        
+        if (response.data && response.data.qrcode) {
+          console.log(`QR code successfully retrieved for ${instanceName}`);
+          return {
+            qrcode: response.data.qrcode,
+            status: 'qr_ready'
+          };
+        }
+        console.log(`No QR code in response for ${instanceName}`);
+      } catch (requestError: any) {
+        console.log(`Error getting QR code: ${requestError.message}`);
+      }
+      
+      // Check if instance has been connecting for too long
       if (instanceInfo.status === 'connecting') {
-        // Get all instances to check creation time
         const allInstancesResponse = await this.client.get('/instance/fetchInstances');
         const instance = allInstancesResponse.data.find((inst: any) => inst.name === instanceName);
         
@@ -110,65 +115,12 @@ export class EvolutionApiService {
           const now = new Date();
           const timeDiff = (now.getTime() - createdAt.getTime()) / 1000 / 60; // in minutes
           
-          console.log(`Instance ${instanceName} has been connecting for ${timeDiff.toFixed(1)} minutes`);
-          
-          // If connecting for more than 5 minutes, it's likely stuck
           if (timeDiff > 5) {
-            console.log(`Instance ${instanceName} appears to be stuck, suggesting restart`);
             return {
               qrcode: '',
               message: 'Instance appears to be stuck. Please delete and create a new instance.',
               status: 'stuck'
             };
-          }
-        }
-        
-        // For fresh connecting instances, try different approaches
-        let attempts = 0;
-        const maxAttempts = 5;
-        
-        while (attempts < maxAttempts) {
-          try {
-            attempts++;
-            console.log(`Attempt ${attempts}/${maxAttempts} for connecting instance ${instanceName}`);
-            
-            // Try different endpoints based on attempt number
-            let response;
-            if (attempts <= 2) {
-              // First tries: standard connect endpoint
-              response = await this.client.get(`/instance/connect/${instanceName}`);
-            } else if (attempts === 3) {
-              // Third try: restart instance first
-              console.log(`Trying to restart instance ${instanceName}...`);
-              await this.client.post(`/instance/restart/${instanceName}`);
-              await new Promise(resolve => setTimeout(resolve, 3000));
-              response = await this.client.get(`/instance/connect/${instanceName}`);
-            } else {
-              // Last tries: force connection
-              console.log(`Forcing connection for instance ${instanceName}...`);
-              response = await this.client.post(`/instance/connect/${instanceName}`);
-            }
-            
-            if (response.data && response.data.qrcode) {
-              console.log(`QR code found for ${instanceName} on attempt ${attempts}!`);
-              return {
-                qrcode: response.data.qrcode,
-                status: 'qr_ready'
-              };
-            }
-            
-            // Progressive wait between attempts
-            if (attempts < maxAttempts) {
-              const waitTime = attempts * 1500; // 1.5s, 3s, 4.5s, 6s
-              console.log(`Waiting ${waitTime}ms before next attempt...`);
-              await new Promise(resolve => setTimeout(resolve, waitTime));
-            }
-            
-          } catch (requestError: any) {
-            console.log(`Request error on attempt ${attempts}: ${requestError.message}`);
-            if (attempts < maxAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
           }
         }
         
@@ -179,22 +131,9 @@ export class EvolutionApiService {
         };
       }
       
-      // For other statuses, try once
-      try {
-        const response = await this.client.get(`/instance/connect/${instanceName}`);
-        if (response.data && response.data.qrcode) {
-          return {
-            qrcode: response.data.qrcode,
-            status: 'qr_ready'
-          };
-        }
-      } catch (requestError: any) {
-        console.log(`Request error: ${requestError.message}`);
-      }
-      
       return {
         qrcode: '',
-        message: 'QR code not available at this moment.',
+        message: 'QR code not available. Please try again or create a new instance.',
         status: 'waiting'
       };
       

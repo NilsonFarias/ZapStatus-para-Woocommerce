@@ -1,12 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MessageQueueItem } from "@shared/schema";
-import { Clock, CheckCircle, XCircle, RefreshCw, Phone } from "lucide-react";
+import { Clock, CheckCircle, XCircle, RefreshCw, Phone, Trash2, Send, Edit3, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatDistance } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -37,11 +44,57 @@ const getStatusColor = (status: string) => {
 };
 
 export default function MessageQueue() {
-  const { data: queueItems = [], isLoading } = useQuery<MessageQueueItem[]>({
+  const { toast } = useToast();
+  
+  const { data: queueItems = [], isLoading, refetch } = useQuery<MessageQueueItem[]>({
     queryKey: ['/api/message-queue'],
     queryFn: () => apiRequest("GET", '/api/message-queue').then(res => res.json()),
     refetchInterval: 5000, // Refresh every 5 seconds
   });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: (messageId: string) => apiRequest("DELETE", `/api/message-queue/${messageId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/message-queue'] });
+      toast({
+        title: "Mensagem removida",
+        description: "A mensagem foi removida da fila com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resendMessageMutation = useMutation({
+    mutationFn: (messageId: string) => apiRequest("POST", `/api/message-queue/${messageId}/resend`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/message-queue'] });
+      toast({
+        title: "Mensagem reenviada",
+        description: "A mensagem foi reagendada para envio imediato.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRefresh = () => {
+    refetch();
+    toast({
+      title: "Atualizado",
+      description: "Lista de mensagens atualizada com sucesso.",
+    });
+  };
 
   const pendingCount = queueItems.filter(item => item.status === 'pending').length;
   const sentCount = queueItems.filter(item => item.status === 'sent').length;
@@ -74,7 +127,7 @@ export default function MessageQueue() {
             <div className="flex items-center justify-end">
               <Button 
                 variant="outline" 
-                onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/message-queue'] })}
+                onClick={handleRefresh}
                 data-testid="button-refresh"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -191,6 +244,44 @@ export default function MessageQueue() {
                               </div>
                             )}
                           </div>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" data-testid={`menu-${item.id}`}>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {item.status === 'pending' && (
+                                <DropdownMenuItem 
+                                  onClick={() => resendMessageMutation.mutate(item.id)}
+                                  data-testid={`resend-${item.id}`}
+                                >
+                                  <Send className="h-4 w-4 mr-2" />
+                                  Enviar Agora
+                                </DropdownMenuItem>
+                              )}
+                              {item.status === 'failed' && (
+                                <DropdownMenuItem 
+                                  onClick={() => resendMessageMutation.mutate(item.id)}
+                                  data-testid={`retry-${item.id}`}
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Tentar Novamente
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem 
+                                onClick={() => deleteMessageMutation.mutate(item.id)}
+                                className="text-red-600"
+                                data-testid={`delete-${item.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     ))}

@@ -275,6 +275,10 @@ export class DatabaseStorage implements IStorage {
     return message;
   }
 
+  async deleteQueuedMessage(id: string): Promise<void> {
+    await db.delete(messageQueue).where(eq(messageQueue.id, id));
+  }
+
   async getDashboardMetrics(userId: string): Promise<{
     activeClients: number;
     messagesSent: number;

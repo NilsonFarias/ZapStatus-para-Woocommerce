@@ -566,6 +566,34 @@ Sua instancia esta funcionando perfeitamente!`;
     }
   });
 
+  app.delete("/api/message-queue/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteQueuedMessage(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/message-queue/:id/resend", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Update the message to be sent immediately
+      await storage.updateQueuedMessage(id, {
+        scheduledFor: new Date(),
+        status: 'pending',
+        error: null,
+        sentAt: null
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Settings endpoints
   app.get("/api/settings/evolution-api-current", async (req, res) => {
     try {

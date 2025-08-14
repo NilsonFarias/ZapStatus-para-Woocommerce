@@ -80,38 +80,55 @@ export class EvolutionApiService {
         };
       }
       
-      // Try multiple attempts to get QR code
-      let attempts = 0;
-      const maxAttempts = 3;
-      
-      while (attempts < maxAttempts) {
+      // For connecting instances, try multiple attempts with longer waits
+      if (instanceInfo.status === 'connecting') {
+        let attempts = 0;
+        const maxAttempts = 5;
+        const waitTimes = [3000, 5000, 8000, 10000, 15000]; // Progressive wait times
+        
+        while (attempts < maxAttempts) {
+          try {
+            attempts++;
+            console.log(`Attempting to get QR code for ${instanceName}, attempt ${attempts}/${maxAttempts}`);
+            
+            const response = await this.client.get(`/instance/connect/${instanceName}`);
+            
+            // Check if QR code is available
+            if (response.data && response.data.qrcode) {
+              console.log(`QR code successfully retrieved for ${instanceName}`);
+              return {
+                qrcode: response.data.qrcode,
+                status: 'qr_ready'
+              };
+            }
+            
+            // If no QR code and not last attempt, wait progressively longer
+            if (attempts < maxAttempts) {
+              const waitTime = waitTimes[attempts - 1];
+              console.log(`No QR code yet, waiting ${waitTime/1000} seconds before retry...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+            
+          } catch (requestError: any) {
+            console.log(`Request error on attempt ${attempts}: ${requestError.message}`);
+            if (attempts === maxAttempts) {
+              throw requestError;
+            }
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
+      } else {
+        // For non-connecting instances, just try once
         try {
-          attempts++;
-          console.log(`Attempting to get QR code for ${instanceName}, attempt ${attempts}/${maxAttempts}`);
-          
           const response = await this.client.get(`/instance/connect/${instanceName}`);
-          
-          // Check if QR code is available
           if (response.data && response.data.qrcode) {
-            console.log(`QR code successfully retrieved for ${instanceName}`);
             return {
               qrcode: response.data.qrcode,
               status: 'qr_ready'
             };
           }
-          
-          // If no QR code and not last attempt, wait and retry
-          if (attempts < maxAttempts) {
-            console.log(`No QR code yet, waiting 2 seconds before retry...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-          
         } catch (requestError: any) {
-          console.log(`Request error on attempt ${attempts}: ${requestError.message}`);
-          if (attempts === maxAttempts) {
-            throw requestError;
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          console.log(`Request error: ${requestError.message}`);
         }
       }
       

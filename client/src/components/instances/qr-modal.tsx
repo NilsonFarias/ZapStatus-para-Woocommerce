@@ -1,6 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { QrCode, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface QRModalProps {
   open: boolean;
@@ -21,6 +23,23 @@ export default function QRModal({
   isLoading = false,
   message 
 }: QRModalProps) {
+  const [progress, setProgress] = useState(0);
+  
+  useEffect(() => {
+    if (isLoading) {
+      setProgress(0);
+      const interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) return 95; // Stop at 95% to avoid false completion
+          return prev + Math.random() * 15; // Random increment
+        });
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    } else {
+      setProgress(0);
+    }
+  }, [isLoading]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -39,8 +58,12 @@ export default function QRModal({
               />
             ) : isLoading ? (
               <div className="text-center">
-                <RefreshCw className="animate-spin text-4xl text-slate-400 mb-2 mx-auto" size={48} />
-                <p className="text-slate-500">Gerando QR Code...</p>
+                <RefreshCw className="animate-spin text-4xl text-slate-400 mb-4 mx-auto" size={48} />
+                <p className="text-slate-500 mb-3">Aguardando QR Code...</p>
+                <Progress value={progress} className="w-48 mx-auto mb-2" />
+                <p className="text-xs text-slate-400">
+                  Instâncias novas podem levar até 30 segundos
+                </p>
               </div>
             ) : (
               <div className="text-center">

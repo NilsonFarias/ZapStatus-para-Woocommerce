@@ -555,6 +555,17 @@ Sua instancia esta funcionando perfeitamente!`;
     }
   });
 
+  // Message Queue endpoints
+  app.get("/api/message-queue", async (req, res) => {
+    try {
+      // Get all queued messages for demo client
+      const queueItems = await storage.getQueuedMessages('demo-instance-bookstore');
+      res.json(queueItems);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Settings endpoints
   app.get("/api/settings/evolution-api-current", async (req, res) => {
     try {

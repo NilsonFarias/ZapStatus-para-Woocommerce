@@ -9,6 +9,7 @@ import Clients from "@/pages/clients";
 import Instances from "@/pages/instances";
 import Templates from "@/pages/templates";
 import Webhooks from "@/pages/webhooks";
+import MessageQueue from "@/pages/message-queue";
 import Billing from "@/pages/billing";
 import Settings from "@/pages/settings";
 import Subscribe from "@/pages/subscribe";
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/instances" component={Instances} />
       <Route path="/templates" component={Templates} />
       <Route path="/webhooks" component={Webhooks} />
+      <Route path="/message-queue" component={MessageQueue} />
       <Route path="/billing" component={Billing} />
       <Route path="/settings" component={Settings} />
       <Route path="/subscribe" component={Subscribe} />

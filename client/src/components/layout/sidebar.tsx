@@ -20,6 +20,7 @@ const navigationItems = [
   { path: "/instances", label: "Instâncias WhatsApp", icon: Smartphone },
   { path: "/templates", label: "Templates de Mensagem", icon: Mail },
   { path: "/webhooks", label: "Webhooks", icon: Webhook },
+  { path: "/message-queue", label: "Fila de Mensagens", icon: MessageCircle },
   { path: "/billing", label: "Faturamento", icon: CreditCard },
   { path: "/settings", label: "Configurações", icon: Settings },
 ];

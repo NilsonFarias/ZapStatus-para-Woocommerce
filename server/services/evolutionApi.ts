@@ -330,8 +330,8 @@ export class EvolutionApiService {
           // Emit QR code via Socket.IO
           try {
             // Import the routes module properly
-            const { getSocketServer } = await import('../routes.js');
-            const io = getSocketServer();
+            const { getGlobalSocketServer } = await import('../routes.js');
+            const io = getGlobalSocketServer();
             if (io) {
               io.to(`instance_${instanceName}`).emit('qr_code', {
                 instance: instanceName,
@@ -354,8 +354,8 @@ export class EvolutionApiService {
           console.log(`✓ Instance ${instanceName} is now connected, stopping QR polling`);
           
           try {
-            const { getSocketServer } = await import('../routes.js');
-            const io = getSocketServer();
+            const { getGlobalSocketServer } = await import('../routes.js');
+            const io = getGlobalSocketServer();
             if (io) {
               io.to(`instance_${instanceName}`).emit('connection_update', {
                 instance: instanceName,

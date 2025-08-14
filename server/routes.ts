@@ -47,6 +47,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     socket.on('join-instance', (instanceName: string) => {
       console.log(`Client ${socket.id} joined instance: ${instanceName}`);
+      socket.join(`instance_${instanceName}`);
       instanceSockets.set(instanceName, socket.id);
     });
 
@@ -71,17 +72,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (event === 'qrcode.updated' || event === 'QRCODE_UPDATED') {
         console.log(`QR Code received for instance: ${instance}`);
         
-        // Send QR code to connected client
-        const socketId = instanceSockets.get(instance);
-        if (socketId) {
-          io.to(socketId).emit('qr_code', {
-            instance,
-            qrCode: data.qrcode || data
-          });
-          console.log(`QR Code sent to client for instance: ${instance}`);
-        } else {
-          console.log(`No client connected for instance: ${instance}`);
-        }
+        // Send QR code to connected clients for this instance
+        io.to(`instance_${instance}`).emit('qr_code', {
+          instance: instance,
+          qrCode: data.qrcode || data.code || data.base64
+        });
+        console.log(`QR Code sent via webhook to instance: ${instance}`);
       } else if (event === 'connection.update' || event === 'CONNECTION_UPDATE') {
         console.log(`Connection update for instance ${instance}:`, data);
         
@@ -232,6 +228,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`Getting QR code for instance: ${instance.instanceId}`);
+      
+      // First check if we have a QR code saved in database
+      if (instance.qrCode) {
+        console.log(`✓ QR code found in database for ${instance.instanceId} (length: ${instance.qrCode.length})`);
+        return res.json({
+          qrcode: instance.qrCode,
+          message: "QR code ready",
+          status: "connecting"
+        });
+      }
+      
+      // If no QR code in database, try to get from Evolution API
       const qrData = await evolutionApi.getQRCode(instance.instanceId);
       
       console.log('QR result for frontend:', {
@@ -242,11 +250,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: qrData.status
       });
       
-      // Update instance with QR code and status
-      await storage.updateInstance(id, { 
-        qrCode: qrData.qrcode,
-        status: 'pending'
-      });
+      // Update instance with QR code and status if we got one
+      if (qrData.qrcode) {
+        await storage.updateInstance(id, { 
+          qrCode: qrData.qrcode,
+          status: 'pending'
+        });
+      }
       
       res.json(qrData);
     } catch (error: any) {

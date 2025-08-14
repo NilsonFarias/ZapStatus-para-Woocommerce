@@ -23,6 +23,7 @@ export interface IStorage {
   getInstance(id: string): Promise<WhatsappInstance | undefined>;
   createInstance(instance: InsertInstance): Promise<WhatsappInstance>;
   updateInstance(id: string, updates: Partial<InsertInstance>): Promise<WhatsappInstance>;
+  updateInstanceQRCode(instanceId: string, qrCode: string): Promise<WhatsappInstance>;
   deleteInstance(id: string): Promise<void>;
   
   // Template methods
@@ -152,6 +153,15 @@ export class DatabaseStorage implements IStorage {
       .update(whatsappInstances)
       .set(updates)
       .where(eq(whatsappInstances.id, id))
+      .returning();
+    return instance;
+  }
+
+  async updateInstanceQRCode(instanceId: string, qrCode: string): Promise<WhatsappInstance> {
+    const [instance] = await db
+      .update(whatsappInstances)
+      .set({ qrCode })
+      .where(eq(whatsappInstances.instanceId, instanceId))
       .returning();
     return instance;
   }

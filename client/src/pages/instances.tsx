@@ -55,7 +55,17 @@ export default function Instances() {
         setQrMessage("");
       } else {
         setQrCode("");
-        setQrMessage(data.message || "QR Code não disponível. A instância pode estar se conectando ou já conectada.");
+        const message = data.message || "QR Code não disponível. A instância pode estar se conectando ou já conectada.";
+        setQrMessage(message);
+        
+        // If instance is stuck, show additional help
+        if (data.status === 'stuck') {
+          toast({
+            title: "Instância com problema",
+            description: "Esta instância parece estar travada. Recomendamos removê-la e criar uma nova.",
+            variant: "destructive",
+          });
+        }
       }
     },
     onError: (error: any) => {

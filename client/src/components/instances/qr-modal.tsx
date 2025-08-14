@@ -68,9 +68,16 @@ export default function QRModal({
             ) : (
               <div className="text-center">
                 <QrCode className="text-4xl text-slate-400 mb-2 mx-auto" size={48} />
-                <p className="text-slate-500">
+                <div className={`text-sm ${message && (message.includes('stuck') || message.includes('travada')) ? 'text-red-600' : 'text-slate-500'}`}>
                   {message || "Clique em \"Gerar QR Code\" para começar"}
-                </p>
+                </div>
+                {message && (message.includes('stuck') || message.includes('travada')) && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-left">
+                    <p className="text-xs text-red-700">
+                      💡 <strong>Dica:</strong> Delete esta instância e crie uma nova para resolver o problema.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

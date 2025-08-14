@@ -80,70 +80,85 @@ export class EvolutionApiService {
         };
       }
       
-      // For connecting instances, try multiple attempts with longer waits
+      // Check if instance has been connecting for too long (more than 10 minutes)
       if (instanceInfo.status === 'connecting') {
+        // Get all instances to check creation time
+        const allInstancesResponse = await this.client.get('/instance/fetchInstances');
+        const instance = allInstancesResponse.data.find((inst: any) => inst.name === instanceName);
+        
+        if (instance) {
+          const createdAt = new Date(instance.createdAt);
+          const now = new Date();
+          const timeDiff = (now.getTime() - createdAt.getTime()) / 1000 / 60; // in minutes
+          
+          console.log(`Instance ${instanceName} has been connecting for ${timeDiff.toFixed(1)} minutes`);
+          
+          // If connecting for more than 10 minutes, it's likely stuck
+          if (timeDiff > 10) {
+            console.log(`Instance ${instanceName} appears to be stuck, suggesting restart`);
+            return {
+              qrcode: '',
+              message: 'Instance appears to be stuck. Please delete and create a new instance.',
+              status: 'stuck'
+            };
+          }
+        }
+        
+        // For fresh connecting instances, try a few quick attempts
         let attempts = 0;
-        const maxAttempts = 5;
-        const waitTimes = [3000, 5000, 8000, 10000, 15000]; // Progressive wait times
+        const maxAttempts = 3;
         
         while (attempts < maxAttempts) {
           try {
             attempts++;
-            console.log(`Attempting to get QR code for ${instanceName}, attempt ${attempts}/${maxAttempts}`);
+            console.log(`Quick attempt ${attempts}/${maxAttempts} for connecting instance ${instanceName}`);
             
             const response = await this.client.get(`/instance/connect/${instanceName}`);
             
-            // Check if QR code is available
             if (response.data && response.data.qrcode) {
-              console.log(`QR code successfully retrieved for ${instanceName}`);
+              console.log(`QR code found for ${instanceName}!`);
               return {
                 qrcode: response.data.qrcode,
                 status: 'qr_ready'
               };
             }
             
-            // If no QR code and not last attempt, wait progressively longer
+            // Short wait between attempts
             if (attempts < maxAttempts) {
-              const waitTime = waitTimes[attempts - 1];
-              console.log(`No QR code yet, waiting ${waitTime/1000} seconds before retry...`);
-              await new Promise(resolve => setTimeout(resolve, waitTime));
+              await new Promise(resolve => setTimeout(resolve, 2000));
             }
             
           } catch (requestError: any) {
             console.log(`Request error on attempt ${attempts}: ${requestError.message}`);
-            if (attempts === maxAttempts) {
-              throw requestError;
+            if (attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
             }
-            await new Promise(resolve => setTimeout(resolve, 2000));
           }
         }
-      } else {
-        // For non-connecting instances, just try once
-        try {
-          const response = await this.client.get(`/instance/connect/${instanceName}`);
-          if (response.data && response.data.qrcode) {
-            return {
-              qrcode: response.data.qrcode,
-              status: 'qr_ready'
-            };
-          }
-        } catch (requestError: any) {
-          console.log(`Request error: ${requestError.message}`);
-        }
-      }
-      
-      // If QR code is still not available after all attempts
-      if (instanceInfo.status === 'connecting') {
+        
         return {
           qrcode: '',
-          message: 'Instance is still connecting. Please wait a bit longer and try again.',
+          message: 'Instance is still initializing. Please wait a few more minutes and try again.',
           status: 'connecting'
         };
       }
       
+      // For other statuses, try once
+      try {
+        const response = await this.client.get(`/instance/connect/${instanceName}`);
+        if (response.data && response.data.qrcode) {
+          return {
+            qrcode: response.data.qrcode,
+            status: 'qr_ready'
+          };
+        }
+      } catch (requestError: any) {
+        console.log(`Request error: ${requestError.message}`);
+      }
+      
       return {
         qrcode: '',
-        message: 'QR code not available. The instance may need more time to initialize.',
+        message: 'QR code not available at this moment.',
         status: 'waiting'
       };
       

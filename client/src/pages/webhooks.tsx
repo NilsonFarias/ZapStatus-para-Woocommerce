@@ -74,9 +74,13 @@ export default function Webhooks() {
 
   const saveConfigMutation = useMutation({
     mutationFn: async (config: any) => {
+      // Ensure events is an array and properly formatted
       const payload = {
         clientId,
-        ...config
+        webhookUrl: config.webhookUrl,
+        secretKey: config.secretKey,
+        isActive: config.isActive,
+        events: Array.isArray(config.events) ? config.events : []
       };
       
       if (existingConfig) {

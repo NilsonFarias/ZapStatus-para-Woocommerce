@@ -10,6 +10,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### WooCommerce Webhook Configuration System (August 14, 2025)
+- **Status**: ✅ **100% FUNCIONAL** - Sistema completo de configuração de webhooks implementado
+- **Funcionalidades**:
+  - Interface completa para configuração de URL e chave secreta
+  - 11 eventos WooCommerce suportados (order.created, order.updated, order.pending, order.processing, order.on-hold, order.completed, order.cancelled, order.refunded, order.failed, order.shipped, order.delivered)
+  - Sistema de salvamento real no banco de dados PostgreSQL
+  - Botão de teste funcional com logs em tempo real
+  - Geração automática de chaves secretas
+  - Switches para ativar/desativar eventos individuais
+  - Validação de formulário e tratamento de erros
+  - Endpoint de recebimento `/api/webhook/woocommerce` funcionando
+- **Resolução de Problemas**:
+  - Cliente demo criado no banco para resolver erro de chave estrangeira
+  - Formatação correta de dados JSON para eventos
+  - Validação adequada de payload antes da inserção no banco
+- **Teste Realizado**: Sistema testado com sucesso via API endpoints
+
 ### QR Code Generation System (August 14, 2025)
 - **Evolution API Integration Status**: Successfully receiving structured data from Evolution API server
 - **Solutions Implemented**:

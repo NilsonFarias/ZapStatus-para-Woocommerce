@@ -258,18 +258,29 @@ export class EvolutionApiService {
 
   async restartInstance(instanceName: string): Promise<void> {
     try {
-      // First disconnect the instance
-      console.log(`Restarting instance ${instanceName}: disconnecting first...`);
+      console.log(`Restarting instance ${instanceName}...`);
+      
+      // Try direct restart approach first
+      try {
+        const response = await this.client.post(`/instance/restart/${instanceName}`);
+        console.log(`Instance ${instanceName} restarted successfully via restart endpoint`);
+        return;
+      } catch (restartError) {
+        console.log(`Direct restart failed, trying disconnect/connect approach...`);
+      }
+      
+      // Fallback: disconnect then connect
+      console.log(`Disconnecting instance ${instanceName}...`);
       await this.client.delete(`/instance/logout/${instanceName}`);
       
-      // Wait a bit for the disconnect to process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for disconnect to process
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // Then reconnect
-      console.log(`Restarting instance ${instanceName}: reconnecting...`);
+      // Reconnect
+      console.log(`Reconnecting instance ${instanceName}...`);
       await this.client.get(`/instance/connect/${instanceName}`);
       
-      console.log(`Instance ${instanceName} restarted successfully`);
+      console.log(`Instance ${instanceName} restarted successfully via disconnect/connect`);
     } catch (error: any) {
       console.error('Error restarting instance:', error.response?.data || error.message);
       throw new Error(`Failed to restart instance: ${error.response?.data?.message || error.message}`);

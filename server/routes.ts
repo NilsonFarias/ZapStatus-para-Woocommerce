@@ -360,17 +360,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Instance not found" });
       }
 
+      // Update status to connecting first
+      await storage.updateInstance(id, { 
+        status: 'connecting',
+        qrCode: null // Clear old QR code
+      });
+
       // Restart instance in Evolution API
       await evolutionApi.restartInstance(instance.instanceId);
       
-      // Update status in database
-      await storage.updateInstance(id, { 
-        status: 'connecting'
-      });
-      
-      res.json({ success: true });
+      res.json({ success: true, message: "Instance restart initiated. Please wait and check QR code if needed." });
     } catch (error: any) {
       console.error('Error restarting instance:', error.message);
+      // Revert status on error
+      await storage.updateInstance(id, { status: 'disconnected' });
       res.status(500).json({ message: error.message });
     }
   });

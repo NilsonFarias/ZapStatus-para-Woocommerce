@@ -78,15 +78,21 @@ export default function InstanceCard({ instance, onShowQR, onDelete }: InstanceC
           <div className="flex justify-between text-sm">
             <span className="text-slate-600">Número:</span>
             <span className="font-medium" data-testid="instance-phone">
-              {instance.phoneNumber || 'Não conectado'}
+              {instance.phoneNumber || (instance.status === 'connected' ? 'Conectado' : 'Não conectado')}
             </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate-600">Última conexão:</span>
             <span className="font-medium" data-testid="instance-last-connection">
               {instance.lastConnection 
-                ? new Date(instance.lastConnection).toLocaleString('pt-BR') 
-                : 'Nunca'
+                ? new Date(instance.lastConnection).toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
+                : (instance.status === 'connected' ? 'Agora' : 'Nunca')
               }
             </span>
           </div>

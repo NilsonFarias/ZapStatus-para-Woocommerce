@@ -95,7 +95,7 @@ export default function QRModal({
               data-testid="button-regenerate-qr"
             >
               <RefreshCw size={16} className="mr-2" />
-              {qrCode ? "Regenerar" : "Gerar QR Code"}
+              {qrCode ? "Regenerar" : message?.includes("initializing") ? "Tentar Novamente" : "Gerar QR Code"}
             </Button>
             <Button 
               variant="outline" 

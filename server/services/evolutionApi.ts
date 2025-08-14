@@ -93,8 +93,8 @@ export class EvolutionApiService {
           
           console.log(`Instance ${instanceName} has been connecting for ${timeDiff.toFixed(1)} minutes`);
           
-          // If connecting for more than 10 minutes, it's likely stuck
-          if (timeDiff > 10) {
+          // If connecting for more than 5 minutes, it's likely stuck
+          if (timeDiff > 5) {
             console.log(`Instance ${instanceName} appears to be stuck, suggesting restart`);
             return {
               qrcode: '',

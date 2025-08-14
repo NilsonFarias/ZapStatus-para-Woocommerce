@@ -50,8 +50,8 @@ export default function Sidebar() {
             return (
               <li key={item.path}>
                 <Link href={item.path}>
-                  <a 
-                    className={`flex items-center px-4 py-3 rounded-lg font-medium transition-colors ${
+                  <div 
+                    className={`flex items-center px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer ${
                       isActive 
                         ? 'bg-primary/10 text-primary' 
                         : 'text-slate-700 hover:bg-slate-100'
@@ -60,7 +60,7 @@ export default function Sidebar() {
                   >
                     <Icon size={20} className="mr-3" />
                     {item.label}
-                  </a>
+                  </div>
                 </Link>
               </li>
             );

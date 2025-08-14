@@ -23,7 +23,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/dashboard/metrics", async (req, res) => {
     try {
       // In a real app, you'd get userId from authentication
-      const userId = "demo-user-id";
+      const userId = "68a6ee4a-0647-447d-913f-2bed17557e96"; // Admin user ID
       const metrics = await storage.getDashboardMetrics(userId);
       res.json(metrics);
     } catch (error: any) {
@@ -34,7 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Client management
   app.get("/api/clients", async (req, res) => {
     try {
-      const userId = "demo-user-id";
+      const userId = "68a6ee4a-0647-447d-913f-2bed17557e96"; // Admin user ID
       const clients = await storage.getClients(userId);
       res.json(clients);
     } catch (error: any) {
@@ -44,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/clients", async (req, res) => {
     try {
-      const userId = "demo-user-id"; // In real app, get from auth
+      const userId = "68a6ee4a-0647-447d-913f-2bed17557e96"; // Admin user ID
       const clientData = {
         ...req.body,
         userId,
@@ -83,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WhatsApp Instances
   app.get("/api/instances", async (req, res) => {
     try {
-      const userId = "demo-user-id";
+      const userId = "68a6ee4a-0647-447d-913f-2bed17557e96"; // Admin user ID
       const instances = await storage.getAllInstances(userId);
       
       // Update instances status from Evolution API

@@ -248,6 +248,15 @@ export class EvolutionApiService {
     }
   }
 
+  async restartInstance(instanceName: string): Promise<void> {
+    try {
+      await this.client.put(`/instance/restart/${instanceName}`);
+    } catch (error: any) {
+      console.error('Error restarting instance:', error.message);
+      throw new Error(`Failed to restart instance: ${error.message}`);
+    }
+  }
+
   async getAllInstances(): Promise<any[]> {
     try {
       const response = await this.client.get('/instance/fetchInstances');

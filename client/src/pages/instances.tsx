@@ -46,6 +46,59 @@ export default function Instances() {
     },
   });
 
+  const disconnectInstanceMutation = useMutation({
+    mutationFn: (instanceId: string) => apiRequest("POST", `/api/instances/${instanceId}/disconnect`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/instances'] });
+      toast({
+        title: "Instância desconectada",
+        description: "A instância foi desconectada com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const restartInstanceMutation = useMutation({
+    mutationFn: (instanceId: string) => apiRequest("POST", `/api/instances/${instanceId}/restart`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/instances'] });
+      toast({
+        title: "Instância reiniciada",
+        description: "A instância foi reiniciada com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const testMessageMutation = useMutation({
+    mutationFn: (instanceId: string) => apiRequest("POST", `/api/instances/${instanceId}/test-message`),
+    onSuccess: () => {
+      toast({
+        title: "Mensagem de teste enviada",
+        description: "A mensagem de teste foi enviada com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const getQRMutation = useMutation({
     mutationFn: (instanceId: string) => 
       apiRequest("GET", `/api/instances/${instanceId}/qr`).then(res => res.json()),
@@ -109,6 +162,22 @@ export default function Instances() {
     }
   };
 
+  const handleDisconnectInstance = async (instance: WhatsappInstance) => {
+    if (confirm(`Desconectar a instância "${instance.name}"?`)) {
+      await disconnectInstanceMutation.mutateAsync(instance.id);
+    }
+  };
+
+  const handleRestartInstance = async (instance: WhatsappInstance) => {
+    if (confirm(`Reiniciar a instância "${instance.name}"?`)) {
+      await restartInstanceMutation.mutateAsync(instance.id);
+    }
+  };
+
+  const handleTestMessage = async (instance: WhatsappInstance) => {
+    await testMessageMutation.mutateAsync(instance.id);
+  };
+
   const testEvolutionApiMutation = useMutation({
     mutationFn: () => apiRequest("GET", "/api/evolution/test").then(res => res.json()),
     onSuccess: (data) => {
@@ -169,6 +238,9 @@ export default function Instances() {
                 instance={instance}
                 onShowQR={handleShowQR}
                 onDelete={handleDeleteInstance}
+                onDisconnect={handleDisconnectInstance}
+                onRestart={handleRestartInstance}
+                onTestMessage={handleTestMessage}
               />
             ))}
             

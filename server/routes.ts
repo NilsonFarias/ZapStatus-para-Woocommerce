@@ -326,6 +326,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/instances/:id/disconnect", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const instance = await storage.getInstance(id);
+      
+      if (!instance) {
+        return res.status(404).json({ message: "Instance not found" });
+      }
+
+      // Disconnect from Evolution API
+      await evolutionApi.disconnectInstance(instance.instanceId);
+      
+      // Update status in database
+      await storage.updateInstance(id, { 
+        status: 'disconnected',
+        lastConnection: new Date()
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error disconnecting instance:', error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/instances/:id/restart", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const instance = await storage.getInstance(id);
+      
+      if (!instance) {
+        return res.status(404).json({ message: "Instance not found" });
+      }
+
+      // Restart instance in Evolution API
+      await evolutionApi.restartInstance(instance.instanceId);
+      
+      // Update status in database
+      await storage.updateInstance(id, { 
+        status: 'connecting'
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error restarting instance:', error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/instances/:id/test-message", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const instance = await storage.getInstance(id);
+      
+      if (!instance) {
+        return res.status(404).json({ message: "Instance not found" });
+      }
+
+      if (instance.status !== 'connected') {
+        return res.status(400).json({ message: "Instance must be connected to send test message" });
+      }
+
+      // Send test message via Evolution API
+      const testPhone = instance.phoneNumber || "5511999999999"; // Use instance phone or default
+      const testMessage = `🤖 Mensagem de teste do WhatsFlow\n\nInstância: ${instance.name}\nHorário: ${new Date().toLocaleString('pt-BR')}\n\nSua instância está funcionando perfeitamente! ✅`;
+      
+      await evolutionApi.sendMessage(instance.instanceId, testPhone, testMessage);
+      
+      res.json({ success: true, message: "Test message sent successfully" });
+    } catch (error: any) {
+      console.error('Error sending test message:', error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.delete("/api/instances/:id", async (req, res) => {
     try {
       const { id } = req.params;

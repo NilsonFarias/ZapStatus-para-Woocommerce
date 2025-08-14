@@ -1,16 +1,27 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { WhatsappInstance } from "@shared/schema";
-import { Smartphone, QrCode, Settings, Trash2 } from "lucide-react";
+import { Smartphone, QrCode, Settings, Trash2, Power, RotateCcw, MessageSquare } from "lucide-react";
 
 interface InstanceCardProps {
   instance: WhatsappInstance;
   onShowQR: (instance: WhatsappInstance) => void;
   onDelete: (instance: WhatsappInstance) => void;
+  onDisconnect?: (instance: WhatsappInstance) => void;
+  onRestart?: (instance: WhatsappInstance) => void;
+  onTestMessage?: (instance: WhatsappInstance) => void;
 }
 
-export default function InstanceCard({ instance, onShowQR, onDelete }: InstanceCardProps) {
+export default function InstanceCard({ 
+  instance, 
+  onShowQR, 
+  onDelete, 
+  onDisconnect, 
+  onRestart, 
+  onTestMessage 
+}: InstanceCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'connected':
@@ -111,9 +122,40 @@ export default function InstanceCard({ instance, onShowQR, onDelete }: InstanceC
             <QrCode size={16} className="mr-2" />
             QR Code
           </Button>
-          <Button variant="outline" size="sm" data-testid="button-settings">
-            <Settings size={16} />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-settings">
+                <Settings size={16} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {instance.status === 'connected' && (
+                <>
+                  <DropdownMenuItem 
+                    onClick={() => onDisconnect?.(instance)}
+                    data-testid="menu-disconnect"
+                  >
+                    <Power size={16} className="mr-2" />
+                    Desconectar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => onTestMessage?.(instance)}
+                    data-testid="menu-test-message"
+                  >
+                    <MessageSquare size={16} className="mr-2" />
+                    Enviar teste
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuItem 
+                onClick={() => onRestart?.(instance)}
+                data-testid="menu-restart"
+              >
+                <RotateCcw size={16} className="mr-2" />
+                Reiniciar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button 
             variant="outline" 
             size="sm" 

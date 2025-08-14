@@ -44,7 +44,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/clients", async (req, res) => {
     try {
-      const validatedData = insertClientSchema.parse(req.body);
+      const userId = "demo-user-id"; // In real app, get from auth
+      const clientData = {
+        ...req.body,
+        userId,
+        status: 'active',
+        monthlyMessages: 0,
+      };
+      const validatedData = insertClientSchema.parse(clientData);
       const client = await storage.createClient(validatedData);
       res.json(client);
     } catch (error: any) {

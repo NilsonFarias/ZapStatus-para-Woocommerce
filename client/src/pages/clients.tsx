@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
+import CreateClientModal from "@/components/clients/create-client-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,6 +19,7 @@ export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const { data: clients = [], isLoading } = useQuery<Client[]>({
     queryKey: ['/api/clients'],
@@ -119,7 +121,7 @@ export default function Clients() {
           description="Gerencie todos os seus clientes e suas configurações"
           action={{
             label: "Adicionar Cliente",
-            onClick: () => console.log("Add client"),
+            onClick: () => setCreateModalOpen(true),
             icon: <Plus className="mr-2" size={16} />
           }}
         />
@@ -254,6 +256,11 @@ export default function Clients() {
             </div>
           </Card>
         </div>
+
+        <CreateClientModal
+          open={createModalOpen}
+          onOpenChange={setCreateModalOpen}
+        />
       </main>
     </div>
   );

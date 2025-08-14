@@ -157,6 +157,15 @@ export class DatabaseStorage implements IStorage {
     return instance;
   }
 
+  // Add method to reset daily messages for all instances at midnight
+  async resetDailyMessagesForAllInstances(): Promise<void> {
+    await db
+      .update(whatsappInstances)
+      .set({ dailyMessages: 0 })
+      .where(sql`daily_messages > 0`);
+    console.log('Daily messages reset for all instances');
+  }
+
   async updateInstanceQRCode(instanceId: string, qrCode: string): Promise<WhatsappInstance> {
     const [instance] = await db
       .update(whatsappInstances)

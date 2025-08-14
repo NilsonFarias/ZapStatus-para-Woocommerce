@@ -282,9 +282,47 @@ export class EvolutionApiService {
       const response = await this.client.post(`/message/sendText/${instanceName}`, payload);
       
       console.log('Message sent successfully:', response.status);
+      
+      // Increment daily message count for this instance
+      await this.incrementDailyMessages(instanceName);
+      
     } catch (error: any) {
       console.error('Error sending message:', error.response?.data || error.message);
       throw new Error(`Failed to send message: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  private async incrementDailyMessages(instanceName: string): Promise<void> {
+    try {
+      // Import storage dynamically to avoid circular dependency
+      const { storage } = await import('../storage');
+      
+      // Find instance by instanceId
+      const instances = await storage.getAllInstances("68a6ee4a-0647-447d-913f-2bed17557e96"); // Admin user
+      const instance = instances.find(inst => inst.instanceId === instanceName);
+      
+      if (instance) {
+        const today = new Date().toDateString();
+        const lastConnectionDate = instance.lastConnection ? new Date(instance.lastConnection).toDateString() : null;
+        
+        // Reset daily count if it's a new day
+        let newDailyCount = (instance.dailyMessages || 0);
+        if (lastConnectionDate !== today) {
+          newDailyCount = 1; // First message of the day
+        } else {
+          newDailyCount += 1; // Increment existing count
+        }
+        
+        await storage.updateInstance(instance.id, { 
+          dailyMessages: newDailyCount,
+          lastConnection: new Date() // Update last activity
+        });
+        
+        console.log(`Daily message count updated for ${instanceName}: ${newDailyCount}`);
+      }
+    } catch (error) {
+      console.error('Error incrementing daily messages:', error);
+      // Don't throw error - message sending should succeed even if counting fails
     }
   }
 

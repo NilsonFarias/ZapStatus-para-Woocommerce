@@ -193,8 +193,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Update last connection time if status changed to connected
             if (mappedStatus === 'connected' && instance.status !== 'connected') {
               updateData.lastConnection = new Date();
-              // Simulate some daily messages for connected instances
-              updateData.dailyMessages = Math.floor(Math.random() * 50) + 10;
+              
+              // Reset daily messages for newly connected instances (will be incremented as messages are sent)
+              const today = new Date().toDateString();
+              const lastConnectionDate = instance.lastConnection ? new Date(instance.lastConnection).toDateString() : null;
+              
+              // Reset daily count if it's a new day or first connection
+              if (lastConnectionDate !== today) {
+                updateData.dailyMessages = 0;
+              }
             }
             
             await storage.updateInstance(instance.id, updateData);

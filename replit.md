@@ -10,6 +10,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Database Cleanup and Message Queue Management (August 14, 2025)
+- **Status**: ✅ **FUNCIONAL** - Sistema de gerenciamento da fila de mensagens completo
+- **Funcionalidades**:
+  - Botão "Atualizar" corrigido com feedback toast
+  - Menu de ações (⋮) para cada mensagem na fila
+  - "Enviar Agora" para mensagens pendentes
+  - "Tentar Novamente" para mensagens com falha
+  - "Excluir" para remover mensagens da fila
+  - Endpoints DELETE e POST resend funcionando
+  - Instância problemática "Bookstore Bot Demo" removida completamente
+- **Limpeza Realizada**:
+  - Instância duplicada removida do banco PostgreSQL
+  - Mensagens órfãs da fila limpas
+  - Código atualizado para buscar de todas as instâncias ativas
+  - Erros "Instance not found" resolvidos
+
 ### WooCommerce Webhook Configuration System (August 14, 2025)
 - **Status**: ✅ **100% FUNCIONAL** - Sistema completo de configuração de webhooks implementado
 - **Funcionalidades**:

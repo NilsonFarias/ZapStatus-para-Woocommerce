@@ -342,7 +342,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateInstance(id, { 
         status: 'disconnected',
         lastConnection: new Date(),
-        qrCode: null // Clear QR code so user can get a fresh one
+        qrCode: null, // Clear QR code so user can get a fresh one
+        phoneNumber: null, // Clear phone number as it will be reassigned
+        profileName: null
       });
       
       res.json({ success: true, message: "Instance disconnected. Use 'Reconectar' to get a new QR code." });

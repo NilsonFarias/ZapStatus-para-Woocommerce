@@ -109,79 +109,120 @@ export class EvolutionApiService {
 
   async getQRCode(instanceName: string): Promise<QRCodeResponse> {
     try {
-      // First check if instance exists and its status
-      const instanceInfo = await this.getInstanceInfo(instanceName);
+      console.log(`Getting QR code for instance: ${instanceName}`);
       
-      console.log(`Instance ${instanceName} status: ${instanceInfo.status}`);
-      
-      // If instance is already connected, return appropriate message
-      if (instanceInfo.status === 'open') {
-        return {
-          qrcode: '',
-          message: 'Instance is already connected to WhatsApp',
-          status: 'connected'
-        };
-      }
-      
-      // Try to get QR code directly
+      // First check instance status
       try {
-        console.log(`Trying to get QR code for ${instanceName}...`);
-        const response = await this.client.get(`/instance/connect/${instanceName}`);
-        
-        if (response.data && response.data.qrcode) {
-          console.log(`QR code successfully retrieved for ${instanceName}`);
-          return {
-            qrcode: response.data.qrcode,
-            status: 'qr_ready'
-          };
-        }
-        console.log(`No QR code in response for ${instanceName}`);
-      } catch (requestError: any) {
-        console.log(`Error getting QR code: ${requestError.message}`);
-      }
-      
-      // Check if instance has been connecting for too long and try to fix it
-      if (instanceInfo.status === 'connecting') {
-        const allInstancesResponse = await this.client.get('/instance/fetchInstances');
-        const instance = allInstancesResponse.data.find((inst: any) => inst.name === instanceName);
+        const instances = await this.client.get('/instance/fetchInstances');
+        const instance = instances.data.find((inst: any) => inst.name === instanceName);
         
         if (instance) {
-          const createdAt = new Date(instance.createdAt);
-          const now = new Date();
-          const timeDiff = (now.getTime() - createdAt.getTime()) / 1000 / 60; // in minutes
+          console.log(`Instance ${instanceName} status: ${instance.connectionStatus}`);
           
-          console.log(`Instance ${instanceName} has been connecting for ${timeDiff.toFixed(1)} minutes`);
-          
-          // If connecting for more than 3 minutes, try logout to reset
-          if (timeDiff > 3) {
-            console.log(`Instance ${instanceName} seems stuck, trying logout...`);
-            try {
-              await this.client.delete(`/instance/logout/${instanceName}`);
-              console.log(`Logout successful for ${instanceName}, waiting 5 seconds...`);
-              await new Promise(resolve => setTimeout(resolve, 5000));
-              
-              // Try to get QR code again after logout
-              const response = await this.client.get(`/instance/connect/${instanceName}`);
-              if (response.data && response.data.qrcode) {
-                console.log(`QR code retrieved for ${instanceName} after logout!`);
-                return {
-                  qrcode: response.data.qrcode,
-                  status: 'qr_ready'
-                };
-              }
-            } catch (logoutError: any) {
-              console.log(`Logout failed for ${instanceName}: ${logoutError.message}`);
-            }
-          }
-          
-          // If connecting for more than 8 minutes, suggest deletion
-          if (timeDiff > 8) {
+          if (instance.connectionStatus === 'open') {
             return {
               qrcode: '',
-              message: 'Instance appears to be stuck. Please delete and create a new instance.',
-              status: 'stuck'
+              message: 'Instance is already connected.',
+              status: 'connected'
             };
           }
+          
+          // If instance is in 'close' state, it needs full restart for QR
+          if (instance.connectionStatus === 'close') {
+            console.log(`Instance ${instanceName} is closed, performing logout and reconnect...`);
+            try {
+              // First logout to clear any old sessions
+              await this.client.delete(`/instance/logout/${instanceName}`);
+              console.log(`Logout completed for ${instanceName}`);
+              
+              // Wait for logout to process
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            } catch (logoutError) {
+              console.log('Logout error (may be expected):', logoutError);
+            }
+          }
+        }
+      } catch (statusError) {
+        console.log('Could not check instance status:', statusError);
+      }
+      
+      // Try multiple attempts to get QR code
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        console.log(`Attempt ${attempt}/3: Trying to get QR code for ${instanceName}...`);
+        
+        try {
+          const response = await this.client.get(`/instance/connect/${instanceName}`);
+          
+          console.log(`Response for ${instanceName} (attempt ${attempt}):`, {
+            status: response.status,
+            hasData: !!response.data,
+            dataType: typeof response.data,
+            keys: response.data ? Object.keys(response.data) : [],
+            qrcodePresent: !!(response.data && response.data.qrcode),
+            base64Present: !!(response.data && response.data.base64),
+            codePresent: !!(response.data && response.data.code),
+            pairingCodePresent: !!(response.data && response.data.pairingCode),
+            base64Length: response.data && response.data.base64 ? response.data.base64.length : 0,
+            codeLength: response.data && response.data.code ? response.data.code.length : 0,
+            pairingCodeLength: response.data && response.data.pairingCode ? response.data.pairingCode.length : 0,
+          });
+          
+          // Check for base64 QR code (Evolution API format)
+          if (response.data && response.data.base64) {
+            let qrCodeData = response.data.base64;
+            
+            // Add data URI prefix if not present
+            if (!qrCodeData.startsWith('data:image')) {
+              qrCodeData = `data:image/png;base64,${qrCodeData}`;
+            }
+            
+            console.log(`✓ QR code found for ${instanceName} on attempt ${attempt} (length: ${qrCodeData.length})`);
+            
+            // Start polling for status updates
+            this.startQRPolling(instanceName);
+            
+            return {
+              qrcode: qrCodeData,
+              message: 'QR code ready for scanning',
+              status: 'connecting'
+            };
+          }
+          
+          // Check for regular qrcode field
+          if (response.data && response.data.qrcode) {
+            console.log(`✓ QR code found (qrcode field) for ${instanceName} on attempt ${attempt}`);
+            return {
+              qrcode: response.data.qrcode,
+              message: 'QR code ready for scanning',
+              status: 'connecting'
+            };
+          }
+          
+          // If no QR code yet, wait before next attempt
+          if (attempt < 3) {
+            console.log(`No QR code on attempt ${attempt}, waiting 4 seconds...`);
+            await new Promise(resolve => setTimeout(resolve, 4000));
+          }
+          
+        } catch (attemptError: any) {
+          console.log(`Attempt ${attempt} failed:`, attemptError.response?.data || attemptError.message);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+        }
+      }
+      
+      // Check if instance has been connecting for too long
+      const connectingTime = this.getConnectingTime(instanceName);
+      if (connectingTime > 5) { // 5 minutes
+        console.log(`Instance ${instanceName} has been connecting for ${connectingTime.toFixed(1)} minutes`);
+        
+        if (connectingTime > 10) { // 10 minutes - consider it stuck
+          return {
+            qrcode: '',
+            message: 'Instance appears to be stuck. Please delete and create a new instance.',
+            status: 'stuck'
+          };
         }
         
         return {
@@ -193,8 +234,8 @@ export class EvolutionApiService {
       
       return {
         qrcode: '',
-        message: 'QR code not available. The Evolution API server may be having issues generating QR codes. Try creating a new instance.',
-        status: 'waiting'
+        message: 'Unable to generate QR code after multiple attempts. The instance may need to be recreated.',
+        status: 'error'
       };
       
     } catch (error: any) {

@@ -70,14 +70,8 @@ export default function MessageQueue() {
         <Header title="Fila de Mensagens" description="Acompanhe o status de envio das mensagens WhatsApp" />
         <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold" data-testid="page-title">Fila de Mensagens</h1>
-                <p className="text-muted-foreground mt-2">
-                  Acompanhe o status de envio das mensagens WhatsApp
-                </p>
-              </div>
+            {/* Refresh Button */}
+            <div className="flex items-center justify-end">
               <Button 
                 variant="outline" 
                 onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/message-queue'] })}

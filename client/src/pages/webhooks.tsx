@@ -59,10 +59,14 @@ export default function Webhooks() {
         events: existingConfig.events || []
       });
     } else {
-      // Set default webhook URL
+      // Set default webhook URL - use Replit's public URL
+      const replitUrl = window.location.origin.includes('localhost') 
+        ? 'https://sua-repl.replit.app' // Substitua pela sua URL do Replit
+        : window.location.origin;
+      
       setWebhookConfig(prev => ({
         ...prev,
-        webhookUrl: `${window.location.origin}/api/webhook/woocommerce`,
+        webhookUrl: `${replitUrl}/api/webhook/woocommerce`,
         secretKey: generateSecretKey()
       }));
     }
@@ -198,7 +202,7 @@ export default function Webhooks() {
                       id="webhook-url"
                       value={webhookConfig.webhookUrl}
                       onChange={(e) => setWebhookConfig(prev => ({ ...prev, webhookUrl: e.target.value }))}
-                      placeholder="https://seu-dominio.com/api/webhook/woocommerce"
+                      placeholder="https://sua-repl.replit.app/api/webhook/woocommerce"
                       data-testid="input-webhook-url"
                     />
                     <Button

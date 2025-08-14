@@ -283,6 +283,9 @@ export class EvolutionApiService {
         console.log(`Polling attempt ${pollCount}/${maxPolls} for ${instanceName}...`);
         const response = await this.client.get(`/instance/connect/${instanceName}`);
         
+        // Log the complete response to investigate QR code structure
+        console.log(`Raw response data for ${instanceName}:`, JSON.stringify(response.data, null, 2));
+        
         console.log(`Response for ${instanceName}:`, {
           status: response.status,
           hasData: !!response.data,
@@ -291,10 +294,13 @@ export class EvolutionApiService {
           qrcodePresent: !!(response.data && response.data.qrcode),
           base64Present: !!(response.data && response.data.base64),
           codePresent: !!(response.data && response.data.code),
+          pairingCodePresent: !!(response.data && response.data.pairingCode),
           base64Length: response.data?.base64?.length || 0,
           codeLength: response.data?.code?.length || 0,
+          pairingCodeLength: response.data?.pairingCode?.length || 0,
           base64Value: response.data?.base64 ? response.data.base64.substring(0, 50) + '...' : 'empty',
-          codeValue: response.data?.code ? response.data.code.substring(0, 50) + '...' : 'empty'
+          codeValue: response.data?.code ? response.data.code.substring(0, 50) + '...' : 'empty',
+          pairingCodeValue: response.data?.pairingCode ? response.data.pairingCode.substring(0, 50) + '...' : 'empty'
         });
         
         // Check for QR code in different possible fields
@@ -312,9 +318,19 @@ export class EvolutionApiService {
         if (qrCodeData) {
           console.log(`✓ QR code found via polling for ${instanceName} (length: ${qrCodeData.length})`);
           
+          // Save QR code to database immediately
+          try {
+            const { storage } = await import('../storage.js');
+            await storage.updateInstanceQRCode(instanceName, qrCodeData);
+            console.log(`✓ QR code saved to database for ${instanceName}`);
+          } catch (dbError: any) {
+            console.log('⚠ Failed to save QR code to database:', dbError.message);
+          }
+          
           // Emit QR code via Socket.IO
           try {
-            const { getSocketServer } = require('../routes');
+            // Import the routes module properly
+            const { getSocketServer } = await import('../routes.js');
             const io = getSocketServer();
             if (io) {
               io.to(`instance_${instanceName}`).emit('qr_code', {
@@ -322,9 +338,11 @@ export class EvolutionApiService {
                 qrCode: qrCodeData
               });
               console.log(`✓ QR code emitted via Socket.IO for ${instanceName}`);
+            } else {
+              console.log('⚠ Socket.IO server not found, but QR code saved to database');
             }
-          } catch (ioError) {
-            console.log('⚠ Socket.IO not available, QR code not emitted');
+          } catch (ioError: any) {
+            console.log('⚠ Socket.IO error, but QR code saved to database:', ioError.message);
           }
           
           return; // Stop polling
@@ -336,7 +354,7 @@ export class EvolutionApiService {
           console.log(`✓ Instance ${instanceName} is now connected, stopping QR polling`);
           
           try {
-            const { getSocketServer } = require('../routes');
+            const { getSocketServer } = await import('../routes.js');
             const io = getSocketServer();
             if (io) {
               io.to(`instance_${instanceName}`).emit('connection_update', {
@@ -344,7 +362,7 @@ export class EvolutionApiService {
                 status: 'connected'
               });
             }
-          } catch (ioError) {
+          } catch (ioError: any) {
             console.log('⚠ Socket.IO not available, connection update not emitted');
           }
           

@@ -620,10 +620,41 @@ Sua instancia esta funcionando perfeitamente!`;
     }
   });
 
+  // Add CORS support for webhook endpoint
+  app.options("/api/webhook/woocommerce", (req, res) => {
+    res.set({
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, x-client-id, Authorization'
+    });
+    res.status(200).end();
+  });
+
   // WooCommerce webhook endpoint
   app.post("/api/webhook/woocommerce", async (req, res) => {
     try {
-      const { event, data } = req.body;
+      // Set response headers first
+      res.set({
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'Content-Type, x-client-id'
+      });
+
+      // Handle both WooCommerce formats (with event field or direct object)
+      let event, data;
+      if (req.body.event) {
+        // Our format with event field
+        event = req.body.event;
+        data = req.body.data;
+      } else if (req.body.id && req.body.status) {
+        // Direct WooCommerce webhook format
+        event = 'order.status_changed';
+        data = req.body;
+      } else {
+        return res.status(400).json({ error: "Invalid webhook format", success: false });
+      }
+
       let clientId = req.headers['x-client-id'] as string;
       
       // For testing, use demo client if no client ID provided
@@ -671,14 +702,26 @@ Sua instancia esta funcionando perfeitamente!`;
       
       res.json({ success: true });
     } catch (error: any) {
-      await storage.createWebhookLog({
-        clientId: req.headers['x-client-id'] as string || 'unknown',
-        event: req.body.event || 'unknown',
-        status: 'error',
-        response: error.message,
-      });
+      console.error('Webhook error:', error);
       
-      res.status(500).json({ message: error.message });
+      // Try to log error if possible
+      try {
+        const errorClientId = req.headers['x-client-id'] as string || 'demo-client-id';
+        await storage.createWebhookLog({
+          clientId: errorClientId,
+          event: req.body?.event || 'unknown',
+          status: 'error',
+          response: error.message,
+        });
+      } catch (logError) {
+        console.error('Failed to log webhook error:', logError);
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 

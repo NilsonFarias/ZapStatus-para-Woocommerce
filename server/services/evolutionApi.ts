@@ -46,7 +46,26 @@ export class EvolutionApiService {
         instanceName,
         qrcode: true,
         integration: 'WHATSAPP-BAILEYS',
+        webhook: {
+          webhook: {
+            enabled: false,
+            url: 'https://webhook.site/disabled',
+            events: []
+          }
+        },
+        settings: {
+          rejectCall: false,
+          msgCall: '',
+          groupsIgnore: false,
+          alwaysOnline: false,
+          readMessages: false,
+          readStatus: false,
+          syncFullHistory: false
+        }
       });
+      
+      // Wait for instance to initialize properly
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       return response.data;
     } catch (error: any) {
@@ -104,28 +123,45 @@ export class EvolutionApiService {
           }
         }
         
-        // For fresh connecting instances, try a few quick attempts
+        // For fresh connecting instances, try different approaches
         let attempts = 0;
-        const maxAttempts = 3;
+        const maxAttempts = 5;
         
         while (attempts < maxAttempts) {
           try {
             attempts++;
-            console.log(`Quick attempt ${attempts}/${maxAttempts} for connecting instance ${instanceName}`);
+            console.log(`Attempt ${attempts}/${maxAttempts} for connecting instance ${instanceName}`);
             
-            const response = await this.client.get(`/instance/connect/${instanceName}`);
+            // Try different endpoints based on attempt number
+            let response;
+            if (attempts <= 2) {
+              // First tries: standard connect endpoint
+              response = await this.client.get(`/instance/connect/${instanceName}`);
+            } else if (attempts === 3) {
+              // Third try: restart instance first
+              console.log(`Trying to restart instance ${instanceName}...`);
+              await this.client.post(`/instance/restart/${instanceName}`);
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              response = await this.client.get(`/instance/connect/${instanceName}`);
+            } else {
+              // Last tries: force connection
+              console.log(`Forcing connection for instance ${instanceName}...`);
+              response = await this.client.post(`/instance/connect/${instanceName}`);
+            }
             
             if (response.data && response.data.qrcode) {
-              console.log(`QR code found for ${instanceName}!`);
+              console.log(`QR code found for ${instanceName} on attempt ${attempts}!`);
               return {
                 qrcode: response.data.qrcode,
                 status: 'qr_ready'
               };
             }
             
-            // Short wait between attempts
+            // Progressive wait between attempts
             if (attempts < maxAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
+              const waitTime = attempts * 1500; // 1.5s, 3s, 4.5s, 6s
+              console.log(`Waiting ${waitTime}ms before next attempt...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
             }
             
           } catch (requestError: any) {

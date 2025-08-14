@@ -151,6 +151,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Getting QR code for instance: ${instance.instanceId}`);
       const qrData = await evolutionApi.getQRCode(instance.instanceId);
       
+      console.log('QR result for frontend:', {
+        instanceName: instance.instanceId,
+        hasQrcode: !!qrData.qrcode,
+        qrcodeLength: qrData.qrcode?.length,
+        message: qrData.message,
+        status: qrData.status
+      });
+      
       // Update instance with QR code and status
       await storage.updateInstance(id, { 
         qrCode: qrData.qrcode,

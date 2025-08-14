@@ -50,13 +50,23 @@ export default function Instances() {
     mutationFn: (instanceId: string) => 
       apiRequest("GET", `/api/instances/${instanceId}/qr`).then(res => res.json()),
     onSuccess: (data) => {
+      console.log('QR Response received:', { 
+        hasQrcode: !!data.qrcode, 
+        qrcodeLength: data.qrcode?.length, 
+        message: data.message,
+        status: data.status,
+        fullData: data 
+      });
+      
       if (data.qrcode) {
         setQrCode(data.qrcode);
         setQrMessage("");
+        console.log('QR Code set successfully');
       } else {
         setQrCode("");
         const message = data.message || "QR Code não disponível. A instância pode estar se conectando ou já conectada.";
         setQrMessage(message);
+        console.log('No QR code, message set:', message);
         
         // If instance is stuck, show additional help
         if (data.status === 'stuck') {

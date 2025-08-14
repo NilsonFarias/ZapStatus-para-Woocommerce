@@ -14,14 +14,19 @@ import { useToast } from "@/hooks/use-toast";
 const ORDER_STATUSES = [
   { value: 'pending', label: 'Pedido Recebido' },
   { value: 'processing', label: 'Processando' },
+  { value: 'on-hold', label: 'Em Espera' },
+  { value: 'completed', label: 'Concluído' },
   { value: 'shipped', label: 'Enviado' },
   { value: 'delivered', label: 'Entregue' },
   { value: 'cancelled', label: 'Cancelado' },
+  { value: 'refunded', label: 'Reembolsado' },
+  { value: 'failed', label: 'Falhado' },
 ];
 
 const AVAILABLE_VARIABLES = [
   { code: '{{nome_cliente}}', description: 'Nome do cliente' },
   { code: '{{numero_pedido}}', description: 'Número do pedido' },
+  { code: '{{status_pedido}}', description: 'Status do pedido' },
   { code: '{{valor_pedido}}', description: 'Valor total' },
   { code: '{{data_pedido}}', description: 'Data do pedido' },
 ];
@@ -82,6 +87,35 @@ export default function Templates() {
     });
   };
 
+  const createTemplateMutation = useMutation({
+    mutationFn: (newTemplate: Partial<MessageTemplate>) => 
+      apiRequest("POST", `/api/templates`, newTemplate).then(res => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      toast({
+        title: "Template criado",
+        description: "O template foi criado com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateTemplate = async () => {
+    await createTemplateMutation.mutateAsync({
+      clientId: selectedClientId,
+      orderStatus: selectedStatus,
+      content: `Olá {{nome_cliente}}, seu pedido #{{numero_pedido}} foi atualizado para: ${ORDER_STATUSES.find(s => s.value === selectedStatus)?.label}!`,
+      delayMinutes: 0,
+      isActive: true,
+    });
+  };
+
   const handleDeleteTemplate = async (template: MessageTemplate) => {
     if (confirm('Tem certeza que deseja remover este template?')) {
       await deleteTemplateMutation.mutateAsync(template.id);
@@ -105,7 +139,7 @@ export default function Templates() {
           description="Configure mensagens automáticas para cada status do pedido"
           action={{
             label: "Novo Template",
-            onClick: () => console.log("Create template"),
+            onClick: () => handleCreateTemplate(),
             icon: <Plus className="mr-2" size={16} />
           }}
         />
@@ -147,7 +181,7 @@ export default function Templates() {
                 <Button
                   variant="outline"
                   className="w-full border-2 border-dashed border-slate-300 h-16 text-slate-500 hover:border-primary hover:text-primary"
-                  onClick={() => console.log("Add new template")}
+                  onClick={handleCreateTemplate}
                   data-testid="button-add-template"
                 >
                   <Plus className="mr-2" size={20} />

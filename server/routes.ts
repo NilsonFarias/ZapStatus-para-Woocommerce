@@ -78,6 +78,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = "demo-user-id";
       const instances = await storage.getAllInstances(userId);
+      
+      // Update instances status from Evolution API
+      for (const instance of instances) {
+        try {
+          const evolutionInfo = await evolutionApi.getInstanceInfo(instance.instanceId);
+          if (evolutionInfo.status !== instance.status) {
+            await storage.updateInstance(instance.id, { 
+              status: evolutionInfo.status,
+              phoneNumber: evolutionInfo.phoneNumber || instance.phoneNumber
+            });
+            instance.status = evolutionInfo.status;
+            instance.phoneNumber = evolutionInfo.phoneNumber || instance.phoneNumber;
+          }
+        } catch (err) {
+          console.log(`Failed to update instance ${instance.instanceId}:`, err);
+        }
+      }
+      
       res.json(instances);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -87,24 +105,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/instances", async (req, res) => {
     try {
       const { clientId, name } = req.body;
-      const instanceId = `instance_${Date.now()}`;
+      const instanceId = `whatsflow_${Date.now()}`;
+      
+      console.log(`Creating Evolution API instance: ${instanceId}`);
       
       // Create instance in Evolution API
-      await evolutionApi.createInstance(instanceId);
+      const evolutionInstance = await evolutionApi.createInstance(instanceId);
       
-      // Create instance record
+      // Create instance record in database
       const instanceData = {
         clientId,
         instanceId,
         name,
-        status: 'disconnected',
+        status: 'pending',
+        phoneNumber: '',
       };
       
       const validatedData = insertInstanceSchema.parse(instanceData);
       const instance = await storage.createInstance(validatedData);
       
+      console.log(`Instance created successfully: ${instanceId}`);
       res.json(instance);
     } catch (error: any) {
+      console.error('Error creating instance:', error.message);
       res.status(500).json({ message: error.message });
     }
   });
@@ -118,14 +141,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Instance not found" });
       }
       
+      console.log(`Getting QR code for instance: ${instance.instanceId}`);
       const qrData = await evolutionApi.getQRCode(instance.instanceId);
       
-      // Update instance with QR code
-      await storage.updateInstance(id, { qrCode: qrData.qrcode });
+      // Update instance with QR code and status
+      await storage.updateInstance(id, { 
+        qrCode: qrData.qrcode,
+        status: 'pending'
+      });
       
       res.json(qrData);
     } catch (error: any) {
+      console.error('Error getting QR code:', error.message);
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Test Evolution API connection
+  app.get("/api/evolution/test", async (req, res) => {
+    try {
+      const testInstanceName = `test_${Date.now()}`;
+      
+      console.log('Testing Evolution API connection...');
+      const result = await evolutionApi.createInstance(testInstanceName);
+      
+      // Clean up test instance
+      setTimeout(async () => {
+        try {
+          await evolutionApi.deleteInstance(testInstanceName);
+        } catch (err) {
+          console.log('Error cleaning up test instance:', err);
+        }
+      }, 5000);
+      
+      res.json({ 
+        success: true, 
+        message: 'Evolution API connection successful',
+        result 
+      });
+    } catch (error: any) {
+      console.error('Evolution API test failed:', error.message);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Evolution API connection failed',
+        error: error.message 
+      });
     }
   });
 

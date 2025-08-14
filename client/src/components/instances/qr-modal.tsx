@@ -27,12 +27,12 @@ export default function QRModal({
         </DialogHeader>
         
         <div className="text-center">
-          <div className="w-64 h-64 mx-auto bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center mb-4">
+          <div className="w-64 h-64 mx-auto bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center mb-4">
             {qrCode ? (
               <img 
-                src={qrCode} 
+                src={`data:image/png;base64,${qrCode}`}
                 alt="QR Code" 
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain p-2"
                 data-testid="qr-code-image"
               />
             ) : isLoading ? (
@@ -43,7 +43,7 @@ export default function QRModal({
             ) : (
               <div className="text-center">
                 <QrCode className="text-4xl text-slate-400 mb-2 mx-auto" size={48} />
-                <p className="text-slate-500">QR Code será gerado aqui</p>
+                <p className="text-slate-500">Clique em "Gerar QR Code" para começar</p>
               </div>
             )}
           </div>
@@ -61,7 +61,7 @@ export default function QRModal({
               data-testid="button-regenerate-qr"
             >
               <RefreshCw size={16} className="mr-2" />
-              Regenerar
+              {qrCode ? "Regenerar" : "Gerar QR Code"}
             </Button>
             <Button 
               variant="outline" 

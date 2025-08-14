@@ -9,7 +9,9 @@ export interface EvolutionInstance {
 
 export interface QRCodeResponse {
   qrcode: string;
-  code: string;
+  code?: string;
+  message?: string;
+  status?: string;
 }
 
 export interface InstanceInfo {
@@ -64,7 +66,36 @@ export class EvolutionApiService {
 
   async getQRCode(instanceName: string): Promise<QRCodeResponse> {
     try {
+      // First check if instance exists and its status
+      const instanceInfo = await this.client.get(`/instance/fetchInstances/${instanceName}`);
+      const instance = instanceInfo.data;
+      
+      if (!instance) {
+        throw new Error('Instance not found');
+      }
+      
+      console.log(`Instance ${instanceName} status: ${instance.connectionStatus}`);
+      
+      // Try to get QR code
       const response = await this.client.get(`/instance/connect/${instanceName}`);
+      
+      // If QR code is empty, the instance might be connecting or already connected
+      if (!response.data.qrcode && instance.connectionStatus === 'connecting') {
+        return {
+          qrcode: '',
+          message: 'Instance is connecting, please wait and try again...',
+          status: 'connecting'
+        };
+      }
+      
+      if (!response.data.qrcode && instance.connectionStatus === 'open') {
+        return {
+          qrcode: '',
+          message: 'Instance is already connected to WhatsApp',
+          status: 'connected'
+        };
+      }
+      
       return response.data;
     } catch (error: any) {
       console.error('Error getting QR code:', error.message);

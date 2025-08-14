@@ -49,7 +49,19 @@ export default function Instances() {
     mutationFn: (instanceId: string) => 
       apiRequest("GET", `/api/instances/${instanceId}/qr`).then(res => res.json()),
     onSuccess: (data) => {
-      setQrCode(data.qrcode);
+      if (data.qrcode) {
+        setQrCode(data.qrcode);
+      } else if (data.message) {
+        toast({
+          title: "Informação",
+          description: data.message,
+        });
+      } else {
+        toast({
+          title: "Informação",
+          description: "QR Code não disponível. A instância pode estar se conectando ou já conectada.",
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -65,6 +77,13 @@ export default function Instances() {
     setQrModalOpen(true);
     setQrCode("");
     await getQRMutation.mutateAsync(instance.id);
+  };
+
+  const handleRegenerateQR = () => {
+    if (selectedInstance) {
+      setQrCode("");
+      getQRMutation.mutate(selectedInstance.id);
+    }
   };
 
   const handleDeleteInstance = async (instance: WhatsappInstance) => {
@@ -90,13 +109,6 @@ export default function Instances() {
       });
     },
   });
-
-  const handleRegenerateQR = () => {
-    if (selectedInstance) {
-      setQrCode("");
-      getQRMutation.mutate(selectedInstance.id);
-    }
-  };
 
   if (isLoading) {
     return (

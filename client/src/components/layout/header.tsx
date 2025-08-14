@@ -9,6 +9,7 @@ interface HeaderProps {
     label: string;
     onClick: () => void;
     icon?: React.ReactNode;
+    disabled?: boolean;
   };
   showDateFilter?: boolean;
 }
@@ -37,6 +38,7 @@ export default function Header({ title, description, action, showDateFilter }: H
           {action && (
             <Button 
               onClick={action.onClick}
+              disabled={action.disabled}
               data-testid="button-header-action"
             >
               {action.icon}

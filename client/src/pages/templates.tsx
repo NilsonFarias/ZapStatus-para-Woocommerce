@@ -107,13 +107,17 @@ export default function Templates() {
   });
 
   const handleCreateTemplate = async () => {
-    await createTemplateMutation.mutateAsync({
-      clientId: selectedClientId,
-      orderStatus: selectedStatus,
-      content: `Olá {{nome_cliente}}, seu pedido #{{numero_pedido}} foi atualizado para: ${ORDER_STATUSES.find(s => s.value === selectedStatus)?.label}!`,
-      delayMinutes: 0,
-      isActive: true,
-    });
+    try {
+      await createTemplateMutation.mutateAsync({
+        clientId: selectedClientId,
+        orderStatus: selectedStatus,
+        content: `Olá {{nome_cliente}}, seu pedido #{{numero_pedido}} foi atualizado para: ${ORDER_STATUSES.find(s => s.value === selectedStatus)?.label}!`,
+        delayMinutes: 0,
+        isActive: true,
+      });
+    } catch (error: any) {
+      console.error('Error creating template:', error);
+    }
   };
 
   const handleDeleteTemplate = async (template: MessageTemplate) => {
@@ -138,9 +142,12 @@ export default function Templates() {
           title="Templates de Mensagem"
           description="Configure mensagens automáticas para cada status do pedido"
           action={{
-            label: "Novo Template",
+            label: createTemplateMutation.isPending ? "Criando..." : "Novo Template",
             onClick: () => handleCreateTemplate(),
-            icon: <Plus className="mr-2" size={16} />
+            disabled: createTemplateMutation.isPending,
+            icon: createTemplateMutation.isPending ? 
+              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" /> :
+              <Plus className="mr-2" size={16} />
           }}
         />
         
@@ -182,10 +189,15 @@ export default function Templates() {
                   variant="outline"
                   className="w-full border-2 border-dashed border-slate-300 h-16 text-slate-500 hover:border-primary hover:text-primary"
                   onClick={handleCreateTemplate}
+                  disabled={createTemplateMutation.isPending}
                   data-testid="button-add-template"
                 >
-                  <Plus className="mr-2" size={20} />
-                  Adicionar Nova Mensagem
+                  {createTemplateMutation.isPending ? (
+                    <div className="animate-spin w-5 h-5 border-2 border-primary border-t-transparent rounded-full mr-2" />
+                  ) : (
+                    <Plus className="mr-2" size={20} />
+                  )}
+                  {createTemplateMutation.isPending ? 'Criando...' : 'Adicionar Nova Mensagem'}
                 </Button>
               </div>
             </CardContent>

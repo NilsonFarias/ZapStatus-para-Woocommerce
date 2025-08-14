@@ -63,17 +63,32 @@ export class EvolutionApiService {
       // Configure webhook for the instance
       try {
         const webhookUrl = `${process.env.REPL_DOMAIN || 'http://localhost:5000'}/webhook/evolution`;
-        await this.client.put(`/webhook/set/${instanceName}`, {
+        await this.client.post(`/webhook/set/${instanceName}`, {
           url: webhookUrl,
-          events: ['QRCODE_UPDATED', 'CONNECTION_UPDATE']
+          enabled: true,
+          events: ['QRCODE_UPDATED', 'CONNECTION_UPDATE', 'MESSAGES_UPSERT']
         });
         console.log(`Webhook configured for instance: ${instanceName}`);
       } catch (webhookError: any) {
         console.log(`Warning: Could not set webhook for ${instanceName}:`, webhookError.message);
+        // Try alternative webhook configuration
+        try {
+          await this.client.post(`/webhook/${instanceName}`, {
+            url: webhookUrl,
+            enabled: true,
+            events: ['QRCODE_UPDATED', 'CONNECTION_UPDATE']
+          });
+          console.log(`Alternative webhook configured for instance: ${instanceName}`);
+        } catch (altError: any) {
+          console.log(`Alternative webhook also failed for ${instanceName}:`, altError.message);
+        }
       }
       
       // Wait for instance to initialize
       await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Start QR code polling since webhook might not work
+      this.startQRPolling(instanceName);
       
       return response.data;
     } catch (error: any) {
@@ -251,6 +266,78 @@ export class EvolutionApiService {
       console.error('Error connecting instance:', error.message);
       throw new Error(`Failed to connect instance: ${error.message}`);
     }
+  }
+
+  // Start polling for QR code when webhook is not available
+  private startQRPolling(instanceName: string) {
+    console.log(`Starting QR code polling for ${instanceName}`);
+    
+    let pollCount = 0;
+    const maxPolls = 20; // Poll for up to 2 minutes (20 * 6 seconds)
+    
+    const pollInterval = setInterval(async () => {
+      pollCount++;
+      
+      try {
+        const response = await this.client.get(`/instance/connect/${instanceName}`);
+        
+        if (response.data && response.data.qrcode) {
+          console.log(`QR code found via polling for ${instanceName}`);
+          
+          // Emit QR code via Socket.IO
+          try {
+            const { getSocketServer } = require('../routes');
+            const io = getSocketServer();
+            if (io) {
+              io.to(`instance_${instanceName}`).emit('qr_code', {
+                instance: instanceName,
+                qrCode: response.data.qrcode
+              });
+              console.log(`QR code emitted via Socket.IO for ${instanceName}`);
+            }
+          } catch (ioError) {
+            console.log('Socket.IO not available, QR code not emitted');
+          }
+          
+          clearInterval(pollInterval);
+          return;
+        }
+        
+        // Check if instance is connected
+        const instanceInfo = await this.getInstanceInfo(instanceName);
+        if (instanceInfo.status === 'open') {
+          console.log(`Instance ${instanceName} is now connected, stopping QR polling`);
+          
+          try {
+            const { getSocketServer } = require('../routes');
+            const io = getSocketServer();
+            if (io) {
+              io.to(`instance_${instanceName}`).emit('connection_update', {
+                instance: instanceName,
+                status: 'connected'
+              });
+            }
+          } catch (ioError) {
+            console.log('Socket.IO not available, connection update not emitted');
+          }
+          
+          clearInterval(pollInterval);
+          return;
+        }
+        
+        if (pollCount >= maxPolls) {
+          console.log(`QR polling timeout for ${instanceName} after ${maxPolls} attempts`);
+          clearInterval(pollInterval);
+        }
+        
+      } catch (error: any) {
+        console.log(`QR polling error for ${instanceName}:`, error.message);
+        
+        if (pollCount >= maxPolls) {
+          clearInterval(pollInterval);
+        }
+      }
+    }, 6000); // Poll every 6 seconds
   }
 }
 

@@ -15,6 +15,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2025-07-30.basil",
 });
 
+// Global variable to store Socket.IO server
+let globalSocketServer: SocketIOServer | null = null;
+
+export function getSocketServer(): SocketIOServer | null {
+  return globalSocketServer;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Start message queue service
@@ -28,6 +35,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       methods: ["GET", "POST"]
     }
   });
+
+  // Store globally for access from other modules
+  globalSocketServer = io;
 
   // Store socket connections by instance name for QR code delivery
   const instanceSockets = new Map<string, string>();

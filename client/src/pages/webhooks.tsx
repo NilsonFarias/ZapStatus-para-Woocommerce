@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
@@ -8,22 +9,149 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Copy, TestTube } from "lucide-react";
+import { Copy, TestTube, Save, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 const WEBHOOK_EVENTS = [
-  { id: 'order_created', label: 'Pedido Criado', description: 'order.created' },
-  { id: 'order_status_changed', label: 'Status Atualizado', description: 'order.status_changed' },
-  { id: 'order_payment_complete', label: 'Pagamento Confirmado', description: 'order.payment_complete' },
-  { id: 'order_cancelled', label: 'Pedido Cancelado', description: 'order.cancelled' },
+  { id: 'order.created', label: 'Pedido Criado', description: 'Quando um novo pedido é criado' },
+  { id: 'order.updated', label: 'Pedido Atualizado', description: 'Quando qualquer informação do pedido é alterada' },
+  { id: 'order.pending', label: 'Aguardando Pagamento', description: 'Status: Aguardando pagamento' },
+  { id: 'order.processing', label: 'Processando', description: 'Status: Processando pedido' },
+  { id: 'order.on-hold', label: 'Em Espera', description: 'Status: Em espera' },
+  { id: 'order.completed', label: 'Concluído', description: 'Status: Pedido concluído' },
+  { id: 'order.cancelled', label: 'Cancelado', description: 'Status: Pedido cancelado' },
+  { id: 'order.refunded', label: 'Reembolsado', description: 'Status: Pedido reembolsado' },
+  { id: 'order.failed', label: 'Falha', description: 'Status: Falha no pagamento' },
+  { id: 'order.shipped', label: 'Enviado', description: 'Status: Pedido enviado' },
+  { id: 'order.delivered', label: 'Entregue', description: 'Status: Pedido entregue' },
 ];
 
 export default function Webhooks() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const clientId = "demo-client-id";
+  
+  const [webhookConfig, setWebhookConfig] = useState({
+    webhookUrl: '',
+    secretKey: '',
+    isActive: true,
+    events: [] as string[]
+  });
+  
+  const [isTesting, setIsTesting] = useState(false);
+  
+  const { data: existingConfig } = useQuery({
+    queryKey: [`/api/webhook-config/${clientId}`],
+  });
   
   const { data: webhookLogs = [] } = useQuery({
-    queryKey: ['/api/webhook-logs/demo-client-id'],
+    queryKey: [`/api/webhook-logs/${clientId}`],
   });
+
+  // Load existing configuration
+  useEffect(() => {
+    if (existingConfig) {
+      setWebhookConfig({
+        webhookUrl: existingConfig.webhookUrl || '',
+        secretKey: existingConfig.secretKey || '',
+        isActive: existingConfig.isActive ?? true,
+        events: existingConfig.events || []
+      });
+    } else {
+      // Set default webhook URL
+      setWebhookConfig(prev => ({
+        ...prev,
+        webhookUrl: `${window.location.origin}/api/webhook/woocommerce`,
+        secretKey: generateSecretKey()
+      }));
+    }
+  }, [existingConfig]);
+
+  const generateSecretKey = () => {
+    return 'whatsflow_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  };
+
+  const saveConfigMutation = useMutation({
+    mutationFn: async (config: any) => {
+      const payload = {
+        clientId,
+        ...config
+      };
+      
+      if (existingConfig) {
+        return apiRequest("PUT", `/api/webhook-config/${existingConfig.id}`, payload);
+      } else {
+        return apiRequest("POST", "/api/webhook-config", payload);
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Configurações salvas",
+        description: "Webhook configurado com sucesso!",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/webhook-config/${clientId}`] });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao salvar",
+        description: "Erro ao salvar configurações do webhook.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const testWebhookMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/webhook/test", {
+        clientId,
+        webhookUrl: webhookConfig.webhookUrl,
+        secretKey: webhookConfig.secretKey
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Teste bem-sucedido",
+        description: "Webhook está funcionando corretamente!",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/webhook-logs/${clientId}`] });
+    },
+    onError: () => {
+      toast({
+        title: "Falha no teste",
+        description: "Erro ao testar webhook. Verifique a configuração.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleSaveConfig = () => {
+    if (!webhookConfig.webhookUrl || !webhookConfig.secretKey) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "URL do webhook e chave secreta são obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    saveConfigMutation.mutate(webhookConfig);
+  };
+
+  const handleTestWebhook = () => {
+    setIsTesting(true);
+    testWebhookMutation.mutate();
+    setTimeout(() => setIsTesting(false), 2000);
+  };
+
+  const handleEventToggle = (eventId: string, checked: boolean) => {
+    setWebhookConfig(prev => ({
+      ...prev,
+      events: checked 
+        ? [...prev.events, eventId]
+        : prev.events.filter(e => e !== eventId)
+    }));
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -42,8 +170,9 @@ export default function Webhooks() {
           title="Configuração de Webhooks"
           description="Configure a integração com WooCommerce"
           action={{
-            label: "Testar Webhook",
-            onClick: () => console.log("Test webhook"),
+            label: isTesting ? "Testando..." : "Testar Webhook",
+            onClick: handleTestWebhook,
+            disabled: isTesting || testWebhookMutation.isPending,
             icon: <TestTube className="mr-2" size={16} />
           }}
         />
@@ -63,15 +192,15 @@ export default function Webhooks() {
                   <div className="flex mt-2">
                     <Input
                       id="webhook-url"
-                      value="https://api.whatsflow.com/webhook/woocommerce"
-                      readOnly
-                      className="bg-slate-50"
+                      value={webhookConfig.webhookUrl}
+                      onChange={(e) => setWebhookConfig(prev => ({ ...prev, webhookUrl: e.target.value }))}
+                      placeholder="https://seu-dominio.com/api/webhook/woocommerce"
                       data-testid="input-webhook-url"
                     />
                     <Button
                       variant="outline"
                       className="ml-2"
-                      onClick={() => copyToClipboard("https://api.whatsflow.com/webhook/woocommerce")}
+                      onClick={() => copyToClipboard(webhookConfig.webhookUrl)}
                       data-testid="button-copy-webhook-url"
                     >
                       <Copy size={16} />
@@ -81,35 +210,57 @@ export default function Webhooks() {
                 </div>
 
                 <div>
-                  <Label htmlFor="secret-key">Chave de Segurança</Label>
+                  <Label htmlFor="secret-key">Chave Secreta</Label>
                   <div className="flex mt-2">
                     <Input
                       id="secret-key"
-                      type="password"
-                      value="sk_live_1234567890abcdef"
-                      readOnly
-                      className="bg-slate-50"
+                      value={webhookConfig.secretKey}
+                      onChange={(e) => setWebhookConfig(prev => ({ ...prev, secretKey: e.target.value }))}
+                      placeholder="whatsflow_secret_key"
                       data-testid="input-secret-key"
                     />
                     <Button
                       variant="outline"
                       className="ml-2"
-                      onClick={() => copyToClipboard("sk_live_1234567890abcdef")}
+                      onClick={() => copyToClipboard(webhookConfig.secretKey)}
                       data-testid="button-copy-secret-key"
                     >
                       <Copy size={16} />
                     </Button>
+                    <Button
+                      variant="outline"
+                      className="ml-2"
+                      onClick={() => setWebhookConfig(prev => ({ ...prev, secretKey: generateSecretKey() }))}
+                      data-testid="button-regenerate-secret"
+                    >
+                      Gerar Nova
+                    </Button>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">Configure no WooCommerce para autenticação</p>
+                  <p className="text-sm text-slate-500 mt-2">
+                    Use esta chave no WooCommerce para autenticar os webhooks
+                  </p>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-success/5 border border-success/20 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-success rounded-full"></div>
-                    <span className="text-sm font-medium text-success">Status: Ativo</span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Webhook Ativo</Label>
+                    <p className="text-sm text-slate-500">Ativar/desativar o recebimento de webhooks</p>
                   </div>
-                  <span className="text-xs text-success">Última verificação: agora</span>
+                  <Switch
+                    checked={webhookConfig.isActive}
+                    onCheckedChange={(checked) => setWebhookConfig(prev => ({ ...prev, isActive: checked }))}
+                    data-testid="switch-webhook-active"
+                  />
                 </div>
+
+                <Button 
+                  onClick={handleSaveConfig}
+                  disabled={saveConfigMutation.isPending}
+                  className="w-full"
+                >
+                  <Save size={16} className="mr-2" />
+                  {saveConfigMutation.isPending ? 'Salvando...' : 'Salvar Configuração'}
+                </Button>
               </CardContent>
             </Card>
 
@@ -121,23 +272,33 @@ export default function Webhooks() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {WEBHOOK_EVENTS.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex items-center justify-between p-3 border border-slate-200 rounded-lg"
-                      data-testid={`webhook-event-${event.id}`}
-                    >
+                    <div key={event.id} className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-slate-900">{event.label}</p>
                         <p className="text-sm text-slate-500">{event.description}</p>
                       </div>
-                      <Switch 
-                        defaultChecked={event.id !== 'order_payment_complete'} 
+                      <Switch
+                        checked={webhookConfig.events.includes(event.id)}
+                        onCheckedChange={(checked) => handleEventToggle(event.id, checked)}
                         data-testid={`switch-${event.id}`}
                       />
                     </div>
                   ))}
+                </div>
+                
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start space-x-2">
+                    <CheckCircle className="text-blue-600 mt-0.5" size={16} />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">Configuração WooCommerce</p>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Configure estes eventos no seu WooCommerce em: 
+                        <strong> WooCommerce → Configurações → Avançado → Webhooks</strong>
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

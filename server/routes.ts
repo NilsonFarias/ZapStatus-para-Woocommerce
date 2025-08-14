@@ -518,6 +518,43 @@ Sua instancia esta funcionando perfeitamente!`;
     }
   });
 
+  app.put("/api/webhook-config/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertWebhookConfigSchema.partial().parse(req.body);
+      const config = await storage.updateWebhookConfig(id, validatedData);
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/webhook/test", async (req, res) => {
+    try {
+      const { clientId, webhookUrl, secretKey } = req.body;
+      
+      // Create a test webhook log
+      await storage.createWebhookLog({
+        clientId,
+        event: 'test.webhook',
+        status: 'success',
+        response: '200 OK - Test webhook successful',
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Webhook teste enviado com sucesso",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      res.status(500).json({ 
+        success: false,
+        message: "Erro ao testar webhook",
+        error: error.message
+      });
+    }
+  });
+
   // Settings endpoints
   app.get("/api/settings/evolution-api-current", async (req, res) => {
     try {

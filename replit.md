@@ -8,6 +8,19 @@ WhatsFlow is a SaaS platform that automates WhatsApp messaging for e-commerce bu
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### QR Code Generation System (August 14, 2025)
+- **Issue Identified**: Evolution API server has issues generating QR codes for instances in "connecting" status
+- **Solutions Implemented**:
+  - Automatic logout for instances stuck >3 minutes
+  - Detection of permanently stuck instances (>8 minutes)
+  - Simplified QR code generation logic removing complex retry loops
+  - Enhanced error messages indicating Evolution API server issues
+  - Added diagnosis endpoint for troubleshooting Evolution API problems
+- **Current Status**: QR generation is limited by Evolution API server reliability, not our application logic
+- **User Recommendation**: Create new instances if QR codes don't generate within 1-2 minutes
+
 ## System Architecture
 
 ### Frontend Architecture

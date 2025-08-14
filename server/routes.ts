@@ -396,6 +396,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Diagnose QR code generation issues
+  app.get("/api/evolution/diagnose", async (req, res) => {
+    try {
+      console.log('Starting Evolution API diagnosis...');
+      
+      // Get all instances
+      const instances = await evolutionApi.getAllInstances();
+      const connectingInstances = instances.filter((inst: any) => inst.connectionStatus === 'connecting');
+      const openInstances = instances.filter((inst: any) => inst.connectionStatus === 'open');
+      
+      console.log(`Found ${connectingInstances.length} connecting instances and ${openInstances.length} open instances`);
+      
+      const diagnosis = {
+        totalInstances: instances.length,
+        connectingInstances: connectingInstances.length,
+        openInstances: openInstances.length,
+        connectingInstancesDetails: connectingInstances.map((inst: any) => ({
+          name: inst.name,
+          status: inst.connectionStatus,
+          createdAt: inst.createdAt,
+          ageMinutes: Math.round((new Date().getTime() - new Date(inst.createdAt).getTime()) / 1000 / 60)
+        })),
+        qrTestResults: [] as any[]
+      };
+      
+      // Test QR generation for a few connecting instances
+      for (const instance of connectingInstances.slice(0, 3)) {
+        try {
+          console.log(`Testing QR for instance: ${instance.name}`);
+          const qrResponse = await evolutionApi.connectInstance(instance.name);
+          diagnosis.qrTestResults.push({
+            instanceName: instance.name,
+            hasQrCode: !!qrResponse?.qrcode,
+            responseType: typeof qrResponse,
+            responseKeys: Object.keys(qrResponse || {}),
+            error: null
+          });
+        } catch (error: any) {
+          diagnosis.qrTestResults.push({
+            instanceName: instance.name,
+            hasQrCode: false,
+            error: error.message
+          });
+        }
+      }
+      
+      res.json(diagnosis);
+    } catch (error: any) {
+      console.error('Error in Evolution API diagnosis:', error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

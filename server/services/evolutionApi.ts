@@ -105,7 +105,7 @@ export class EvolutionApiService {
         console.log(`Error getting QR code: ${requestError.message}`);
       }
       
-      // Check if instance has been connecting for too long
+      // Check if instance has been connecting for too long and try to fix it
       if (instanceInfo.status === 'connecting') {
         const allInstancesResponse = await this.client.get('/instance/fetchInstances');
         const instance = allInstancesResponse.data.find((inst: any) => inst.name === instanceName);
@@ -115,7 +115,32 @@ export class EvolutionApiService {
           const now = new Date();
           const timeDiff = (now.getTime() - createdAt.getTime()) / 1000 / 60; // in minutes
           
-          if (timeDiff > 5) {
+          console.log(`Instance ${instanceName} has been connecting for ${timeDiff.toFixed(1)} minutes`);
+          
+          // If connecting for more than 3 minutes, try logout to reset
+          if (timeDiff > 3) {
+            console.log(`Instance ${instanceName} seems stuck, trying logout...`);
+            try {
+              await this.client.delete(`/instance/logout/${instanceName}`);
+              console.log(`Logout successful for ${instanceName}, waiting 5 seconds...`);
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              
+              // Try to get QR code again after logout
+              const response = await this.client.get(`/instance/connect/${instanceName}`);
+              if (response.data && response.data.qrcode) {
+                console.log(`QR code retrieved for ${instanceName} after logout!`);
+                return {
+                  qrcode: response.data.qrcode,
+                  status: 'qr_ready'
+                };
+              }
+            } catch (logoutError: any) {
+              console.log(`Logout failed for ${instanceName}: ${logoutError.message}`);
+            }
+          }
+          
+          // If connecting for more than 8 minutes, suggest deletion
+          if (timeDiff > 8) {
             return {
               qrcode: '',
               message: 'Instance appears to be stuck. Please delete and create a new instance.',
@@ -133,7 +158,7 @@ export class EvolutionApiService {
       
       return {
         qrcode: '',
-        message: 'QR code not available. Please try again or create a new instance.',
+        message: 'QR code not available. The Evolution API server may be having issues generating QR codes. Try creating a new instance.',
         status: 'waiting'
       };
       
@@ -185,6 +210,26 @@ export class EvolutionApiService {
     } catch (error: any) {
       console.error('Error disconnecting instance:', error.message);
       throw new Error(`Failed to disconnect instance: ${error.message}`);
+    }
+  }
+
+  async getAllInstances(): Promise<any[]> {
+    try {
+      const response = await this.client.get('/instance/fetchInstances');
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching instances:', error.message);
+      throw new Error(`Failed to fetch instances: ${error.message}`);
+    }
+  }
+
+  async connectInstance(instanceName: string): Promise<any> {
+    try {
+      const response = await this.client.get(`/instance/connect/${instanceName}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error connecting instance:', error.message);
+      throw new Error(`Failed to connect instance: ${error.message}`);
     }
   }
 }

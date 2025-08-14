@@ -12,9 +12,10 @@ interface TemplateEditorProps {
   template: MessageTemplate;
   onSave: (template: MessageTemplate) => void;
   onDelete: (template: MessageTemplate) => void;
+  onEdit?: () => void;
 }
 
-export default function TemplateEditor({ template, onSave, onDelete }: TemplateEditorProps) {
+export default function TemplateEditor({ template, onSave, onDelete, onEdit }: TemplateEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(template.content);
   const [delayMinutes, setDelayMinutes] = useState(template.delayMinutes || 0);
@@ -78,7 +79,7 @@ export default function TemplateEditor({ template, onSave, onDelete }: TemplateE
               </>
             ) : (
               <>
-                <Button size="sm" variant="outline" onClick={() => setIsEditing(true)} data-testid="button-edit-template">
+                <Button size="sm" variant="outline" onClick={onEdit || (() => setIsEditing(true))} data-testid="button-edit-template">
                   <Edit size={16} />
                 </Button>
                 <Button 

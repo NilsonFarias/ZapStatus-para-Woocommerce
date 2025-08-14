@@ -3,6 +3,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import TemplateEditor from "@/components/templates/template-editor";
+import TemplateModal from "@/components/templates/template-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,8 @@ export default function Templates() {
   const { toast } = useToast();
   const [selectedStatus, setSelectedStatus] = useState('pending');
   const [selectedClientId] = useState('demo-client-id'); // In real app, get from context
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
 
   const { data: templates = [], isLoading } = useQuery<MessageTemplate[]>({
     queryKey: ['/api/templates', selectedClientId, selectedStatus],
@@ -77,15 +80,7 @@ export default function Templates() {
     },
   });
 
-  const handleSaveTemplate = async (template: MessageTemplate) => {
-    await updateTemplateMutation.mutateAsync({ 
-      id: template.id, 
-      updates: {
-        content: template.content,
-        delayMinutes: template.delayMinutes,
-      }
-    });
-  };
+  // Old function removed - using new handleSaveTemplate below
 
   const createTemplateMutation = useMutation({
     mutationFn: (newTemplate: Partial<MessageTemplate>) => 
@@ -106,18 +101,43 @@ export default function Templates() {
     },
   });
 
-  const handleCreateTemplate = async () => {
+  const handleCreateTemplate = () => {
+    setEditingTemplate(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditTemplate = (template: MessageTemplate) => {
+    setEditingTemplate(template);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveTemplate = async (templateData: Partial<MessageTemplate>) => {
     try {
-      await createTemplateMutation.mutateAsync({
-        clientId: selectedClientId,
-        orderStatus: selectedStatus,
-        content: `Olá {{nome_cliente}}, seu pedido #{{numero_pedido}} foi atualizado para: ${ORDER_STATUSES.find(s => s.value === selectedStatus)?.label}!`,
-        delayMinutes: 0,
-        isActive: true,
-      });
+      if (templateData.id) {
+        // Update existing template
+        await updateTemplateMutation.mutateAsync({ 
+          id: templateData.id, 
+          updates: templateData
+        });
+      } else {
+        // Create new template
+        await createTemplateMutation.mutateAsync(templateData as any);
+      }
+      setIsModalOpen(false);
+      setEditingTemplate(null);
     } catch (error: any) {
-      console.error('Error creating template:', error);
+      console.error('Error saving template:', error);
     }
+  };
+
+  const handleSaveTemplateOld = async (template: MessageTemplate) => {
+    await updateTemplateMutation.mutateAsync({ 
+      id: template.id, 
+      updates: {
+        content: template.content,
+        delayMinutes: template.delayMinutes,
+      }
+    });
   };
 
   const handleDeleteTemplate = async (template: MessageTemplate) => {
@@ -178,8 +198,9 @@ export default function Templates() {
                     <TemplateEditor
                       key={template.id}
                       template={template}
-                      onSave={handleSaveTemplate}
+                      onSave={handleSaveTemplateOld}
                       onDelete={handleDeleteTemplate}
+                      onEdit={() => handleEditTemplate(template)}
                     />
                   ))
                 }
@@ -224,6 +245,17 @@ export default function Templates() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Template Modal */}
+        <TemplateModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleSaveTemplate}
+          template={editingTemplate}
+          orderStatus={selectedStatus}
+          clientId={selectedClientId}
+          isSaving={createTemplateMutation.isPending || updateTemplateMutation.isPending}
+        />
       </main>
     </div>
   );

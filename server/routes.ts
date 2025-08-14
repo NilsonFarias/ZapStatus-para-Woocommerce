@@ -558,9 +558,19 @@ Sua instancia esta funcionando perfeitamente!`;
   // Message Queue endpoints
   app.get("/api/message-queue", async (req, res) => {
     try {
-      // Get all queued messages for demo client
-      const queueItems = await storage.getQueuedMessages('demo-instance-bookstore');
-      res.json(queueItems);
+      // Get all queued messages from all instances
+      const allInstances = await storage.getWhatsappInstances();
+      const allQueueItems = [];
+      
+      for (const instance of allInstances) {
+        const queueItems = await storage.getQueuedMessages(instance.instanceId);
+        allQueueItems.push(...queueItems);
+      }
+      
+      // Sort by scheduled time
+      allQueueItems.sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime());
+      
+      res.json(allQueueItems);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

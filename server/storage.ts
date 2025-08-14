@@ -1,6 +1,6 @@
 import { users, clients, whatsappInstances, messageTemplates, webhookConfigs, webhookLogs, messageQueue, type User, type InsertUser, type Client, type InsertClient, type WhatsappInstance, type InsertInstance, type MessageTemplate, type InsertTemplate, type WebhookConfig, type InsertWebhookConfig, type WebhookLog, type MessageQueueItem } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql, gt } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -25,6 +25,7 @@ export interface IStorage {
   updateInstance(id: string, updates: Partial<InsertInstance>): Promise<WhatsappInstance>;
   updateInstanceQRCode(instanceId: string, qrCode: string): Promise<WhatsappInstance>;
   deleteInstance(id: string): Promise<void>;
+  getWhatsappInstances(): Promise<WhatsappInstance[]>;
   
   // Template methods
   getTemplates(clientId: string, orderStatus?: string): Promise<MessageTemplate[]>;
@@ -162,7 +163,7 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(whatsappInstances)
       .set({ dailyMessages: 0 })
-      .where(sql`daily_messages > 0`);
+      .where(gt(whatsappInstances.dailyMessages, 0));
     console.log('Daily messages reset for all instances');
   }
 
@@ -177,6 +178,10 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInstance(id: string): Promise<void> {
     await db.delete(whatsappInstances).where(eq(whatsappInstances.id, id));
+  }
+
+  async getWhatsappInstances(): Promise<WhatsappInstance[]> {
+    return await db.select().from(whatsappInstances);
   }
 
   async getTemplates(clientId: string, orderStatus?: string): Promise<MessageTemplate[]> {

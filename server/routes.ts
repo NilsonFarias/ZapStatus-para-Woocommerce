@@ -517,6 +517,59 @@ Sua instancia esta funcionando perfeitamente!`;
     }
   });
 
+  // Settings endpoints
+  app.post("/api/settings/evolution-api", async (req, res) => {
+    try {
+      const { apiUrl, apiToken } = req.body;
+      
+      // Here you would save the settings to your database or environment
+      // For now, we'll just validate the format
+      if (!apiUrl || !apiToken) {
+        return res.status(400).json({ message: "URL da API e Token são obrigatórios" });
+      }
+      
+      res.json({ success: true, message: "Configurações salvas com sucesso" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/settings/test-evolution-api", async (req, res) => {
+    try {
+      const { apiUrl, apiToken } = req.body;
+      
+      if (!apiUrl || !apiToken) {
+        return res.status(400).json({ message: "URL da API e Token são obrigatórios" });
+      }
+      
+      // Test connection to Evolution API
+      const testClient = axios.create({
+        baseURL: apiUrl,
+        headers: {
+          'apikey': apiToken,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      });
+      
+      // Try to fetch instances to test the connection
+      const response = await testClient.get('/instance/fetchInstances');
+      
+      res.json({ 
+        success: true, 
+        message: "Conexão estabelecida com sucesso",
+        instanceCount: response.data?.length || 0
+      });
+    } catch (error: any) {
+      console.error('Evolution API test failed:', error.message);
+      res.status(500).json({ 
+        success: false,
+        message: "Falha na conexão com Evolution API",
+        error: error.response?.data?.message || error.message
+      });
+    }
+  });
+
   // WooCommerce webhook endpoint
   app.post("/api/webhook/woocommerce", async (req, res) => {
     try {

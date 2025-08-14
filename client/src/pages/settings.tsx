@@ -39,18 +39,83 @@ export default function Settings() {
     email: user?.email || '',
     company: user?.company || '',
     phone: user?.phone || '',
-    evolutionApiUrl: 'https://api.evolution.com',
-    evolutionApiToken: 'evo_api_token_123456',
+    evolutionApiUrl: process.env.VITE_EVOLUTION_API_URL || 'https://your-evolution-api.com',
+    evolutionApiToken: process.env.VITE_EVOLUTION_API_KEY || '',
     darkMode: false,
     emailNotifications: true,
     autoBackup: true,
   });
+  
+  const [connectionStatus, setConnectionStatus] = useState<'testing' | 'connected' | 'error' | null>(null);
 
-  const handleSave = () => {
-    toast({
-      title: "Configurações salvas",
-      description: "Suas configurações foram atualizadas com sucesso.",
-    });
+  const handleSave = async () => {
+    try {
+      // Save Evolution API configuration
+      const response = await fetch('/api/settings/evolution-api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          apiUrl: formData.evolutionApiUrl,
+          apiToken: formData.evolutionApiToken,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save settings');
+      }
+
+      toast({
+        title: "Configurações salvas",
+        description: "Suas configurações foram atualizadas com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao salvar",
+        description: "Erro ao salvar as configurações. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const testEvolutionApiConnection = async () => {
+    setConnectionStatus('testing');
+    
+    try {
+      const response = await fetch('/api/settings/test-evolution-api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          apiUrl: formData.evolutionApiUrl,
+          apiToken: formData.evolutionApiToken,
+        }),
+      });
+
+      if (response.ok) {
+        setConnectionStatus('connected');
+        toast({
+          title: "Conexão bem-sucedida",
+          description: "A conexão com a Evolution API foi estabelecida.",
+        });
+      } else {
+        setConnectionStatus('error');
+        toast({
+          title: "Erro de conexão",
+          description: "Não foi possível conectar com a Evolution API. Verifique as credenciais.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setConnectionStatus('error');
+      toast({
+        title: "Erro de conexão",
+        description: "Erro ao testar a conexão. Verifique a URL e tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -147,18 +212,35 @@ export default function Settings() {
             </Button>
           </div>
         </div>
-        <div className="flex items-center justify-between p-3 bg-success/5 border border-success/20 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <CheckCircle className="text-success" size={16} />
-            <span className="text-sm font-medium text-success">Conexão estabelecida</span>
+        {connectionStatus === 'connected' && (
+          <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="text-green-600" size={16} />
+              <span className="text-sm font-medium text-green-700">Conexão estabelecida</span>
+            </div>
           </div>
+        )}
+        
+        {connectionStatus === 'error' && (
+          <div className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded-full bg-red-500"></div>
+              <span className="text-sm font-medium text-red-700">Erro de conexão</span>
+            </div>
+          </div>
+        )}
+        
+        <div className="flex gap-2">
           <Button
-            variant="ghost"
-            size="sm"
-            className="text-success hover:text-success/80"
+            onClick={testEvolutionApiConnection}
+            disabled={connectionStatus === 'testing' || !formData.evolutionApiUrl || !formData.evolutionApiToken}
             data-testid="button-test-connection"
           >
-            Testar conexão
+            {connectionStatus === 'testing' ? 'Testando...' : 'Testar conexão'}
+          </Button>
+          <Button onClick={handleSave} variant="outline">
+            <Save size={16} className="mr-2" />
+            Salvar
           </Button>
         </div>
       </CardContent>
@@ -245,16 +327,7 @@ export default function Settings() {
           </Card>
         );
       case 'api':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações de API</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-600">Configurações de API em desenvolvimento...</p>
-            </CardContent>
-          </Card>
-        );
+        return renderEvolutionApiSection();
       case 'billing':
         return (
           <Card>

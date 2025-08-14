@@ -275,14 +275,42 @@ export class EvolutionApiService {
     let pollCount = 0;
     const maxPolls = 20; // Poll for up to 2 minutes (20 * 6 seconds)
     
-    const pollInterval = setInterval(async () => {
+    // Use setTimeout instead of setInterval for better error handling
+    const pollFunction = async () => {
       pollCount++;
       
       try {
+        console.log(`Polling attempt ${pollCount}/${maxPolls} for ${instanceName}...`);
         const response = await this.client.get(`/instance/connect/${instanceName}`);
         
-        if (response.data && response.data.qrcode) {
-          console.log(`QR code found via polling for ${instanceName}`);
+        console.log(`Response for ${instanceName}:`, {
+          status: response.status,
+          hasData: !!response.data,
+          dataType: typeof response.data,
+          keys: response.data ? Object.keys(response.data) : [],
+          qrcodePresent: !!(response.data && response.data.qrcode),
+          base64Present: !!(response.data && response.data.base64),
+          codePresent: !!(response.data && response.data.code),
+          base64Length: response.data?.base64?.length || 0,
+          codeLength: response.data?.code?.length || 0,
+          base64Value: response.data?.base64 ? response.data.base64.substring(0, 50) + '...' : 'empty',
+          codeValue: response.data?.code ? response.data.code.substring(0, 50) + '...' : 'empty'
+        });
+        
+        // Check for QR code in different possible fields
+        let qrCodeData = null;
+        if (response.data) {
+          if (response.data.qrcode) {
+            qrCodeData = response.data.qrcode;
+          } else if (response.data.base64) {
+            qrCodeData = response.data.base64;
+          } else if (response.data.code) {
+            qrCodeData = response.data.code;
+          }
+        }
+        
+        if (qrCodeData) {
+          console.log(`✓ QR code found via polling for ${instanceName} (length: ${qrCodeData.length})`);
           
           // Emit QR code via Socket.IO
           try {
@@ -291,22 +319,21 @@ export class EvolutionApiService {
             if (io) {
               io.to(`instance_${instanceName}`).emit('qr_code', {
                 instance: instanceName,
-                qrCode: response.data.qrcode
+                qrCode: qrCodeData
               });
-              console.log(`QR code emitted via Socket.IO for ${instanceName}`);
+              console.log(`✓ QR code emitted via Socket.IO for ${instanceName}`);
             }
           } catch (ioError) {
-            console.log('Socket.IO not available, QR code not emitted');
+            console.log('⚠ Socket.IO not available, QR code not emitted');
           }
           
-          clearInterval(pollInterval);
-          return;
+          return; // Stop polling
         }
         
         // Check if instance is connected
         const instanceInfo = await this.getInstanceInfo(instanceName);
         if (instanceInfo.status === 'open') {
-          console.log(`Instance ${instanceName} is now connected, stopping QR polling`);
+          console.log(`✓ Instance ${instanceName} is now connected, stopping QR polling`);
           
           try {
             const { getSocketServer } = require('../routes');
@@ -318,26 +345,35 @@ export class EvolutionApiService {
               });
             }
           } catch (ioError) {
-            console.log('Socket.IO not available, connection update not emitted');
+            console.log('⚠ Socket.IO not available, connection update not emitted');
           }
           
-          clearInterval(pollInterval);
+          return; // Stop polling
+        }
+        
+        if (pollCount >= maxPolls) {
+          console.log(`⏰ QR polling timeout for ${instanceName} after ${maxPolls} attempts`);
+          return; // Stop polling
+        }
+        
+        // Continue polling
+        setTimeout(pollFunction, 6000); // Poll again in 6 seconds
+        
+      } catch (error: any) {
+        console.log(`❌ QR polling error for ${instanceName}:`, error.message);
+        
+        if (pollCount >= maxPolls) {
+          console.log(`⏰ QR polling stopped for ${instanceName} due to max attempts`);
           return;
         }
         
-        if (pollCount >= maxPolls) {
-          console.log(`QR polling timeout for ${instanceName} after ${maxPolls} attempts`);
-          clearInterval(pollInterval);
-        }
-        
-      } catch (error: any) {
-        console.log(`QR polling error for ${instanceName}:`, error.message);
-        
-        if (pollCount >= maxPolls) {
-          clearInterval(pollInterval);
-        }
+        // Continue polling even on errors
+        setTimeout(pollFunction, 6000);
       }
-    }, 6000); // Poll every 6 seconds
+    };
+    
+    // Start first poll immediately
+    setTimeout(pollFunction, 1000); // Start after 1 second
   }
 }
 

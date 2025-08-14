@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { QrCode, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSocket } from "@/hooks/use-socket";
 
 interface QRModalProps {
   open: boolean;
@@ -24,6 +25,9 @@ export default function QRModal({
   message 
 }: QRModalProps) {
   const [progress, setProgress] = useState(0);
+  const [realtimeQrCode, setRealtimeQrCode] = useState<string>("");
+  const [connectionStatus, setConnectionStatus] = useState<string>("");
+  const socket = useSocket();
   
   useEffect(() => {
     if (isLoading) {
@@ -40,6 +44,39 @@ export default function QRModal({
       setProgress(0);
     }
   }, [isLoading]);
+
+  // Socket.IO event handlers for real-time QR codes
+  useEffect(() => {
+    if (open && instanceName) {
+      console.log(`Joining instance for real-time updates: ${instanceName}`);
+      socket.joinInstance(instanceName);
+
+      // Listen for QR code updates
+      const handleQrCode = (data: { instance: string; qrCode: string }) => {
+        if (data.instance === instanceName) {
+          console.log(`Real-time QR code received for ${instanceName}`);
+          setRealtimeQrCode(data.qrCode);
+        }
+      };
+
+      // Listen for connection updates
+      const handleConnectionUpdate = (data: { instance: string; status: string }) => {
+        if (data.instance === instanceName) {
+          console.log(`Connection status update for ${instanceName}: ${data.status}`);
+          setConnectionStatus(data.status);
+        }
+      };
+
+      socket.on('qr_code', handleQrCode);
+      socket.on('connection_update', handleConnectionUpdate);
+
+      // Cleanup
+      return () => {
+        socket.off('qr_code', handleQrCode);
+        socket.off('connection_update', handleConnectionUpdate);
+      };
+    }
+  }, [open, instanceName, socket]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -49,9 +86,9 @@ export default function QRModal({
         
         <div className="text-center">
           <div className="w-64 h-64 mx-auto bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center mb-4">
-            {qrCode ? (
+            {(realtimeQrCode || qrCode) ? (
               <img 
-                src={`data:image/png;base64,${qrCode}`}
+                src={realtimeQrCode || `data:image/png;base64,${qrCode}`}
                 alt="QR Code" 
                 className="w-full h-full object-contain p-2"
                 data-testid="qr-code-image"

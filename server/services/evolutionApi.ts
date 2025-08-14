@@ -44,14 +44,33 @@ export class EvolutionApiService {
     try {
       console.log(`Creating Evolution API instance: ${instanceName}`);
       
-      // Create instance using correct Evolution API format
+      // Create instance without webhook initially (we'll set it later)
       const response = await this.client.post('/instance/create', {
         instanceName,
         qrcode: true,
-        integration: 'WHATSAPP-BAILEYS'
+        integration: 'WHATSAPP-BAILEYS',
+        rejectCall: false,
+        msgCall: '',
+        groupsIgnore: false,
+        alwaysOnline: false,
+        readMessages: false,
+        readStatus: false,
+        syncFullHistory: false
       });
       
       console.log(`Instance created successfully: ${instanceName}`);
+      
+      // Configure webhook for the instance
+      try {
+        const webhookUrl = `${process.env.REPL_DOMAIN || 'http://localhost:5000'}/webhook/evolution`;
+        await this.client.put(`/webhook/set/${instanceName}`, {
+          url: webhookUrl,
+          events: ['QRCODE_UPDATED', 'CONNECTION_UPDATE']
+        });
+        console.log(`Webhook configured for instance: ${instanceName}`);
+      } catch (webhookError: any) {
+        console.log(`Warning: Could not set webhook for ${instanceName}:`, webhookError.message);
+      }
       
       // Wait for instance to initialize
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -59,6 +78,7 @@ export class EvolutionApiService {
       return response.data;
     } catch (error: any) {
       console.error('Error creating Evolution API instance:', error.message);
+      console.error('Error details:', error.response?.data || error);
       throw new Error(`Failed to create instance: ${error.message}`);
     }
   }

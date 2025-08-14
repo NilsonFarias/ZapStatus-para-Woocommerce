@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { Server as SocketIOServer } from "socket.io";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { evolutionApi } from "./services/evolutionApi";
@@ -18,6 +19,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Start message queue service
   messageQueue.start();
+
+  // Create HTTP server and Socket.IO
+  const httpServer = createServer(app);
+  const io = new SocketIOServer(httpServer, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
+
+  // Store socket connections by instance name for QR code delivery
+  const instanceSockets = new Map<string, string>();
+
+  io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+
+    socket.on('join-instance', (instanceName: string) => {
+      console.log(`Client ${socket.id} joined instance: ${instanceName}`);
+      instanceSockets.set(instanceName, socket.id);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Client disconnected:', socket.id);
+      // Remove socket from all instances
+      for (const [instanceName, socketId] of instanceSockets.entries()) {
+        if (socketId === socket.id) {
+          instanceSockets.delete(instanceName);
+        }
+      }
+    });
+  });
+
+  // Evolution API Webhook endpoint
+  app.post("/webhook/evolution", (req, res) => {
+    try {
+      const { event, instance, data } = req.body;
+      
+      console.log('Evolution API Webhook received:', { event, instance, dataKeys: Object.keys(data || {}) });
+
+      if (event === 'qrcode.updated' || event === 'QRCODE_UPDATED') {
+        console.log(`QR Code received for instance: ${instance}`);
+        
+        // Send QR code to connected client
+        const socketId = instanceSockets.get(instance);
+        if (socketId) {
+          io.to(socketId).emit('qr_code', {
+            instance,
+            qrCode: data.qrcode || data
+          });
+          console.log(`QR Code sent to client for instance: ${instance}`);
+        } else {
+          console.log(`No client connected for instance: ${instance}`);
+        }
+      } else if (event === 'connection.update' || event === 'CONNECTION_UPDATE') {
+        console.log(`Connection update for instance ${instance}:`, data);
+        
+        // Send connection status to client
+        const socketId = instanceSockets.get(instance);
+        if (socketId) {
+          io.to(socketId).emit('connection_update', {
+            instance,
+            status: data.state || data.connection
+          });
+        }
+      }
+
+      res.sendStatus(200);
+    } catch (error: any) {
+      console.error('Error processing webhook:', error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // Dashboard metrics
   app.get("/api/dashboard/metrics", async (req, res) => {
@@ -449,6 +522,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
   return httpServer;
 }

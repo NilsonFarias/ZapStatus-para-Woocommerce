@@ -88,10 +88,15 @@ export default function QRModal({
           <div className="w-64 h-64 mx-auto bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center mb-4">
             {(realtimeQrCode || qrCode) ? (
               <img 
-                src={realtimeQrCode || `data:image/png;base64,${qrCode}`}
+                src={realtimeQrCode || (qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`)}
                 alt="QR Code" 
                 className="w-full h-full object-contain p-2"
                 data-testid="qr-code-image"
+                onError={(e) => {
+                  console.error('QR Code image failed to load:', e);
+                  console.log('QR Code data:', qrCode?.substring(0, 100) + '...');
+                }}
+                onLoad={() => console.log('QR Code image loaded successfully')}
               />
             ) : isLoading ? (
               <div className="text-center">

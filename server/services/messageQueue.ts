@@ -29,10 +29,10 @@ export class MessageQueueService {
       
       // This is a simplified approach - in a real implementation, you'd want to
       // query the database more efficiently
-      const instances = await storage.getAllInstances(''); // We'd need to modify this
+      const instances = await storage.getWhatsappInstances();
       
       for (const instance of instances) {
-        const queuedMessages = await storage.getQueuedMessages(instance.id);
+        const queuedMessages = await storage.getQueuedMessages(instance.instanceId);
         
         for (const message of queuedMessages) {
           if (message.status === 'pending' && message.scheduledFor <= now) {
@@ -45,15 +45,24 @@ export class MessageQueueService {
     }
   }
 
-  private async sendQueuedMessage(messageId: string, instanceName: string) {
+  async sendQueuedMessage(messageId: string, instanceName: string) {
     try {
       const message = await storage.updateQueuedMessage(messageId, {
         status: 'sending'
       });
 
+      // Clean phone number format before sending
+      let cleanPhone = message.recipientPhone.replace(/\D/g, ''); // Remove all non-digits
+      if (!cleanPhone.startsWith('55') && cleanPhone.length === 11) {
+        cleanPhone = '55' + cleanPhone;
+      }
+      const formattedPhone = cleanPhone;
+      
+      console.log(`Sending message to ${formattedPhone} (cleaned from ${message.recipientPhone})`);
+      
       await evolutionApi.sendMessage(
         instanceName, 
-        message.recipientPhone, 
+        formattedPhone, 
         message.message
       );
 

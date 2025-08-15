@@ -5,7 +5,9 @@ import axios from "axios";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { evolutionApi } from "./services/evolutionApi";
-import { messageQueue } from "./services/messageQueue";
+import { messageQueue, MessageQueueService } from "./services/messageQueue";
+
+const messageQueueService = new MessageQueueService();
 import { insertClientSchema, insertInstanceSchema, insertTemplateSchema, insertWebhookConfigSchema } from "@shared/schema";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -558,20 +560,17 @@ Sua instancia esta funcionando perfeitamente!`;
   // Message Queue endpoints
   app.get("/api/message-queue", async (req, res) => {
     try {
-      // Get all queued messages from all instances
-      const allInstances = await storage.getWhatsappInstances();
-      const allQueueItems = [];
-      
-      for (const instance of allInstances) {
-        const queueItems = await storage.getQueuedMessages(instance.instanceId);
-        allQueueItems.push(...queueItems);
-      }
+      // Get all queued messages directly from the database
+      console.log('Fetching message queue...');
+      const allQueueItems = await storage.getAllQueuedMessages();
+      console.log(`Found ${allQueueItems.length} queued messages`);
       
       // Sort by scheduled time
       allQueueItems.sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime());
       
       res.json(allQueueItems);
     } catch (error: any) {
+      console.error('Error fetching message queue:', error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -601,6 +600,31 @@ Sua instancia esta funcionando perfeitamente!`;
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/message-queue/:id/send-now", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get the message and instance details
+      const message = await storage.getQueuedMessage(id);
+      if (!message) {
+        return res.status(404).json({ success: false, message: "Message not found" });
+      }
+      
+      const instance = await storage.getWhatsappInstance(message.whatsappInstanceId);
+      if (!instance) {
+        return res.status(404).json({ success: false, message: "Instance not found" });
+      }
+      
+      // Send the message directly using the message queue service
+      await messageQueueService.sendQueuedMessage(id, instance.instanceId);
+      
+      res.json({ success: true, message: "Message sent successfully" });
+    } catch (error: any) {
+      console.error('Error sending message now:', error);
+      res.status(500).json({ success: false, message: error.message });
     }
   });
 
@@ -751,10 +775,12 @@ Sua instancia esta funcionando perfeitamente!`;
               }
               if (!clientPhone && billing.phone) {
                 clientPhone = billing.phone;
-                // Format Brazilian phone number
-                if (!clientPhone.startsWith('+')) {
-                  clientPhone = `+55${clientPhone}`;
+                // Clean and format Brazilian phone number
+                clientPhone = clientPhone.replace(/\D/g, ''); // Remove all non-digits
+                if (!clientPhone.startsWith('55') && clientPhone.length === 11) {
+                  clientPhone = '55' + clientPhone; // Add country code if missing
                 }
+                clientPhone = '+' + clientPhone; // Add + prefix
               }
             }
             

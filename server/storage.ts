@@ -26,6 +26,7 @@ export interface IStorage {
   updateInstanceQRCode(instanceId: string, qrCode: string): Promise<WhatsappInstance>;
   deleteInstance(id: string): Promise<void>;
   getWhatsappInstances(): Promise<WhatsappInstance[]>;
+  getAllQueuedMessages(): Promise<MessageQueueItem[]>;
   
   // Template methods
   getTemplates(clientId: string, orderStatus?: string): Promise<MessageTemplate[]>;
@@ -184,6 +185,13 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(whatsappInstances);
   }
 
+  async getAllQueuedMessages(): Promise<MessageQueueItem[]> {
+    console.log('Executing getAllQueuedMessages query...');
+    const result = await db.select().from(messageQueue);
+    console.log(`Database returned ${result.length} messages`);
+    return result;
+  }
+
   async getTemplates(clientId: string, orderStatus?: string): Promise<MessageTemplate[]> {
     const conditions = orderStatus 
       ? and(eq(messageTemplates.clientId, clientId), eq(messageTemplates.orderStatus, orderStatus))
@@ -261,6 +269,15 @@ export class DatabaseStorage implements IStorage {
       .from(messageQueue)
       .where(eq(messageQueue.instanceId, instanceId))
       .orderBy(messageQueue.scheduledFor);
+  }
+
+  async getQueuedMessage(id: string): Promise<MessageQueueItem | undefined> {
+    const [message] = await db
+      .select()
+      .from(messageQueue)
+      .where(eq(messageQueue.id, id))
+      .limit(1);
+    return message;
   }
 
   async createQueuedMessage(message: Omit<MessageQueueItem, 'id' | 'createdAt'>): Promise<MessageQueueItem> {

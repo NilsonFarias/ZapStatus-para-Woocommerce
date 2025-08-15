@@ -17,23 +17,6 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 const PLANS = [
   {
-    id: 'free',
-    name: 'Plano Gratuito',
-    price: 0,
-    description: 'Experimente gratuitamente',
-    icon: AlertTriangle,
-    features: [
-      'Até 30 mensagens/mês',
-      '1 instância WhatsApp',
-      'Templates básicos',
-      'Suporte por email',
-    ],
-    popular: false,
-    color: 'text-yellow-600',
-    bgColor: 'bg-yellow-50',
-    borderColor: 'border-yellow-200',
-  },
-  {
     id: 'basic',
     name: 'Plano Básico',
     price: 29,
@@ -287,7 +270,6 @@ export default function Subscribe() {
         <PlanSelection onSelectPlan={handleSelectPlan} />
         
         <div className="text-center text-sm text-slate-500">
-          <p>Todos os planos incluem teste gratuito de 14 dias</p>
           <p>Cancele a qualquer momento, sem taxas de cancelamento</p>
         </div>
       </div>

@@ -313,26 +313,47 @@ export class DatabaseStorage implements IStorage {
     monthlyRevenue: number;
     deliveryRate: number;
   }> {
-    const userClients = await db.select().from(clients).where(eq(clients.userId, userId));
-    const activeClients = userClients.filter(c => c.status === 'active').length;
+    // Get real data from database
+    const [clientsData] = await db.execute(sql`
+      SELECT COUNT(*) as total_clients
+      FROM clients 
+      WHERE status = 'active'
+    `);
     
-    // Calculate total messages sent this month
-    const messagesSent = userClients.reduce((total, client) => total + (client.monthlyMessages || 0), 0);
+    const [instancesData] = await db.execute(sql`
+      SELECT 
+        COUNT(*) as total_instances,
+        COALESCE(SUM(daily_messages), 0) as total_daily_messages
+      FROM whatsapp_instances wi
+      JOIN clients c ON wi.client_id = c.id
+      WHERE c.status = 'active'
+    `);
     
-    // Calculate monthly revenue (simplified calculation)
-    const monthlyRevenue = userClients.reduce((total, client) => {
-      const planRevenue = client.plan === 'pro' ? 89 : client.plan === 'enterprise' ? 199 : 29;
-      return total + (client.status === 'active' ? planRevenue : 0);
-    }, 0);
+    const [messagesData] = await db.execute(sql`
+      SELECT 
+        COUNT(*) as total_sent,
+        COUNT(CASE WHEN status = 'sent' THEN 1 END) as successful_sent,
+        COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_sent
+      FROM message_queue
+      WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
+    `);
     
-    // Calculate delivery rate (simplified - assume 98.5% for now)
-    const deliveryRate = 98.5;
+    const activeClients = Number(clientsData.total_clients) || 0;
+    const messagesSent = Number(instancesData.total_daily_messages) || 0;
+    const totalSent = Number(messagesData.total_sent) || 0;
+    const successfulSent = Number(messagesData.successful_sent) || 0;
+    
+    // Calculate real delivery rate
+    const deliveryRate = totalSent > 0 ? (successfulSent / totalSent) * 100 : 100;
+    
+    // Calculate monthly revenue based on active clients (R$ 47/month per client)
+    const monthlyRevenue = activeClients * 47;
     
     return {
       activeClients,
       messagesSent,
       monthlyRevenue,
-      deliveryRate,
+      deliveryRate: Math.round(deliveryRate * 100) / 100,
     };
   }
 }

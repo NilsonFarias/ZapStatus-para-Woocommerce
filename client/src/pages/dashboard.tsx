@@ -16,6 +16,7 @@ interface DashboardMetrics {
 export default function Dashboard() {
   const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
     queryKey: ['/api/dashboard/metrics'],
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   if (isLoading) {
@@ -46,30 +47,30 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <MetricsCard
               title="Clientes Ativos"
-              value={metrics?.activeClients || 247}
+              value={metrics?.activeClients || 0}
               icon={Users}
-              trend={{ value: "+12%", isPositive: true, label: "vs mês anterior" }}
+              trend={{ value: `${metrics?.activeClients || 0} ativo(s)`, isPositive: true, label: "sistema atual" }}
               iconBgColor="bg-primary/10 text-primary"
             />
             <MetricsCard
               title="Mensagens Enviadas"
-              value={(metrics?.messagesSent || 18542).toLocaleString()}
+              value={metrics?.messagesSent || 0}
               icon={Send}
-              trend={{ value: "+8%", isPositive: true, label: "vs mês anterior" }}
+              trend={{ value: "Hoje", isPositive: true, label: "mensagens diárias" }}
               iconBgColor="bg-success/10 text-success"
             />
             <MetricsCard
               title="Receita Mensal"
-              value={`R$ ${(metrics?.monthlyRevenue || 12480).toLocaleString()}`}
+              value={`R$ ${metrics?.monthlyRevenue || 0}`}
               icon={DollarSign}
-              trend={{ value: "+23%", isPositive: true, label: "vs mês anterior" }}
+              trend={{ value: "R$ 47/cliente", isPositive: true, label: "preço fixo mensal" }}
               iconBgColor="bg-warning/10 text-warning"
             />
             <MetricsCard
               title="Taxa de Entrega"
-              value={`${metrics?.deliveryRate || 98.5}%`}
+              value={`${(metrics?.deliveryRate || 100).toFixed(1)}%`}
               icon={CheckCircle}
-              trend={{ value: "+0.3%", isPositive: true, label: "vs mês anterior" }}
+              trend={{ value: "Evolution API", isPositive: true, label: "plataforma confiável" }}
               iconBgColor="bg-success/10 text-success"
             />
           </div>

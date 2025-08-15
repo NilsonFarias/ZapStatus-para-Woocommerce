@@ -175,10 +175,10 @@ export default function Clients() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Usuário</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Mensagens/Mês</TableHead>
-                    <TableHead>Último Acesso</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -199,6 +199,32 @@ export default function Clients() {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <div>
+                          <p className="font-medium text-slate-900" data-testid="user-name">
+                            {(client as any).userName || 'N/A'}
+                          </p>
+                          <p className="text-sm text-slate-500" data-testid="user-email">
+                            {(client as any).userEmail || 'N/A'}
+                          </p>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Badge 
+                              variant="outline" 
+                              className="text-xs"
+                              data-testid="user-plan"
+                            >
+                              {(client as any).userPlan || 'basic'}
+                            </Badge>
+                            <Badge 
+                              variant={((client as any).subscriptionStatus === 'active') ? 'default' : 'secondary'}
+                              className="text-xs"
+                              data-testid="subscription-status"
+                            >
+                              {(client as any).subscriptionStatus || 'inactive'}
+                            </Badge>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <Badge className={getPlanBadgeColor(client.plan)} data-testid="client-plan">
                           {getPlanLabel(client.plan)}
                         </Badge>
@@ -211,12 +237,7 @@ export default function Clients() {
                       <TableCell className="text-slate-600" data-testid="client-messages">
                         {client.monthlyMessages?.toLocaleString() || 0}
                       </TableCell>
-                      <TableCell className="text-slate-600" data-testid="client-last-access">
-                        {client.lastAccess 
-                          ? new Date(client.lastAccess).toLocaleDateString('pt-BR') 
-                          : 'Nunca'
-                        }
-                      </TableCell>
+
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <Button 

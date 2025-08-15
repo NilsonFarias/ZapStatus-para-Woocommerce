@@ -293,6 +293,24 @@ export default function Settings() {
           </Card>
         );
 
+      case 'subscription':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Gerenciar Assinatura
+              </CardTitle>
+              <CardDescription>
+                Controle sua assinatura e pagamentos
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SubscriptionManagement />
+            </CardContent>
+          </Card>
+        );
+
       default:
         return null;
     }
@@ -302,6 +320,7 @@ export default function Settings() {
     { id: 'profile', label: 'Perfil', icon: User },
     { id: 'security', label: 'Segurança', icon: Shield },
     { id: 'notifications', label: 'Notificações', icon: Bell },
+    ...(user?.role !== 'admin' ? [{ id: 'subscription', label: 'Gerenciar Assinatura', icon: CreditCard }] : []),
   ];
 
   return (
@@ -342,26 +361,6 @@ export default function Settings() {
               {/* Settings Content */}
               <div className="flex-1">
                 {renderContent()}
-                
-                {/* Subscription Management - Only for non-admin users */}
-                {user?.role !== 'admin' && activeSection === 'profile' && (
-                  <div className="mt-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <CreditCard className="h-5 w-5 text-primary" />
-                          Gerenciar Assinatura
-                        </CardTitle>
-                        <CardDescription>
-                          Controle sua assinatura e pagamentos
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <SubscriptionManagement />
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
               </div>
             </div>
           </div>

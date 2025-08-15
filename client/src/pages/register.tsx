@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -21,7 +21,7 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
   company: z.string().min(2, "Nome da empresa é obrigatório"),
   phone: z.string().min(10, "Telefone deve ter pelo menos 10 dígitos"),
-  plan: z.enum(["basic", "pro", "enterprise"], { message: "Selecione um plano" }),
+  plan: z.string().default("free"),
   acceptTerms: z.boolean().refine((val) => val === true, "Você deve aceitar os termos de uso"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Senhas não coincidem",
@@ -30,26 +30,7 @@ const registerSchema = z.object({
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
-const PLAN_DETAILS = {
-  basic: { 
-    name: "Básico", 
-    price: "R$ 29/mês", 
-    messages: "1.000 mensagens",
-    description: "Ideal para pequenas lojas"
-  },
-  pro: { 
-    name: "Pro", 
-    price: "R$ 89/mês", 
-    messages: "10.000 mensagens",
-    description: "Para lojas em crescimento"
-  },
-  enterprise: { 
-    name: "Enterprise", 
-    price: "R$ 199/mês", 
-    messages: "Mensagens ilimitadas",
-    description: "Para grandes operações"
-  },
-};
+
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -64,7 +45,7 @@ export default function Register() {
       confirmPassword: "",
       company: "",
       phone: "",
-      plan: undefined,
+      plan: "free",
       acceptTerms: false,
     },
   });
@@ -240,44 +221,22 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Plan Selection */}
-              <div className="space-y-2">
-                <Label>Escolha seu Plano</Label>
-                <Select onValueChange={(value) => form.setValue("plan", value as any)}>
-                  <SelectTrigger data-testid="select-plan">
-                    <SelectValue placeholder="Selecione um plano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PLAN_DETAILS).map(([key, plan]) => (
-                      <SelectItem key={key} value={key}>
-                        <div className="flex flex-col">
-                          <div className="font-medium">{plan.name} - {plan.price}</div>
-                          <div className="text-sm text-gray-500">{plan.messages} • {plan.description}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {form.formState.errors.plan && (
-                  <p className="text-sm text-red-600">{form.formState.errors.plan.message}</p>
-                )}
+              {/* Plan Information */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-medium text-green-900 mb-2">
+                  Plano Free Incluído
+                </h4>
+                <p className="text-sm text-green-700 mb-2">
+                  Sua conta será criada com o plano Free, que inclui:
+                </p>
+                <ul className="text-sm text-green-700 space-y-1">
+                  <li>• Recursos básicos para começar</li>
+                  <li>• 1 instância WhatsApp</li>
+                  <li>• Templates básicos</li>
+                  <li>• Webhook WooCommerce</li>
+                  <li>• Upgrade disponível a qualquer momento</li>
+                </ul>
               </div>
-
-              {/* Plan Details */}
-              {form.watch("plan") && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-900 mb-2">
-                    Plano Selecionado: {PLAN_DETAILS[form.watch("plan")!].name}
-                  </h4>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• {PLAN_DETAILS[form.watch("plan")!].messages} por mês</li>
-                    <li>• 1 instância WhatsApp</li>
-                    <li>• Templates ilimitados</li>
-                    <li>• Webhook WooCommerce</li>
-                    <li>• Suporte técnico</li>
-                  </ul>
-                </div>
-              )}
 
               {/* Terms */}
               <div className="flex items-center space-x-2">

@@ -288,7 +288,7 @@ export default function Templates() {
           onSave={handleSaveTemplate}
           template={editingTemplate}
           orderStatus={selectedStatus}
-          clientId={clientId}
+          clientId={clientId || ''}
           isSaving={createTemplateMutation.isPending || updateTemplateMutation.isPending}
         />
       </main>

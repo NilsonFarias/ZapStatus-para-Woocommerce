@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageTemplate } from "@shared/schema";
 import { useState } from "react";
+import React from "react";
 import { Save, X } from "lucide-react";
 
 interface TemplateModalProps {
@@ -39,17 +40,37 @@ export default function TemplateModal({
   clientId,
   isSaving = false
 }: TemplateModalProps) {
-  const [content, setContent] = useState(template?.content || '');
-  const [delayMinutes, setDelayMinutes] = useState(template?.delayMinutes || 0);
-  const [delayType, setDelayType] = useState(
-    template?.delayMinutes === 0 ? 'immediate' : 
-    template?.delayMinutes && template.delayMinutes < 60 ? 'minutes' : 'hours'
-  );
-  const [delayValue, setDelayValue] = useState(
-    template?.delayMinutes === 0 ? 0 :
-    template?.delayMinutes && template.delayMinutes < 60 ? template.delayMinutes :
-    template?.delayMinutes ? Math.floor(template.delayMinutes / 60) : 0
-  );
+  // Reset states when template changes or modal opens
+  const [content, setContent] = useState('');
+  const [delayMinutes, setDelayMinutes] = useState(0);
+  const [delayType, setDelayType] = useState('immediate');
+  const [delayValue, setDelayValue] = useState(0);
+
+  // Update states when template prop changes
+  React.useEffect(() => {
+    if (template) {
+      setContent(template.content || '');
+      setDelayMinutes(template.delayMinutes || 0);
+      
+      const delay = template.delayMinutes || 0;
+      if (delay === 0) {
+        setDelayType('immediate');
+        setDelayValue(0);
+      } else if (delay < 60) {
+        setDelayType('minutes');
+        setDelayValue(delay);
+      } else {
+        setDelayType('hours');
+        setDelayValue(Math.floor(delay / 60));
+      }
+    } else {
+      // Reset for new template
+      setContent('');
+      setDelayMinutes(0);
+      setDelayType('immediate');
+      setDelayValue(0);
+    }
+  }, [template, isOpen]);
 
   const handleSave = () => {
     let finalDelayMinutes = 0;

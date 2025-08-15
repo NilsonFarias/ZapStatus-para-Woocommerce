@@ -229,7 +229,7 @@ export default function Instances() {
           }}
         />
         
-        <div className="px-6 pb-4">
+        <div className="px-6 pb-4 flex gap-3">
           <Button 
             variant="outline" 
             onClick={() => testEvolutionApiMutation.mutate()}
@@ -237,6 +237,20 @@ export default function Instances() {
             data-testid="button-test-evolution-api"
           >
             {testEvolutionApiMutation.isPending ? "Testando..." : "Testar Conexão Evolution API"}
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: instancesQueryKey });
+              toast({
+                title: "Status atualizado",
+                description: "Status das instâncias foi atualizado",
+              });
+            }}
+            data-testid="button-refresh-status"
+          >
+            Atualizar Status
           </Button>
         </div>
         

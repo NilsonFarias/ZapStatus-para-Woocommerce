@@ -333,7 +333,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      const instances = await storage.getWhatsappInstances(clients[0].id);
+      const instances = await storage.getInstances(clients[0].id);
+      
+      // Update instances status from Evolution API (same logic as admin route)
+      for (const instance of instances) {
+        try {
+          const evolutionInfo = await evolutionApi.getInstanceInfo(instance.instanceId);
+          
+          // Map Evolution API status to our status system
+          let mappedStatus = 'pending';
+          if (evolutionInfo.status === 'open') {
+            mappedStatus = 'connected';
+          } else if (evolutionInfo.status === 'close') {
+            mappedStatus = 'disconnected';
+          } else if (evolutionInfo.status === 'connecting') {
+            mappedStatus = 'connecting';
+          }
+          
+          if (mappedStatus !== instance.status || evolutionInfo.phoneNumber !== instance.phoneNumber) {
+            const updateData: any = { 
+              status: mappedStatus,
+            };
+            
+            // Only update phone number if we have one from Evolution API
+            if (evolutionInfo.phoneNumber) {
+              updateData.phoneNumber = evolutionInfo.phoneNumber;
+            }
+            
+            // Update last connection time if status changed to connected
+            if (mappedStatus === 'connected' && instance.status !== 'connected') {
+              updateData.lastConnection = new Date();
+              
+              // Reset daily messages for newly connected instances
+              const today = new Date().toDateString();
+              const lastConnectionDate = instance.lastConnection ? new Date(instance.lastConnection).toDateString() : null;
+              
+              if (lastConnectionDate !== today) {
+                updateData.dailyMessages = 0;
+              }
+            }
+            
+            await storage.updateInstance(instance.id, updateData);
+            instance.status = mappedStatus;
+            if (evolutionInfo.phoneNumber) {
+              instance.phoneNumber = evolutionInfo.phoneNumber;
+            }
+            if (updateData.lastConnection) {
+              instance.lastConnection = updateData.lastConnection;
+            }
+          }
+        } catch (err) {
+          console.log(`Failed to update instance ${instance.instanceId}:`, err);
+        }
+      }
+      
       res.json(instances);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

@@ -1444,12 +1444,8 @@ Sua instancia esta funcionando perfeitamente!`;
     try {
       const { plan, email, name } = req.body;
       
-      // Create Stripe customer
-      const customer = await stripe.customers.create({
-        email,
-        name,
-      });
-
+      console.log(`Creating subscription for plan: ${plan}`);
+      
       // Define plan prices
       const planPrices = {
         basic: process.env.STRIPE_BASIC_PRICE_ID || 'price_basic',
@@ -1457,10 +1453,29 @@ Sua instancia esta funcionando perfeitamente!`;
         enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID || 'price_enterprise',
       };
 
+      const selectedPriceId = planPrices[plan as keyof typeof planPrices];
+      console.log(`Using price ID: ${selectedPriceId} for plan: ${plan}`);
+      
+      // Validate that we have a valid price ID
+      if (!selectedPriceId || selectedPriceId.startsWith('price_basic') || selectedPriceId.startsWith('price_pro') || selectedPriceId.startsWith('price_enterprise')) {
+        throw new Error(`Invalid or missing Stripe price ID for plan: ${plan}. Please check environment variables.`);
+      }
+      
+      // Validate price ID format
+      if (selectedPriceId.startsWith('prod_')) {
+        throw new Error(`Invalid price ID format: ${selectedPriceId}. Expected a price ID starting with 'price_', but received a product ID starting with 'prod_'. Please use the price ID from your Stripe dashboard.`);
+      }
+      
+      // Create Stripe customer
+      const customer = await stripe.customers.create({
+        email,
+        name,
+      });
+
       const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{
-          price: planPrices[plan as keyof typeof planPrices],
+          price: selectedPriceId,
         }],
         payment_behavior: 'default_incomplete',
         expand: ['latest_invoice.payment_intent'],
@@ -1471,6 +1486,7 @@ Sua instancia esta funcionando perfeitamente!`;
         clientSecret: (subscription.latest_invoice as any)?.payment_intent?.client_secret,
       });
     } catch (error: any) {
+      console.error('Stripe subscription error:', error.message);
       res.status(500).json({ message: error.message });
     }
   });

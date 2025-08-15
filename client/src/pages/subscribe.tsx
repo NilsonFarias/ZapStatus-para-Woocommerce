@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Zap, Building } from "lucide-react";
+import { Check, Crown, Zap, Building, AlertTriangle, Shield } from "lucide-react";
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
@@ -21,7 +21,7 @@ const PLANS = [
     name: 'Plano Gratuito',
     price: 0,
     description: 'Experimente gratuitamente',
-    icon: Zap,
+    icon: AlertTriangle,
     features: [
       'Até 30 mensagens/mês',
       '1 instância WhatsApp',
@@ -29,13 +29,16 @@ const PLANS = [
       'Suporte por email',
     ],
     popular: false,
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50',
+    borderColor: 'border-yellow-200',
   },
   {
     id: 'basic',
     name: 'Plano Básico',
     price: 29,
     description: 'Ideal para pequenas lojas',
-    icon: Zap,
+    icon: Shield,
     features: [
       'Até 1.000 mensagens/mês',
       '1 instância WhatsApp',
@@ -43,6 +46,9 @@ const PLANS = [
       'Suporte por email',
     ],
     popular: false,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
   },
   {
     id: 'pro',
@@ -59,13 +65,16 @@ const PLANS = [
       'Analytics detalhados',
     ],
     popular: true,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    borderColor: 'border-purple-200',
   },
   {
     id: 'enterprise',
     name: 'Plano Enterprise',
     price: 199,
     description: 'Para grandes operações',
-    icon: Building,
+    icon: Zap,
     features: [
       'Mensagens ilimitadas',
       '1 instância WhatsApp',
@@ -75,6 +84,9 @@ const PLANS = [
       'Gerente de conta dedicado',
     ],
     popular: false,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    borderColor: 'border-green-200',
   },
 ];
 
@@ -151,7 +163,7 @@ function PlanSelection({ onSelectPlan }: { onSelectPlan: (plan: string) => void 
             )}
             
             <CardHeader className="text-center">
-              <div className={`w-12 h-12 mx-auto ${plan.popular ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'} rounded-lg flex items-center justify-center mb-4`}>
+              <div className={`w-12 h-12 mx-auto ${plan.bgColor} ${plan.color} rounded-lg flex items-center justify-center mb-4`}>
                 <Icon size={24} />
               </div>
               <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>

@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, Crown, Zap, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, Crown, Zap, Shield, ArrowUp } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
 
 interface PlanLimits {
   allowed: boolean;
@@ -54,6 +56,19 @@ export default function PlanUsageCard() {
     }
   };
 
+  const getUpgradeText = (plan: string) => {
+    switch (plan) {
+      case 'free': return 'Upgrade para Básico';
+      case 'basic': return 'Upgrade para Pro';
+      case 'pro': return 'Upgrade para Enterprise';
+      default: return null;
+    }
+  };
+
+  const shouldShowUpgrade = (plan: string) => {
+    return plan !== 'enterprise';
+  };
+
   return (
     <Card className={`mb-6 border-2 ${planLimits ? getPlanColor(planLimits.plan) : 'border-gray-200 bg-gray-50'}`}>
       <CardHeader>
@@ -102,6 +117,17 @@ export default function PlanUsageCard() {
             {planLimits.current / planLimits.limit > 0.8 && planLimits.limit !== -1 && planLimits.allowed && (
               <div className="text-orange-700 text-sm bg-orange-100 p-3 rounded-lg">
                 ⚡ Você usou {Math.round((planLimits.current / planLimits.limit) * 100)}% do seu plano. Considere fazer upgrade!
+              </div>
+            )}
+
+            {shouldShowUpgrade(planLimits.plan) && (
+              <div className="pt-4 border-t border-gray-200">
+                <Link href="/subscribe">
+                  <Button className="w-full" variant="default" size="sm">
+                    <ArrowUp className="w-4 h-4 mr-2" />
+                    {getUpgradeText(planLimits.plan)}
+                  </Button>
+                </Link>
               </div>
             )}
           </div>

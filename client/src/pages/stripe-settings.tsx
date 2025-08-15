@@ -2,15 +2,16 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Sidebar from '@/components/layout/sidebar';
+import Header from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { CreditCard, Key, Settings, DollarSign, Shield, AlertTriangle } from 'lucide-react';
+import { CreditCard, Key, DollarSign, Shield, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const stripeConfigSchema = z.object({
@@ -113,31 +114,29 @@ export default function StripeSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <CreditCard className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Configurações do Stripe</h1>
-          <p className="text-muted-foreground">
-            Configure as chaves de API e IDs de preço para processamento de pagamentos
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* API Keys Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Key className="h-5 w-5" />
-                  Chaves de API
-                </CardTitle>
-                <CardDescription>
-                  Configure suas chaves de API do Stripe para autenticação
-                </CardDescription>
-              </CardHeader>
+    <div className="flex h-screen bg-slate-50">
+      <Sidebar />
+      <main className="flex-1 overflow-auto">
+        <Header
+          title="Configurações do Stripe"
+          description="Configure as chaves de API e IDs de preço para processamento de pagamentos"
+        />
+        
+        <div className="p-6">
+          <div className="grid gap-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* API Keys Section */}
+              <Card className="border-slate-200">
+                <CardHeader className="bg-slate-50/50">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <Key className="h-5 w-5 text-slate-600" />
+                    Chaves de API
+                  </CardTitle>
+                  <CardDescription className="text-slate-600">
+                    Configure suas chaves de API do Stripe para autenticação
+                  </CardDescription>
+                </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
@@ -184,29 +183,29 @@ export default function StripeSettings() {
               </CardContent>
             </Card>
 
-            {/* Price IDs Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  IDs de Preço dos Planos
-                </CardTitle>
-                <CardDescription>
-                  Configure os IDs de preço do Stripe para cada plano de assinatura
-                </CardDescription>
-              </CardHeader>
+              {/* Price IDs Section */}
+              <Card className="border-slate-200">
+                <CardHeader className="bg-slate-50/50">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <DollarSign className="h-5 w-5 text-slate-600" />
+                    IDs de Preço dos Planos
+                  </CardTitle>
+                  <CardDescription className="text-slate-600">
+                    Configure os IDs de preço do Stripe para cada plano de assinatura
+                  </CardDescription>
+                </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-blue-800">
-                      <p className="font-medium mb-1">Como encontrar os IDs de preço:</p>
-                      <ol className="list-decimal list-inside space-y-1 text-xs">
-                        <li>Acesse o painel do Stripe Dashboard</li>
-                        <li>Vá em "Produtos" no menu lateral</li>
-                        <li>Clique em cada produto</li>
-                        <li>Na seção "Preços", copie o ID que começa com "price_"</li>
-                        <li><strong>Importante:</strong> Use price IDs, não product IDs</li>
+                      <p className="font-semibold mb-2">Como encontrar os IDs de preço:</p>
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li>Acesse o <strong>Stripe Dashboard</strong></li>
+                        <li>Navegue até <strong>"Produtos"</strong> no menu lateral</li>
+                        <li>Clique no produto desejado</li>
+                        <li>Na seção "Preços", copie o ID que começa com <code className="bg-blue-100 px-1 rounded">price_</code></li>
+                        <li className="text-blue-900 font-medium">⚠️ Use apenas price IDs, não product IDs</li>
                       </ol>
                     </div>
                   </div>
@@ -217,9 +216,10 @@ export default function StripeSettings() {
                   name="basicPriceId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
+                      <FormLabel className="flex items-center gap-2 font-medium">
                         <Shield className="h-4 w-4 text-blue-600" />
-                        Plano Básico (R$ 29/mês)
+                        Plano Básico
+                        <Badge variant="outline" className="text-xs">R$ 29/mês</Badge>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -241,9 +241,10 @@ export default function StripeSettings() {
                   name="proPriceId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
+                      <FormLabel className="flex items-center gap-2 font-medium">
                         <CreditCard className="h-4 w-4 text-purple-600" />
-                        Plano Pro (R$ 89/mês)
+                        Plano Pro
+                        <Badge variant="outline" className="text-xs">R$ 89/mês</Badge>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -265,9 +266,10 @@ export default function StripeSettings() {
                   name="enterprisePriceId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Settings className="h-4 w-4 text-green-600" />
-                        Plano Enterprise (R$ 199/mês)
+                      <FormLabel className="flex items-center gap-2 font-medium">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                        Plano Enterprise
+                        <Badge variant="outline" className="text-xs">R$ 199/mês</Badge>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -286,68 +288,85 @@ export default function StripeSettings() {
               </CardContent>
             </Card>
 
-            <div className="flex gap-3">
-              <Button
-                type="submit"
-                disabled={saveMutation.isPending}
-                data-testid="button-save-config"
-              >
-                {saveMutation.isPending ? 'Salvando...' : 'Salvar Configurações'}
-              </Button>
+              <div className="flex gap-3 pt-4 border-t border-slate-200">
+                <Button
+                  type="submit"
+                  disabled={saveMutation.isPending}
+                  className="bg-primary hover:bg-primary/90"
+                  data-testid="button-save-config"
+                >
+                  {saveMutation.isPending ? 'Salvando...' : 'Salvar Configurações'}
+                </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleTest}
-                disabled={testMutation.isPending}
-                data-testid="button-test-config"
-              >
-                {testMutation.isPending ? 'Testando...' : 'Testar Configurações'}
-              </Button>
-            </div>
-          </form>
-        </Form>
-
-        {/* Test Results */}
-        {testResults && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Resultados do Teste</CardTitle>
-              <CardDescription>
-                Verificação das configurações do Stripe
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {testResults.apiConnection && (
-                  <div className="flex items-center gap-2">
-                    <Badge variant={testResults.apiConnection.success ? 'default' : 'destructive'}>
-                      {testResults.apiConnection.success ? 'OK' : 'ERRO'}
-                    </Badge>
-                    <span className="text-sm">Conexão com API: {testResults.apiConnection.message}</span>
-                  </div>
-                )}
-
-                {testResults.priceValidation && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Validação de Preços:</h4>
-                    {Object.entries(testResults.priceValidation).map(([plan, result]: [string, any]) => (
-                      <div key={plan} className="flex items-center gap-2 ml-4">
-                        <Badge variant={result.valid ? 'default' : 'destructive'}>
-                          {result.valid ? 'OK' : 'ERRO'}
-                        </Badge>
-                        <span className="text-sm">
-                          {plan}: {result.message}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTest}
+                  disabled={testMutation.isPending}
+                  className="border-slate-300 hover:bg-slate-50"
+                  data-testid="button-test-config"
+                >
+                  {testMutation.isPending ? 'Testando...' : 'Testar Configurações'}
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </form>
+          </Form>
+
+          {/* Test Results */}
+          {testResults && (
+            <Card className="border-slate-200">
+              <CardHeader className="bg-slate-50/50">
+                <CardTitle className="flex items-center gap-2 text-slate-900">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Resultados do Teste
+                </CardTitle>
+                <CardDescription className="text-slate-600">
+                  Verificação das configurações do Stripe
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  {testResults.apiConnection && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
+                      {testResults.apiConnection.success ? (
+                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                      )}
+                      <div>
+                        <p className="font-medium text-slate-900">Conexão com API</p>
+                        <p className="text-sm text-slate-600">{testResults.apiConnection.message}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {testResults.priceValidation && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-slate-900">Validação de Preços</h4>
+                      <div className="space-y-2">
+                        {Object.entries(testResults.priceValidation).map(([plan, result]: [string, any]) => (
+                          <div key={plan} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
+                            {result.valid ? (
+                              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                            )}
+                            <div className="flex-1">
+                              <p className="font-medium text-slate-900 capitalize">{plan}</p>
+                              <p className="text-sm text-slate-600">{result.message}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

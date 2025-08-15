@@ -5,43 +5,49 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Client } from "@shared/schema";
 
 interface CreateInstanceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  clients: Client[];
 }
 
-export default function CreateInstanceModal({ open, onOpenChange, clients }: CreateInstanceModalProps) {
+export default function CreateInstanceModal({ open, onOpenChange }: CreateInstanceModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
-    clientId: "",
   });
 
-  // Filter clients that don't have instances yet (1 instance per client)
+  // Get user's client data
+  const { data: userClients = [] } = useQuery({
+    queryKey: ['/api/user/clients'],
+    enabled: !!user && user.role !== 'admin',
+  });
+
+  // Check if user already has an instance
   const { data: instances = [] } = useQuery({
-    queryKey: ['/api/instances'],
+    queryKey: ['/api/user/instances'],
+    enabled: !!user && user.role !== 'admin',
   });
 
-  const availableClients = clients.filter(client => 
-    !instances.some((instance: any) => instance.clientId === client.id)
-  );
+  const clientId = userClients.length > 0 ? userClients[0].id : null;
+  const hasExistingInstance = instances.length > 0;
 
   const createInstanceMutation = useMutation({
     mutationFn: (data: { name: string; clientId: string }) =>
-      apiRequest("POST", "/api/instances", data).then(res => res.json()),
+      apiRequest("POST", "/api/instances", data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/instances'] });
       queryClient.invalidateQueries({ queryKey: ['/api/instances'] });
       toast({
         title: "Instância criada",
         description: "A nova instância foi criada com sucesso!",
       });
       onOpenChange(false);
-      setFormData({ name: "", clientId: "" });
+      setFormData({ name: "" });
     },
     onError: (error: any) => {
       toast({
@@ -54,25 +60,35 @@ export default function CreateInstanceModal({ open, onOpenChange, clients }: Cre
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.clientId) {
+    
+    if (!formData.name) {
       toast({
         title: "Erro",
-        description: "Por favor, preencha todos os campos.",
+        description: "Por favor, preencha o nome da instância.",
         variant: "destructive",
       });
       return;
     }
     
-    if (availableClients.length === 0) {
+    if (!clientId) {
       toast({
         title: "Erro",
-        description: "Todos os clientes já possuem uma instância WhatsApp.",
+        description: "Cliente não encontrado. Tente fazer login novamente.",
         variant: "destructive",
       });
       return;
     }
     
-    createInstanceMutation.mutate(formData);
+    if (hasExistingInstance) {
+      toast({
+        title: "Erro",
+        description: "Você já possui uma instância WhatsApp. Cada cliente pode ter apenas uma instância.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createInstanceMutation.mutate({ name: formData.name, clientId });
   };
 
   return (
@@ -92,30 +108,13 @@ export default function CreateInstanceModal({ open, onOpenChange, clients }: Cre
               data-testid="input-instance-name"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="client-select">Cliente</Label>
-            <Select 
-              value={formData.clientId} 
-              onValueChange={(value) => setFormData({ ...formData, clientId: value })}
-            >
-              <SelectTrigger data-testid="select-client">
-                <SelectValue placeholder="Selecione um cliente" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableClients.length === 0 ? (
-                  <div className="px-2 py-1 text-sm text-muted-foreground">
-                    Todos os clientes já possuem instância
-                  </div>
-                ) : (
-                  availableClients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+          {hasExistingInstance && (
+            <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-sm text-orange-800">
+                Você já possui uma instância WhatsApp. Cada cliente pode ter apenas uma instância ativa.
+              </p>
+            </div>
+          )}
           <DialogFooter>
             <Button
               type="button"

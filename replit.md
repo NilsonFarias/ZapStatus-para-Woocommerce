@@ -25,6 +25,12 @@ Preferred communication style: Simple, everyday language.
   - ✅ URLs webhook específicas: `/api/webhook/woocommerce/{clientId}` por cliente
   - ✅ Queries isoladas: `enabled: !!clientId` para evitar conflitos
 - **Arquitetura**: Multi-tenant perfeito - dados isolados por usuário, admins veem tudo
+- **UX Simplificado (15/08/2025)**:
+  - ✅ Removido campo "Cliente" do formulário criar instância
+  - ✅ ClientId automaticamente associado ao usuário logado
+  - ✅ Validação: usuário só pode criar instância se não tiver uma existente
+  - ✅ Rotas dinâmicas: admin usa `/api/instances`, user usa `/api/user/instances`
+  - ✅ Formulário limpo: apenas "Nome da Instância" + aviso se já existe instância
 
 ### Public Registration System Implementation (August 15, 2025)
 - **Status**: ✅ **IMPLEMENTADO** - Sistema completo de registro público funcionando

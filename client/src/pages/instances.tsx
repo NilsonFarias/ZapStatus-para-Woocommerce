@@ -7,31 +7,31 @@ import QRModal from "@/components/instances/qr-modal";
 import CreateInstanceModal from "@/components/instances/create-instance-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { WhatsappInstance, Client } from "@shared/schema";
+import { WhatsappInstance } from "@shared/schema";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Instances() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedInstance, setSelectedInstance] = useState<WhatsappInstance | null>(null);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrCode, setQrCode] = useState<string>("");
   const [qrMessage, setQrMessage] = useState<string>("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
+  // Use user-specific routes for regular users, admin routes for admins
+  const instancesQueryKey = user?.role === 'admin' ? ['/api/instances'] : ['/api/user/instances'];
   const { data: instances = [], isLoading } = useQuery<WhatsappInstance[]>({
-    queryKey: ['/api/instances'],
-  });
-
-  const { data: clients = [] } = useQuery<Client[]>({
-    queryKey: ['/api/clients'],
+    queryKey: instancesQueryKey,
   });
 
   const deleteInstanceMutation = useMutation({
     mutationFn: (instanceId: string) => apiRequest("DELETE", `/api/instances/${instanceId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/instances'] });
+      queryClient.invalidateQueries({ queryKey: instancesQueryKey });
       toast({
         title: "Instância removida",
         description: "A instância foi removida com sucesso.",
@@ -49,7 +49,7 @@ export default function Instances() {
   const disconnectInstanceMutation = useMutation({
     mutationFn: (instanceId: string) => apiRequest("POST", `/api/instances/${instanceId}/disconnect`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/instances'] });
+      queryClient.invalidateQueries({ queryKey: instancesQueryKey });
       toast({
         title: "Instância desconectada",
         description: "A instância foi desconectada com sucesso.",
@@ -67,7 +67,7 @@ export default function Instances() {
   const restartInstanceMutation = useMutation({
     mutationFn: (instanceId: string) => apiRequest("POST", `/api/instances/${instanceId}/restart`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/instances'] });
+      queryClient.invalidateQueries({ queryKey: instancesQueryKey });
       toast({
         title: "Instância reiniciada",
         description: "A instância foi reiniciada com sucesso.",
@@ -287,7 +287,6 @@ export default function Instances() {
         <CreateInstanceModal
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
-          clients={clients}
         />
       </main>
     </div>

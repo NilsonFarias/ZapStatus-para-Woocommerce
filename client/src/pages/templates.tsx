@@ -7,10 +7,11 @@ import TemplateModal from "@/components/templates/template-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MessageTemplate } from "@shared/schema";
+import { MessageTemplate, Client } from "@shared/schema";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 const ORDER_STATUSES = [
   { value: 'pending', label: 'Pedido Recebido' },
@@ -34,21 +35,30 @@ const AVAILABLE_VARIABLES = [
 
 export default function Templates() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedStatus, setSelectedStatus] = useState('pending');
-  const [selectedClientId] = useState('demo-client-id'); // In real app, get from context
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
 
+  // Get user's client data
+  const { data: userClients = [] } = useQuery<Client[]>({
+    queryKey: ['/api/user/clients'],
+    enabled: !!user && user.role !== 'admin',
+  });
+  
+  const clientId = userClients.length > 0 ? userClients[0].id : null;
+
   const { data: templates = [], isLoading } = useQuery<MessageTemplate[]>({
-    queryKey: ['/api/templates', selectedClientId, selectedStatus],
-    queryFn: () => apiRequest("GET", `/api/templates?clientId=${selectedClientId}&orderStatus=${selectedStatus}`).then(res => res.json()),
+    queryKey: ['/api/templates', clientId, selectedStatus],
+    queryFn: () => apiRequest("GET", `/api/templates?clientId=${clientId}&orderStatus=${selectedStatus}`).then(res => res.json()),
+    enabled: !!clientId,
   });
 
   const updateTemplateMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<MessageTemplate> }) =>
       apiRequest("PUT", `/api/templates/${id}`, updates).then(res => res.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', selectedClientId, selectedStatus] });
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', clientId, selectedStatus] });
       queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
       toast({
         title: "Template atualizado",
@@ -67,7 +77,7 @@ export default function Templates() {
   const deleteTemplateMutation = useMutation({
     mutationFn: (templateId: string) => apiRequest("DELETE", `/api/templates/${templateId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', selectedClientId, selectedStatus] });
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', clientId, selectedStatus] });
       queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
       toast({
         title: "Template removido",
@@ -89,7 +99,7 @@ export default function Templates() {
     mutationFn: (newTemplate: Partial<MessageTemplate>) => 
       apiRequest("POST", `/api/templates`, newTemplate).then(res => res.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', selectedClientId, selectedStatus] });
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', clientId, selectedStatus] });
       queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
       toast({
         title: "Template criado",
@@ -257,7 +267,7 @@ export default function Templates() {
           onSave={handleSaveTemplate}
           template={editingTemplate}
           orderStatus={selectedStatus}
-          clientId={selectedClientId}
+          clientId={clientId}
           isSaving={createTemplateMutation.isPending || updateTemplateMutation.isPending}
         />
       </main>

@@ -1470,6 +1470,7 @@ Sua instancia esta funcionando perfeitamente!`;
 
   // Stripe subscription endpoint
   app.post('/api/create-subscription', async (req, res) => {
+    console.log(`DEBUG: Starting create-subscription endpoint for plan: ${req.body.plan}, user:`, req.user);
     try {
       const { plan, email, name } = req.body;
       

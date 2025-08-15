@@ -89,6 +89,16 @@ export const messageQueue = pgTable("message_queue", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const systemSettings = pgTable("system_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  value: text("value"),
+  encrypted: boolean("encrypted").default(false),
+  description: text("description"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   clients: many(clients),
@@ -153,6 +163,11 @@ export const insertWebhookConfigSchema = createInsertSchema(webhookConfigs).omit
   createdAt: true,
 });
 
+export const insertSystemSettingSchema = createInsertSchema(systemSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -166,3 +181,5 @@ export type InsertWebhookConfig = z.infer<typeof insertWebhookConfigSchema>;
 export type WebhookConfig = typeof webhookConfigs.$inferSelect;
 export type WebhookLog = typeof webhookLogs.$inferSelect;
 export type MessageQueueItem = typeof messageQueue.$inferSelect;
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type InsertSystemSetting = z.infer<typeof insertSystemSettingSchema>;

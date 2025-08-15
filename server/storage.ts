@@ -1,4 +1,4 @@
-import { users, clients, whatsappInstances, messageTemplates, webhookConfigs, webhookLogs, messageQueue, type User, type InsertUser, type Client, type InsertClient, type WhatsappInstance, type InsertInstance, type MessageTemplate, type InsertTemplate, type WebhookConfig, type InsertWebhookConfig, type WebhookLog, type MessageQueueItem } from "@shared/schema";
+import { users, clients, whatsappInstances, messageTemplates, webhookConfigs, webhookLogs, messageQueue, systemSettings, type User, type InsertUser, type Client, type InsertClient, type WhatsappInstance, type InsertInstance, type MessageTemplate, type InsertTemplate, type WebhookConfig, type InsertWebhookConfig, type WebhookLog, type MessageQueueItem, type SystemSetting, type InsertSystemSetting } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, gt, gte } from "drizzle-orm";
 
@@ -63,6 +63,11 @@ export interface IStorage {
     monthlyRevenue: number;
     deliveryRate: number;
   }>;
+  
+  // System Settings methods
+  getSystemSetting(key: string): Promise<SystemSetting | undefined>;
+  setSystemSetting(key: string, value: string, encrypted?: boolean, description?: string, updatedBy?: string): Promise<SystemSetting>;
+  getSystemSettings(): Promise<SystemSetting[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -444,6 +449,47 @@ export class DatabaseStorage implements IStorage {
 
   async getTemplatesByClient(clientId: string): Promise<MessageTemplate[]> {
     return await db.select().from(messageTemplates).where(eq(messageTemplates.clientId, clientId));
+  }
+
+  // System Settings methods
+  async getSystemSetting(key: string): Promise<SystemSetting | undefined> {
+    const [setting] = await db.select().from(systemSettings).where(eq(systemSettings.key, key));
+    return setting || undefined;
+  }
+
+  async setSystemSetting(key: string, value: string, encrypted: boolean = false, description?: string, updatedBy?: string): Promise<SystemSetting> {
+    const existing = await this.getSystemSetting(key);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(systemSettings)
+        .set({
+          value,
+          encrypted,
+          description,
+          updatedBy,
+          updatedAt: new Date(),
+        })
+        .where(eq(systemSettings.key, key))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(systemSettings)
+        .values({
+          key,
+          value,
+          encrypted,
+          description,
+          updatedBy,
+        })
+        .returning();
+      return created;
+    }
+  }
+
+  async getSystemSettings(): Promise<SystemSetting[]> {
+    return await db.select().from(systemSettings);
   }
 }
 

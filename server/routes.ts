@@ -1547,14 +1547,22 @@ Sua instancia esta funcionando perfeitamente!`;
   // Admin Stripe configuration
   app.get('/api/admin/stripe-config', async (req, res) => {
     try {
-      // Return current configuration (without exposing secret key)
+      // Get configuration from database
+      const stripePublicKey = await storage.getSystemSetting('stripe_public_key');
+      const stripeSecretKey = await storage.getSystemSetting('stripe_secret_key');
+      const basicPriceId = await storage.getSystemSetting('stripe_basic_price_id');
+      const proPriceId = await storage.getSystemSetting('stripe_pro_price_id');
+      const enterprisePriceId = await storage.getSystemSetting('stripe_enterprise_price_id');
+
       const config = {
-        stripePublicKey: process.env.VITE_STRIPE_PUBLIC_KEY || '',
-        basicPriceId: process.env.STRIPE_BASIC_PRICE_ID || '',
-        proPriceId: process.env.STRIPE_PRO_PRICE_ID || '',
-        enterprisePriceId: process.env.STRIPE_ENTERPRISE_PRICE_ID || '',
-        stripeSecretKey: process.env.STRIPE_SECRET_KEY ? '***' + process.env.STRIPE_SECRET_KEY.slice(-4) : ''
+        stripePublicKey: stripePublicKey?.value || process.env.VITE_STRIPE_PUBLIC_KEY || '',
+        basicPriceId: basicPriceId?.value || process.env.STRIPE_BASIC_PRICE_ID || '',
+        proPriceId: proPriceId?.value || process.env.STRIPE_PRO_PRICE_ID || '',
+        enterprisePriceId: enterprisePriceId?.value || process.env.STRIPE_ENTERPRISE_PRICE_ID || '',
+        stripeSecretKey: stripeSecretKey?.value ? '***' + stripeSecretKey.value.slice(-4) : 
+                        (process.env.STRIPE_SECRET_KEY ? '***' + process.env.STRIPE_SECRET_KEY.slice(-4) : '')
       };
+      
       res.json(config);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1564,6 +1572,8 @@ Sua instancia esta funcionando perfeitamente!`;
   app.post('/api/admin/stripe-config', async (req, res) => {
     try {
       const { stripeSecretKey, stripePublicKey, basicPriceId, proPriceId, enterprisePriceId } = req.body;
+      const user = req.user as any;
+      const userId = user?.id;
       
       // Validate price IDs format
       const priceIds = { basicPriceId, proPriceId, enterprisePriceId };
@@ -1593,9 +1603,35 @@ Sua instancia esta funcionando perfeitamente!`;
         }
       }
 
+      // Save configuration to database
+      const configUpdates = [];
+
+      if (stripeSecretKey && stripeSecretKey.trim() !== '') {
+        configUpdates.push(storage.setSystemSetting('stripe_secret_key', stripeSecretKey, true, 'Stripe Secret Key', userId));
+      }
+
+      if (stripePublicKey && stripePublicKey.trim() !== '') {
+        configUpdates.push(storage.setSystemSetting('stripe_public_key', stripePublicKey, false, 'Stripe Public Key', userId));
+      }
+
+      if (basicPriceId) {
+        configUpdates.push(storage.setSystemSetting('stripe_basic_price_id', basicPriceId, false, 'Stripe Basic Plan Price ID', userId));
+      }
+
+      if (proPriceId) {
+        configUpdates.push(storage.setSystemSetting('stripe_pro_price_id', proPriceId, false, 'Stripe Pro Plan Price ID', userId));
+      }
+
+      if (enterprisePriceId) {
+        configUpdates.push(storage.setSystemSetting('stripe_enterprise_price_id', enterprisePriceId, false, 'Stripe Enterprise Plan Price ID', userId));
+      }
+
+      // Execute all updates
+      await Promise.all(configUpdates);
+
       res.json({ 
         success: true, 
-        message: 'Configuração validada com sucesso! Em produção, essas configurações seriam salvas de forma segura.' 
+        message: 'Configurações salvas com sucesso!' 
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1609,10 +1645,17 @@ Sua instancia esta funcionando perfeitamente!`;
         priceValidation: {} as any
       };
 
+      // Get secret key from database or environment
+      const secretKeySetting = await storage.getSystemSetting('stripe_secret_key');
+      const secretKey = secretKeySetting?.value || process.env.STRIPE_SECRET_KEY;
+
       // Test API connection
       try {
-        if (process.env.STRIPE_SECRET_KEY) {
-          const customers = await stripe.customers.list({ limit: 1 });
+        if (secretKey) {
+          const testStripe = new (await import('stripe')).default(secretKey, {
+            apiVersion: '2023-10-16',
+          });
+          const customers = await testStripe.customers.list({ limit: 1 });
           results.apiConnection = { success: true, message: 'API connection successful' };
         } else {
           results.apiConnection = { success: false, message: 'No Stripe Secret Key configured' };
@@ -1622,10 +1665,14 @@ Sua instancia esta funcionando perfeitamente!`;
       }
 
       // Test price validation
+      const basicPriceId = (await storage.getSystemSetting('stripe_basic_price_id'))?.value || process.env.STRIPE_BASIC_PRICE_ID;
+      const proPriceId = (await storage.getSystemSetting('stripe_pro_price_id'))?.value || process.env.STRIPE_PRO_PRICE_ID;
+      const enterprisePriceId = (await storage.getSystemSetting('stripe_enterprise_price_id'))?.value || process.env.STRIPE_ENTERPRISE_PRICE_ID;
+
       const priceIds = {
-        basic: process.env.STRIPE_BASIC_PRICE_ID,
-        pro: process.env.STRIPE_PRO_PRICE_ID,
-        enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID,
+        basic: basicPriceId,
+        pro: proPriceId,
+        enterprise: enterprisePriceId,
       };
 
       for (const [plan, priceId] of Object.entries(priceIds)) {
@@ -1640,11 +1687,21 @@ Sua instancia esta funcionando perfeitamente!`;
         }
 
         try {
-          const price = await stripe.prices.retrieve(priceId);
-          results.priceValidation[plan] = { 
-            valid: true, 
-            message: `Valid - ${price.currency.toUpperCase()} ${price.unit_amount! / 100}` 
-          };
+          if (secretKey) {
+            const testStripe = new (await import('stripe')).default(secretKey, {
+              apiVersion: '2023-10-16',
+            });
+            const price = await testStripe.prices.retrieve(priceId);
+            results.priceValidation[plan] = { 
+              valid: true, 
+              message: `Valid - ${price.currency.toUpperCase()} ${price.unit_amount! / 100}` 
+            };
+          } else {
+            results.priceValidation[plan] = { 
+              valid: false, 
+              message: 'No secret key to validate price' 
+            };
+          }
         } catch (error: any) {
           results.priceValidation[plan] = { 
             valid: false, 

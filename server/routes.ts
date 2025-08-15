@@ -1569,29 +1569,33 @@ Sua instancia esta funcionando perfeitamente!`;
       const priceIds = { basicPriceId, proPriceId, enterprisePriceId };
       
       for (const [key, priceId] of Object.entries(priceIds)) {
-        if (!priceId.startsWith('price_')) {
+        if (priceId && !priceId.startsWith('price_')) {
           return res.status(400).json({ 
             message: `Invalid format for ${key}. Expected price ID starting with 'price_', got: ${priceId}` 
           });
         }
       }
 
-      // Validate keys format
-      if (stripeSecretKey && !stripeSecretKey.startsWith('sk_')) {
-        return res.status(400).json({ 
-          message: 'Invalid Stripe Secret Key format. Expected key starting with sk_' 
-        });
+      // Validate keys format - only validate if provided and not empty
+      if (stripeSecretKey && stripeSecretKey.trim() !== '') {
+        if (!stripeSecretKey.startsWith('sk_')) {
+          return res.status(400).json({ 
+            message: 'Invalid Stripe Secret Key format. Expected key starting with sk_' 
+          });
+        }
       }
 
-      if (stripePublicKey && !stripePublicKey.startsWith('pk_')) {
-        return res.status(400).json({ 
-          message: 'Invalid Stripe Public Key format. Expected key starting with pk_' 
-        });
+      if (stripePublicKey && stripePublicKey.trim() !== '') {
+        if (!stripePublicKey.startsWith('pk_')) {
+          return res.status(400).json({ 
+            message: 'Invalid Stripe Public Key format. Expected key starting with pk_' 
+          });
+        }
       }
 
       res.json({ 
         success: true, 
-        message: 'Configuration validated successfully. In production, these would be saved securely.' 
+        message: 'Configuração validada com sucesso! Em produção, essas configurações seriam salvas de forma segura.' 
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

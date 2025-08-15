@@ -14,8 +14,8 @@ import { CreditCard, Key, Settings, DollarSign, Shield, AlertTriangle } from 'lu
 import { Badge } from '@/components/ui/badge';
 
 const stripeConfigSchema = z.object({
-  stripeSecretKey: z.string().min(1, 'Stripe Secret Key é obrigatória'),
-  stripePublicKey: z.string().min(1, 'Stripe Public Key é obrigatória'),
+  stripeSecretKey: z.string().optional().or(z.literal('')),
+  stripePublicKey: z.string().optional().or(z.literal('')),
   basicPriceId: z.string().min(1, 'ID do preço do Plano Básico é obrigatório'),
   proPriceId: z.string().min(1, 'ID do preço do Plano Pro é obrigatório'),
   enterprisePriceId: z.string().min(1, 'ID do preço do Plano Enterprise é obrigatório'),
@@ -154,7 +154,7 @@ export default function StripeSettings() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Chave secreta do Stripe (nunca compartilhe esta chave)
+                        Chave secreta do Stripe (deve começar com sk_). Deixe vazio para manter a atual.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -175,7 +175,7 @@ export default function StripeSettings() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Chave pública do Stripe (usada no frontend)
+                        Chave pública do Stripe (deve começar com pk_). Deixe vazio para manter a atual.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -202,10 +202,11 @@ export default function StripeSettings() {
                     <div className="text-sm text-blue-800">
                       <p className="font-medium mb-1">Como encontrar os IDs de preço:</p>
                       <ol className="list-decimal list-inside space-y-1 text-xs">
-                        <li>Acesse o painel do Stripe</li>
+                        <li>Acesse o painel do Stripe Dashboard</li>
                         <li>Vá em "Produtos" no menu lateral</li>
                         <li>Clique em cada produto</li>
                         <li>Na seção "Preços", copie o ID que começa com "price_"</li>
+                        <li><strong>Importante:</strong> Use price IDs, não product IDs</li>
                       </ol>
                     </div>
                   </div>

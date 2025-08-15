@@ -632,10 +632,17 @@ Sua instancia esta funcionando perfeitamente!`;
         return res.status(404).json({ message: "Instance not found" });
       }
       
-      // Delete from Evolution API
-      await evolutionApi.deleteInstance(instance.instanceId);
+      // Try to delete from Evolution API, but continue if it fails (instance might not exist there)
+      try {
+        await evolutionApi.deleteInstance(instance.instanceId);
+      } catch (evolutionError: any) {
+        // If Evolution API returns 404, the instance doesn't exist there, which is fine
+        if (evolutionError.response?.status !== 404) {
+          console.warn(`Warning: Failed to delete instance ${instance.instanceId} from Evolution API:`, evolutionError.message);
+        }
+      }
       
-      // Delete from database
+      // Always delete from our database
       await storage.deleteInstance(id);
       
       res.json({ success: true });

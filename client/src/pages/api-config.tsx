@@ -26,7 +26,8 @@ export default function ApiConfig() {
 
   const { mutate: saveConfig, isPending: isSaving } = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/settings/evolution-api", "POST", { apiUrl, apiToken: apiKey });
+      const response = await apiRequest("POST", "/api/settings/evolution-api", { apiUrl, apiToken: apiKey });
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -46,7 +47,8 @@ export default function ApiConfig() {
 
   const { mutate: testConnection, isPending: isTesting } = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/settings/test-evolution-api", "POST", { apiUrl, apiToken: apiKey });
+      const response = await apiRequest("POST", "/api/settings/test-evolution-api", { apiUrl, apiToken: apiKey });
+      return await response.json();
     },
     onSuccess: (data: any) => {
       toast({

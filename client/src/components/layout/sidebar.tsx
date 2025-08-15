@@ -27,7 +27,7 @@ const adminNavigation = [
 const userNavigation = [
   { path: "/", label: "Dashboard", icon: BarChart3 },
   { path: "/instances", label: "Conectar WhatsApp", icon: Smartphone },
-  { path: "/templates", label: "Templates de Mensagem", icon: Mail },
+  { path: "/templates", label: "Criar Mensagens", icon: Mail },
   { path: "/webhooks", label: "Webhooks", icon: Webhook },
   { path: "/message-queue", label: "Fila de Mensagens", icon: MessageCircle },
   { path: "/settings", label: "Configurações", icon: Settings },

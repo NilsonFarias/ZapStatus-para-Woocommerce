@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
-import PlanUsageCard from "@/components/layout/plan-usage-card";
+
 import TemplateEditor from "@/components/templates/template-editor";
 import TemplateModal from "@/components/templates/template-modal";
 import { Button } from "@/components/ui/button";
@@ -194,7 +194,7 @@ export default function Templates() {
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header
-          title="Templates de Mensagem"
+          title="Criar Mensagens"
           description="Configure mensagens automáticas para cada status do pedido"
           action={{
             label: createTemplateMutation.isPending ? "Criando..." : "Novo Template",
@@ -207,8 +207,6 @@ export default function Templates() {
         />
         
         <div className="p-6">
-          <PlanUsageCard />
-          
           {/* Status Tabs */}
           <Card className="mb-6">
             <CardHeader className="border-b border-slate-200 pb-4">

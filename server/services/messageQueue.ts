@@ -10,8 +10,8 @@ export class MessageQueueService {
     
     this.isRunning = true;
     
-    // Run every minute to check for scheduled messages
-    cron.schedule('* * * * *', async () => {
+    // Run every 10 seconds to check for scheduled messages
+    cron.schedule('*/10 * * * * *', async () => {
       await this.processQueuedMessages();
     });
     
@@ -38,7 +38,7 @@ export class MessageQueueService {
       
       for (const message of pendingMessages) {
         // Get the instance for this message
-        const instance = await storage.getWhatsappInstance(message.instanceId);
+        const instance = await storage.getInstance(message.instanceId);
         if (instance) {
           console.log(`Processing pending message ${message.id} for instance ${instance.instanceId}`);
           await this.sendQueuedMessage(message.id, instance.instanceId);
@@ -97,6 +97,28 @@ export class MessageQueueService {
   ) {
     const scheduledFor = new Date();
     scheduledFor.setMinutes(scheduledFor.getMinutes() + delayMinutes);
+
+    return await storage.createQueuedMessage({
+      instanceId,
+      templateId,
+      recipientPhone,
+      message,
+      scheduledFor,
+      status: 'pending',
+      sentAt: null,
+      error: null,
+    });
+  }
+
+  async scheduleMessageInSeconds(
+    instanceId: string,
+    templateId: string,
+    recipientPhone: string,
+    message: string,
+    delaySeconds = 0
+  ) {
+    const scheduledFor = new Date();
+    scheduledFor.setSeconds(scheduledFor.getSeconds() + delaySeconds);
 
     return await storage.createQueuedMessage({
       instanceId,

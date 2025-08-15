@@ -344,7 +344,7 @@ export default function Settings() {
                 {renderContent()}
                 
                 {/* Subscription Management - Only for non-admin users */}
-                {user?.role !== 'admin' && activeTab === 'profile' && (
+                {user?.role !== 'admin' && activeSection === 'profile' && (
                   <div className="mt-6">
                     <Card>
                       <CardHeader>

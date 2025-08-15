@@ -1,6 +1,6 @@
 import { users, clients, whatsappInstances, messageTemplates, webhookConfigs, webhookLogs, messageQueue, type User, type InsertUser, type Client, type InsertClient, type WhatsappInstance, type InsertInstance, type MessageTemplate, type InsertTemplate, type WebhookConfig, type InsertWebhookConfig, type WebhookLog, type MessageQueueItem } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, gt } from "drizzle-orm";
+import { eq, desc, and, sql, gt, gte } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -29,6 +29,10 @@ export interface IStorage {
   getWhatsappInstances(): Promise<WhatsappInstance[]>;
   getAllQueuedMessages(): Promise<MessageQueueItem[]>;
   getQueuedMessagesByUser(userId: string): Promise<MessageQueueItem[]>;
+  
+  // Plan limits
+  getMonthlyMessageCount(clientId: string): Promise<number>;
+  checkMessageLimits(clientId: string): Promise<{ allowed: boolean; limit: number; current: number; plan: string }>;
   
   // Template methods
   getTemplates(clientId: string, orderStatus?: string): Promise<MessageTemplate[]>;
@@ -230,6 +234,53 @@ export class DatabaseStorage implements IStorage {
     
     console.log(`Database returned ${result.length} messages for user ${userId}`);
     return result;
+  }
+
+  async getMonthlyMessageCount(clientId: string): Promise<number> {
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const result = await db
+      .select({
+        count: sql<number>`count(*)`
+      })
+      .from(messageQueue)
+      .innerJoin(whatsappInstances, eq(messageQueue.instanceId, whatsappInstances.id))
+      .where(
+        and(
+          eq(whatsappInstances.clientId, clientId),
+          eq(messageQueue.status, 'sent'),
+          gte(messageQueue.sentAt, firstDayOfMonth)
+        )
+      );
+
+    return Number(result[0]?.count || 0);
+  }
+
+  async checkMessageLimits(clientId: string): Promise<{ allowed: boolean; limit: number; current: number; plan: string }> {
+    // Get client plan
+    const client = await this.getClient(clientId);
+    if (!client) {
+      throw new Error('Client not found');
+    }
+
+    // Define plan limits
+    const planLimits: Record<string, number> = {
+      free: 30,
+      basic: 1000,
+      pro: 10000,
+      enterprise: -1 // unlimited
+    };
+
+    const limit = planLimits[client.plan] || 30; // default to free plan limit
+    const current = await this.getMonthlyMessageCount(clientId);
+    
+    return {
+      allowed: limit === -1 || current < limit,
+      limit,
+      current,
+      plan: client.plan
+    };
   }
 
   async getTemplates(clientId: string, orderStatus?: string): Promise<MessageTemplate[]> {

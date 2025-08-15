@@ -3,8 +3,10 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import MetricsCard from "@/components/dashboard/metrics-card";
 import ActivityFeed from "@/components/dashboard/activity-feed";
-import { Users, Send, DollarSign, CheckCircle, Download, BarChart3 } from "lucide-react";
+import { Users, Send, DollarSign, CheckCircle, Download, BarChart3, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/hooks/use-auth";
 
 interface DashboardMetrics {
   activeClients: number;
@@ -13,9 +15,22 @@ interface DashboardMetrics {
   deliveryRate: number;
 }
 
+interface PlanLimits {
+  allowed: boolean;
+  limit: number;
+  current: number;
+  plan: string;
+}
+
 export default function Dashboard() {
+  const { user } = useAuth();
   const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
     queryKey: ['/api/dashboard/metrics'],
+  });
+
+  const { data: planLimits } = useQuery<PlanLimits>({
+    queryKey: ['/api/plan-limits'],
+    enabled: !!user && user.role !== 'admin',
   });
 
   if (isLoading) {
@@ -42,6 +57,44 @@ export default function Dashboard() {
         />
         
         <div className="p-6">
+          {/* Plan Usage for Users */}
+          {user?.role !== 'admin' && planLimits && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {planLimits.plan === 'free' && <AlertTriangle className="w-5 h-5 text-yellow-500" />}
+                  Uso do Plano {planLimits.plan.charAt(0).toUpperCase() + planLimits.plan.slice(1)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Mensagens Mensais</span>
+                    <span>
+                      {planLimits.current} / {planLimits.limit === -1 ? 'Ilimitado' : planLimits.limit}
+                    </span>
+                  </div>
+                  {planLimits.limit !== -1 && (
+                    <Progress 
+                      value={(planLimits.current / planLimits.limit) * 100} 
+                      className="w-full"
+                    />
+                  )}
+                  {!planLimits.allowed && (
+                    <div className="text-red-600 text-sm font-medium">
+                      ⚠️ Limite atingido! Atualize seu plano para continuar enviando mensagens.
+                    </div>
+                  )}
+                  {planLimits.plan === 'free' && planLimits.allowed && (
+                    <div className="text-blue-600 text-sm">
+                      💡 Plano gratuito com 30 mensagens. Atualize para enviar mais!
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <MetricsCard

@@ -175,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user.id,
         name: userData.company || userData.name,
         email: userData.email,
-        plan: userData.plan || 'basico',
+        plan: userData.plan || 'free',
         status: "active",
       });
 
@@ -849,6 +849,31 @@ Sua instancia esta funcionando perfeitamente!`;
         message: "Erro ao testar webhook",
         error: error.message
       });
+    }
+  });
+
+  // Plan limits endpoint
+  app.get("/api/plan-limits", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      // Get user's client
+      const clients = await storage.getClients(userId);
+      if (clients.length === 0) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      const client = clients[0]; // Assuming one client per user
+      const limits = await storage.checkMessageLimits(client.id);
+      
+      res.json(limits);
+    } catch (error: any) {
+      console.error('Error fetching plan limits:', error);
+      res.status(500).json({ message: error.message });
     }
   });
 

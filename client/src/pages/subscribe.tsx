@@ -17,6 +17,20 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 const PLANS = [
   {
+    id: 'free',
+    name: 'Plano Gratuito',
+    price: 0,
+    description: 'Experimente gratuitamente',
+    icon: Zap,
+    features: [
+      'Até 30 mensagens/mês',
+      '1 instância WhatsApp',
+      'Templates básicos',
+      'Suporte por email',
+    ],
+    popular: false,
+  },
+  {
     id: 'basic',
     name: 'Plano Básico',
     price: 29,
@@ -38,7 +52,7 @@ const PLANS = [
     icon: Crown,
     features: [
       'Até 10.000 mensagens/mês',
-      '5 instâncias WhatsApp',
+      '1 instância WhatsApp',
       'Templates avançados',
       'Webhooks personalizados',
       'Suporte prioritário',
@@ -54,7 +68,7 @@ const PLANS = [
     icon: Building,
     features: [
       'Mensagens ilimitadas',
-      'Instâncias ilimitadas',
+      '1 instância WhatsApp',
       'API completa',
       'Integrações customizadas',
       'Suporte 24/7',

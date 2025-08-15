@@ -95,6 +95,18 @@ export class MessageQueueService {
     message: string,
     delayMinutes = 0
   ) {
+    // Get instance to find the client
+    const instance = await storage.getInstance(instanceId);
+    if (!instance) {
+      throw new Error('Instance not found');
+    }
+
+    // Check message limits for this client
+    const limits = await storage.checkMessageLimits(instance.clientId);
+    if (!limits.allowed) {
+      throw new Error(`Limite de mensagens atingido para o plano ${limits.plan}. Limite: ${limits.limit === -1 ? 'ilimitado' : limits.limit}/mês, Atual: ${limits.current}`);
+    }
+
     const scheduledFor = new Date();
     scheduledFor.setMinutes(scheduledFor.getMinutes() + delayMinutes);
 

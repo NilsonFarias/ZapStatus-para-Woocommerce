@@ -16,9 +16,11 @@ interface PlanLimits {
 export default function PlanUsageCard() {
   const { user } = useAuth();
   
-  const { data: planLimits, isLoading } = useQuery<PlanLimits>({
+  const { data: planLimits, isLoading, refetch } = useQuery<PlanLimits>({
     queryKey: ['/api/plan-limits'],
     enabled: !!user && user.role !== 'admin',
+    staleTime: 0, // Always refetch to get latest data
+    cacheTime: 0, // Don't cache
   });
 
   // Don't show for admins

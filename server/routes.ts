@@ -862,14 +862,36 @@ Sua instancia esta funcionando perfeitamente!`;
         return res.status(401).json({ message: "User not authenticated" });
       }
       
-      // Get user's client
+      // Get user and their client
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
       const clients = await storage.getClients(userId);
       if (clients.length === 0) {
         return res.status(404).json({ message: "Client not found" });
       }
       
       const client = clients[0]; // Assuming one client per user
-      const limits = await storage.checkMessageLimits(client.id);
+      
+      // Use user's plan instead of client's plan
+      const planLimits: Record<string, number> = {
+        free: 30,
+        basic: 1000,
+        pro: 10000,
+        enterprise: -1 // unlimited
+      };
+
+      const limit = planLimits[user.plan] || 1000; // default to basic plan limit
+      const current = await storage.getMonthlyMessageCount(client.id);
+      
+      const limits = {
+        allowed: limit === -1 || current < limit,
+        limit,
+        current,
+        plan: user.plan
+      };
       
       res.json(limits);
     } catch (error: any) {

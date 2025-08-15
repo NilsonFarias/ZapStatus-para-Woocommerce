@@ -1,71 +1,60 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User } from "@shared/schema";
+import { createContext, useContext, ReactNode } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import type { User } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  refetch: () => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: user, isLoading, refetch } = useQuery<User | null>({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
-  useEffect(() => {
-    // For demo purposes, we'll use a mock user
-    // In a real app, check for stored authentication token
-    setTimeout(() => {
-      setUser({
-        id: "demo-user-id",
-        username: "admin",
-        email: "admin@whatsflow.com",
-        password: "", // Never store passwords in frontend
-        name: "Admin User",
-        company: "WhatsFlow Tech",
-        phone: "+55 11 99999-9999",
-        plan: "pro",
-        subscriptionStatus: "active",
-        stripeCustomerId: null,
-        stripeSubscriptionId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      setIsLoading(false);
-    }, 500);
-  }, []);
+  const loginMutation = useMutation({
+    mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      return await apiRequest("/api/auth/login", "POST", { email, password });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    },
+  });
 
-  const login = async (username: string, password: string) => {
-    // Mock login - in real app, call authentication API
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setUser({
-      id: "demo-user-id",
-      username,
-      email: "admin@whatsflow.com",
-      password: "",
-      name: "Admin User",
-      company: "WhatsFlow Tech",
-      phone: "+55 11 99999-9999",
-      plan: "pro",
-      subscriptionStatus: "active",
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    setIsLoading(false);
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/auth/logout", "POST");
+    },
+    onSuccess: () => {
+      queryClient.setQueryData(["/api/auth/me"], null);
+      queryClient.clear();
+    },
+  });
+
+  const login = async (email: string, password: string) => {
+    await loginMutation.mutateAsync({ email, password });
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    await logoutMutation.mutateAsync();
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      login, 
+      logout, 
+      refetch 
+    }}>
       {children}
     </AuthContext.Provider>
   );

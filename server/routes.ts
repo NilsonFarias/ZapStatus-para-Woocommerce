@@ -3,12 +3,20 @@ import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import axios from "axios";
 import Stripe from "stripe";
+import bcrypt from "bcryptjs";
+import session from "express-session";
 import { storage } from "./storage";
 import { evolutionApi } from "./services/evolutionApi";
 import { messageQueue, MessageQueueService } from "./services/messageQueue";
 
 const messageQueueService = new MessageQueueService();
-import { insertClientSchema, insertInstanceSchema, insertTemplateSchema, insertWebhookConfigSchema } from "@shared/schema";
+import { insertClientSchema, insertInstanceSchema, insertTemplateSchema, insertWebhookConfigSchema, insertUserSchema } from "@shared/schema";
+
+declare module 'express-session' {
+  interface SessionData {
+    userId: string;
+  }
+}
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
@@ -27,6 +35,18 @@ export function getSocketServer(): SocketIOServer | null {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Session middleware
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'whatsflow-secret-key-dev',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // Set to true in production with HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  }));
+
   // Start message queue service
   messageQueue.start();
 
@@ -101,35 +121,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard metrics
-  app.get("/api/dashboard/metrics", async (req, res) => {
+  // Authentication middleware
+  const requireAuth = (req: any, res: any, next: any) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    next();
+  };
+
+  // Authentication routes
+  app.post("/api/auth/register", async (req, res) => {
     try {
-      // In a real app, you'd get userId from authentication
-      const userId = "68a6ee4a-0647-447d-913f-2bed17557e96"; // Admin user ID
-      const metrics = await storage.getDashboardMetrics(userId);
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email já está em uso" });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(userData.password, 12);
+      
+      // Create user
+      const user = await storage.createUser({
+        ...userData,
+        password: hashedPassword,
+        username: userData.email, // Use email as username
+        company: userData.company || "",
+        phone: userData.phone || "",
+      });
+
+      // Create corresponding client automatically
+      await storage.createClient({
+        userId: user.id,
+        name: userData.company,
+        email: userData.email,
+        plan: userData.plan,
+        status: "active",
+      });
+
+      // Create session
+      req.session.userId = user.id;
+      
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email e senha são obrigatórios" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Email ou senha incorretos" });
+      }
+
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Email ou senha incorretos" });
+      }
+
+      // Create session
+      req.session.userId = user.id;
+      
+      // Return user without password
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Erro ao fazer logout" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ success: true });
+    });
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        req.session.destroy(() => {});
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Auth check error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Dashboard metrics
+  app.get("/api/dashboard/metrics", requireAuth, async (req: any, res) => {
+    try {
+      const metrics = await storage.getDashboardMetrics(req.session.userId);
       res.json(metrics);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  // Client management
-  app.get("/api/clients", async (req, res) => {
+  // Client management (now user-specific)
+  app.get("/api/clients", requireAuth, async (req: any, res) => {
     try {
-      const userId = "68a6ee4a-0647-447d-913f-2bed17557e96"; // Admin user ID
-      const clients = await storage.getClients(userId);
+      const clients = await storage.getClients(req.session.userId);
       res.json(clients);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.post("/api/clients", async (req, res) => {
+  app.post("/api/clients", requireAuth, async (req: any, res) => {
     try {
-      const userId = "68a6ee4a-0647-447d-913f-2bed17557e96"; // Admin user ID
       const clientData = {
         ...req.body,
-        userId,
+        userId: req.session.userId,
         status: 'active',
         monthlyMessages: 0,
       };
@@ -141,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/clients/:id", async (req, res) => {
+  app.put("/api/clients/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertClientSchema.partial().parse(req.body);
@@ -152,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/clients/:id", async (req, res) => {
+  app.delete("/api/clients/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteClient(id);
@@ -163,10 +294,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // WhatsApp Instances
-  app.get("/api/instances", async (req, res) => {
+  app.get("/api/instances", requireAuth, async (req: any, res) => {
     try {
-      const userId = "68a6ee4a-0647-447d-913f-2bed17557e96"; // Admin user ID
-      const instances = await storage.getAllInstances(userId);
+      const instances = await storage.getAllInstances(req.session.userId);
       
       // Update instances status from Evolution API
       for (const instance of instances) {

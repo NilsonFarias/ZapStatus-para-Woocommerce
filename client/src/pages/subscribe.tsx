@@ -110,12 +110,15 @@ const SubscribeForm = ({ selectedPlan }: { selectedPlan: string }) => {
 
     setIsProcessing(true);
 
-    const { error } = await stripe.confirmPayment({
+    const result = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/subscription-success`,
       },
+      redirect: 'if_required',
     });
+
+    const { error, paymentIntent } = result;
 
     if (error) {
       toast({
@@ -123,11 +126,13 @@ const SubscribeForm = ({ selectedPlan }: { selectedPlan: string }) => {
         description: error.message,
         variant: "destructive",
       });
-    } else {
+    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
       toast({
         title: "Pagamento Realizado!",
         description: "Sua assinatura foi ativada com sucesso!",
       });
+      // Navigate to success page manually
+      window.location.href = '/subscription-success?payment_intent=' + paymentIntent.id + '&redirect_status=succeeded';
     }
 
     setIsProcessing(false);

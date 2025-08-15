@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import axios from "axios";
@@ -1502,6 +1503,32 @@ Sua instancia esta funcionando perfeitamente!`;
         expand: ['latest_invoice.payment_intent'],
       });
 
+      // Update user plan immediately after successful subscription creation
+      const user = req.user as any;
+      if (user?.id) {
+        try {
+          // Map plan to subscription plan
+          const planMapping = {
+            'basic': 'basic',
+            'pro': 'pro', 
+            'enterprise': 'enterprise'
+          };
+          
+          const userPlan = planMapping[plan as keyof typeof planMapping];
+          if (userPlan) {
+            await storage.updateUser(user.id, {
+              plan: userPlan,
+              subscriptionStatus: 'active',
+              stripeCustomerId: subscription.customer as string,
+              stripeSubscriptionId: subscription.id
+            });
+            console.log(`User ${user.id} plan updated to ${userPlan}`);
+          }
+        } catch (updateError: any) {
+          console.error('Error updating user plan:', updateError.message);
+        }
+      }
+
       res.json({
         subscriptionId: subscription.id,
         clientSecret: (subscription.latest_invoice as any)?.payment_intent?.client_secret,
@@ -1657,6 +1684,100 @@ Sua instancia esta funcionando perfeitamente!`;
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
+  });
+
+  // Stripe webhook endpoint
+  app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+      // Get webhook secret from environment or database
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      
+      if (!webhookSecret) {
+        console.log('No webhook secret configured, processing event anyway');
+        event = req.body;
+      } else {
+        const secretKeySetting = await storage.getSystemSetting('stripe_secret_key');
+        const secretKey = secretKeySetting?.value || process.env.STRIPE_SECRET_KEY;
+        
+        if (secretKey) {
+          const stripeInstance = new (await import('stripe')).default(secretKey, {
+            apiVersion: '2023-10-16',
+          });
+          event = stripeInstance.webhooks.constructEvent(req.body, sig!, webhookSecret);
+        } else {
+          return res.status(400).send('Webhook signature verification failed');
+        }
+      }
+    } catch (err: any) {
+      console.log(`Webhook signature verification failed.`, err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+        const subscription = event.data.object;
+        console.log('Subscription event received:', subscription.id);
+        
+        try {
+          // Find user by Stripe customer ID
+          const users = await storage.getUsers();
+          const user = users.find(u => u.stripeCustomerId === subscription.customer);
+          
+          if (user) {
+            // Determine plan from price ID
+            const priceId = subscription.items.data[0]?.price?.id;
+            let plan = 'basic';
+            
+            const basicPriceId = (await storage.getSystemSetting('stripe_basic_price_id'))?.value || process.env.STRIPE_BASIC_PRICE_ID;
+            const proPriceId = (await storage.getSystemSetting('stripe_pro_price_id'))?.value || process.env.STRIPE_PRO_PRICE_ID;
+            const enterprisePriceId = (await storage.getSystemSetting('stripe_enterprise_price_id'))?.value || process.env.STRIPE_ENTERPRISE_PRICE_ID;
+            
+            if (priceId === proPriceId) plan = 'pro';
+            else if (priceId === enterprisePriceId) plan = 'enterprise';
+            
+            await storage.updateUser(user.id, {
+              plan,
+              subscriptionStatus: subscription.status === 'active' ? 'active' : 'inactive',
+              stripeSubscriptionId: subscription.id
+            });
+            
+            console.log(`User ${user.id} plan updated to ${plan} via webhook`);
+          }
+        } catch (error: any) {
+          console.error('Error processing subscription webhook:', error.message);
+        }
+        break;
+        
+      case 'customer.subscription.deleted':
+        const deletedSubscription = event.data.object;
+        console.log('Subscription deleted:', deletedSubscription.id);
+        
+        try {
+          const users = await storage.getUsers();
+          const user = users.find(u => u.stripeSubscriptionId === deletedSubscription.id);
+          
+          if (user) {
+            await storage.updateUser(user.id, {
+              plan: 'free',
+              subscriptionStatus: 'cancelled'
+            });
+            console.log(`User ${user.id} plan downgraded to free via webhook`);
+          }
+        } catch (error: any) {
+          console.error('Error processing subscription deletion webhook:', error.message);
+        }
+        break;
+        
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    res.json({ received: true });
   });
 
   app.post('/api/admin/test-stripe-config', async (req, res) => {

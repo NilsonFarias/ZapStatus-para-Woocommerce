@@ -15,21 +15,28 @@ import {
   Zap
 } from "lucide-react";
 
-const navigationItems = [
+const adminNavigation = [
   { path: "/", label: "Dashboard", icon: BarChart3 },
   { path: "/clients", label: "Clientes", icon: Users },
+  { path: "/billing", label: "Faturamento", icon: CreditCard },
+  { path: "/api-config", label: "API", icon: Zap },
+  { path: "/settings", label: "Configurações", icon: Settings },
+];
+
+const userNavigation = [
   { path: "/instances", label: "Instâncias WhatsApp", icon: Smartphone },
   { path: "/templates", label: "Templates de Mensagem", icon: Mail },
   { path: "/webhooks", label: "Webhooks", icon: Webhook },
   { path: "/message-queue", label: "Fila de Mensagens", icon: MessageCircle },
-  { path: "/billing", label: "Faturamento", icon: CreditCard },
-  { path: "/api-config", label: "API", icon: Zap },
-  { path: "/settings", label: "Configurações", icon: User },
+  { path: "/settings", label: "Configurações", icon: Settings },
 ];
 
 export default function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+
+  // Choose navigation based on user role
+  const navigationItems = user?.role === 'admin' ? adminNavigation : userNavigation;
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-screen" data-testid="sidebar">
@@ -82,7 +89,7 @@ export default function Sidebar() {
               {user?.name || 'Loading...'}
             </p>
             <p className="text-xs text-slate-500" data-testid="user-plan">
-              Plano {user?.plan === 'pro' ? 'Pro' : user?.plan === 'enterprise' ? 'Enterprise' : 'Básico'}
+              {user?.role === 'admin' ? 'Administrador' : `Plano ${user?.plan === 'pro' ? 'Pro' : user?.plan === 'enterprise' ? 'Enterprise' : 'Básico'}`}
             </p>
           </div>
           <Button 

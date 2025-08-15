@@ -129,6 +129,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  const requireAdmin = async (req: any, res: any, next: any) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      req.user = user;
+      next();
+    } catch (error) {
+      console.error("Admin check error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  };
+
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -236,27 +254,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard metrics
-  app.get("/api/dashboard/metrics", requireAuth, async (req: any, res) => {
+  // Dashboard metrics (Admin only)
+  app.get("/api/dashboard/metrics", requireAdmin, async (req: any, res) => {
     try {
-      const metrics = await storage.getDashboardMetrics(req.session.userId);
+      const metrics = await storage.getDashboardMetrics();
       res.json(metrics);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  // Client management (now user-specific)
-  app.get("/api/clients", requireAuth, async (req: any, res) => {
+  // Client management (Admin only - all clients)
+  app.get("/api/clients", requireAdmin, async (req: any, res) => {
     try {
-      const clients = await storage.getClients(req.session.userId);
+      const clients = await storage.getAllClients();
       res.json(clients);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.post("/api/clients", requireAuth, async (req: any, res) => {
+  // User routes for their own instances, templates, etc.
+  app.get("/api/user/instances", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get the user's client to find their instances
+      const clients = await storage.getClients(req.session.userId);
+      if (clients.length === 0) {
+        return res.json([]);
+      }
+      
+      const instances = await storage.getWhatsappInstances(clients[0].id);
+      res.json(instances);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/clients", requireAdmin, async (req: any, res) => {
     try {
       const clientData = {
         ...req.body,

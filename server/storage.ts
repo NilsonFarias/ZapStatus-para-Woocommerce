@@ -94,6 +94,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(clients).where(eq(clients.userId, userId));
   }
 
+  async getAllClients(): Promise<Client[]> {
+    return await db.select().from(clients);
+  }
+
   async getClient(id: string): Promise<Client | undefined> {
     const [client] = await db.select().from(clients).where(eq(clients.id, id));
     return client || undefined;
@@ -307,20 +311,23 @@ export class DatabaseStorage implements IStorage {
       .where(sql`message LIKE '%' || ${orderId} || '%'`);
   }
 
-  async getDashboardMetrics(userId: string): Promise<{
+  async getDashboardMetrics(userId?: string): Promise<{
     activeClients: number;
     messagesSent: number;
     monthlyRevenue: number;
     deliveryRate: number;
   }> {
-    const userClients = await db.select().from(clients).where(eq(clients.userId, userId));
-    const activeClients = userClients.filter(c => c.status === 'active').length;
+    const allClients = userId 
+      ? await db.select().from(clients).where(eq(clients.userId, userId))
+      : await db.select().from(clients);
+      
+    const activeClients = allClients.filter(c => c.status === 'active').length;
     
     // Calculate total messages sent this month
-    const messagesSent = userClients.reduce((total, client) => total + (client.monthlyMessages || 0), 0);
+    const messagesSent = allClients.reduce((total, client) => total + (client.monthlyMessages || 0), 0);
     
     // Calculate monthly revenue (simplified calculation)
-    const monthlyRevenue = userClients.reduce((total, client) => {
+    const monthlyRevenue = allClients.reduce((total, client) => {
       const planRevenue = client.plan === 'pro' ? 89 : client.plan === 'enterprise' ? 199 : 29;
       return total + (client.status === 'active' ? planRevenue : 0);
     }, 0);

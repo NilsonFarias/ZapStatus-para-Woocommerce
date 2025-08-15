@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   company: text("company"),
   phone: text("phone"),
+  role: text("role").notNull().default("user"), // "user" | "admin"
   plan: text("plan").notNull().default("basic"),
   subscriptionStatus: text("subscription_status").notNull().default("active"),
   stripeCustomerId: text("stripe_customer_id"),

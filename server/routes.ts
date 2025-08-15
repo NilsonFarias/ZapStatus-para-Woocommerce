@@ -565,8 +565,8 @@ Sua instancia esta funcionando perfeitamente!`;
       const allQueueItems = await storage.getAllQueuedMessages();
       console.log(`Found ${allQueueItems.length} queued messages`);
       
-      // Sort by scheduled time
-      allQueueItems.sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime());
+      // Sort by creation time (newest first) - database already does this, but ensuring consistency
+      allQueueItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
       res.json(allQueueItems);
     } catch (error: any) {

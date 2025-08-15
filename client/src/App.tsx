@@ -14,6 +14,7 @@ import MessageQueue from "@/pages/message-queue";
 import Billing from "@/pages/billing";
 import Settings from "@/pages/settings";
 import Subscribe from "@/pages/subscribe";
+import SubscriptionSuccess from "@/pages/subscription-success";
 import Register from "@/pages/register";
 import Login from "@/pages/login";
 import Welcome from "@/pages/welcome";
@@ -38,6 +39,7 @@ function Router() {
       <Switch>
         <Route path="/register" component={Register} />
         <Route path="/login" component={Login} />
+        <Route path="/subscription-success" component={SubscriptionSuccess} />
         <Route path="/" component={Login} />
         <Route component={Login} />
       </Switch>
@@ -61,6 +63,7 @@ function Router() {
       <Route path="/stripe-settings" component={StripeSettings} />
       <Route path="/settings" component={Settings} />
       <Route path="/subscribe" component={Subscribe} />
+      <Route path="/subscription-success" component={SubscriptionSuccess} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -113,7 +113,7 @@ const SubscribeForm = ({ selectedPlan }: { selectedPlan: string }) => {
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/?subscription=success`,
+        return_url: `${window.location.origin}/subscription-success`,
       },
     });
 
@@ -265,7 +265,8 @@ export default function Subscribe() {
                     variables: {
                       colorPrimary: '#2563EB',
                     }
-                  }
+                  },
+                  loader: 'auto'
                 }}
               >
                 <SubscribeForm selectedPlan={plan?.name || ''} />

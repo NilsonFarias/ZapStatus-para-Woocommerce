@@ -258,7 +258,15 @@ export default function MessageQueue() {
                                   Tentar Novamente
                                 </DropdownMenuItem>
                               )}
-
+                              {item.status === 'sent' && (
+                                <DropdownMenuItem 
+                                  onClick={() => resendMessageMutation.mutate(item.id)}
+                                  data-testid={`resend-sent-${item.id}`}
+                                >
+                                  <Send className="h-4 w-4 mr-2" />
+                                  Reenviar
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>

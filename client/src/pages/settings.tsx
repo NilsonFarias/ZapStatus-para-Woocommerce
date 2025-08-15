@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { User, Shield, Bell, Save } from "lucide-react";
+import { User, Shield, Bell, Save, CreditCard } from "lucide-react";
+import SubscriptionManagement from "@/pages/subscription-management";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -341,6 +342,26 @@ export default function Settings() {
               {/* Settings Content */}
               <div className="flex-1">
                 {renderContent()}
+                
+                {/* Subscription Management - Only for non-admin users */}
+                {user?.role !== 'admin' && activeTab === 'profile' && (
+                  <div className="mt-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <CreditCard className="h-5 w-5 text-primary" />
+                          Gerenciar Assinatura
+                        </CardTitle>
+                        <CardDescription>
+                          Controle sua assinatura e pagamentos
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <SubscriptionManagement />
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
               </div>
             </div>
           </div>

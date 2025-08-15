@@ -1758,6 +1758,226 @@ Sua instancia esta funcionando perfeitamente!`;
     }
   });
 
+  // Cancel subscription endpoint
+  app.post("/api/cancel-subscription", requireAuth, async (req: any, res) => {
+    try {
+      const { cancelImmediately = false, reason } = req.body;
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      if (!user.stripeSubscriptionId) {
+        return res.status(400).json({ message: "Nenhuma assinatura ativa encontrada" });
+      }
+
+      let canceledSubscription;
+      
+      if (cancelImmediately) {
+        // Cancel subscription immediately
+        canceledSubscription = await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+        
+        // Update user plan to basic and status to canceled
+        await storage.updateUser(user.id, {
+          plan: 'basic',
+          subscriptionStatus: 'canceled'
+        });
+
+        // Update client plan
+        const clients = await storage.getClients(user.id);
+        if (clients.length > 0) {
+          await storage.updateClient(clients[0].id, { plan: 'basic' });
+        }
+
+        console.log(`Subscription ${user.stripeSubscriptionId} canceled immediately for user ${user.id}. Reason: ${reason || 'Not provided'}`);
+      } else {
+        // Cancel at period end
+        canceledSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+          cancel_at_period_end: true
+        });
+
+        // Keep current plan until period ends
+        await storage.updateUser(user.id, {
+          subscriptionStatus: 'cancel_at_period_end'
+        });
+
+        console.log(`Subscription ${user.stripeSubscriptionId} scheduled for cancellation at period end for user ${user.id}. Reason: ${reason || 'Not provided'}`);
+      }
+
+      res.json({
+        success: true,
+        subscription: {
+          id: canceledSubscription.id,
+          status: canceledSubscription.status,
+          cancelAtPeriodEnd: canceledSubscription.cancel_at_period_end,
+          currentPeriodEnd: new Date(canceledSubscription.current_period_end * 1000),
+        }
+      });
+    } catch (error: any) {
+      console.error("Subscription cancellation error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Reactivate subscription endpoint
+  app.post("/api/reactivate-subscription", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      if (!user.stripeSubscriptionId) {
+        return res.status(400).json({ message: "Nenhuma assinatura encontrada" });
+      }
+
+      // Remove cancel_at_period_end flag
+      const reactivatedSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: false
+      });
+
+      // Update user status back to active
+      await storage.updateUser(user.id, {
+        subscriptionStatus: 'active'
+      });
+
+      console.log(`Subscription ${user.stripeSubscriptionId} reactivated for user ${user.id}`);
+
+      res.json({
+        success: true,
+        subscription: {
+          id: reactivatedSubscription.id,
+          status: reactivatedSubscription.status,
+          cancelAtPeriodEnd: reactivatedSubscription.cancel_at_period_end,
+        }
+      });
+    } catch (error: any) {
+      console.error("Subscription reactivation error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get subscription details endpoint
+  app.get("/api/subscription-details", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      if (!user.stripeSubscriptionId) {
+        return res.json({
+          hasSubscription: false,
+          plan: user.plan,
+          subscriptionStatus: user.subscriptionStatus
+        });
+      }
+
+      // Get subscription details from Stripe
+      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+      
+      res.json({
+        hasSubscription: true,
+        subscription: {
+          id: subscription.id,
+          status: subscription.status,
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          currentPeriodStart: new Date(subscription.current_period_start * 1000),
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+        },
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus
+      });
+    } catch (error: any) {
+      console.error("Get subscription details error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Stripe webhook endpoint for subscription changes
+  app.post('/api/stripe/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+    const sig = req.headers['stripe-signature'] as string;
+    
+    let event;
+
+    try {
+      // Verify webhook signature
+      const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      if (endpointSecret) {
+        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+      } else {
+        // For development, skip signature verification
+        event = JSON.parse(req.body.toString());
+      }
+    } catch (err: any) {
+      console.log(`Webhook signature verification failed.`, err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    console.log(`Received Stripe webhook: ${event.type}`);
+
+    try {
+      // Handle the event
+      switch (event.type) {
+        case 'customer.subscription.updated': {
+          const subscription = event.data.object;
+          console.log(`Subscription updated: ${subscription.id}`);
+          
+          // Update user subscription status in database
+          const user = await storage.getUserByStripeSubscriptionId(subscription.id);
+          if (user) {
+            let newStatus = 'active';
+            if (subscription.cancel_at_period_end) {
+              newStatus = 'cancel_at_period_end';
+            } else if (subscription.status === 'canceled') {
+              newStatus = 'canceled';
+            }
+            
+            await storage.updateUser(user.id, {
+              subscriptionStatus: newStatus
+            });
+            
+            console.log(`Updated user ${user.id} subscription status to: ${newStatus}`);
+          }
+          break;
+        }
+        
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object;
+          console.log(`Subscription canceled: ${subscription.id}`);
+          
+          // Update user to basic plan when subscription is canceled
+          const user = await storage.getUserByStripeSubscriptionId(subscription.id);
+          if (user) {
+            await storage.updateUser(user.id, {
+              plan: 'basic',
+              subscriptionStatus: 'canceled'
+            });
+            
+            // Also update client plan
+            const clients = await storage.getClients(user.id);
+            if (clients.length > 0) {
+              await storage.updateClient(clients[0].id, { plan: 'basic' });
+            }
+            
+            console.log(`Updated user ${user.id} to basic plan after subscription cancellation`);
+          }
+          break;
+        }
+        
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+      
+      res.json({received: true});
+    } catch (error: any) {
+      console.error(`Error processing webhook:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Diagnose QR code generation issues
   app.get("/api/evolution/diagnose", async (req, res) => {
     try {

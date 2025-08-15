@@ -222,7 +222,7 @@ export default function Instances() {
       <main className="flex-1 overflow-auto">
         <Header
           title="Conectar WhatsApp"
-          description="Uma instância por cliente - Gerencie conexões WhatsApp via Evolution API"
+          description="Uma instância por cliente - Gerencie conexões WhatsApp"
           action={{
             label: "Nova Instância",
             onClick: () => setCreateModalOpen(true),
@@ -237,7 +237,7 @@ export default function Instances() {
             disabled={testEvolutionApiMutation.isPending}
             data-testid="button-test-evolution-api"
           >
-            {testEvolutionApiMutation.isPending ? "Testando..." : "Testar Conexão Evolution API"}
+            {testEvolutionApiMutation.isPending ? "Testando..." : "Testar Conexão"}
           </Button>
           
           <Button 

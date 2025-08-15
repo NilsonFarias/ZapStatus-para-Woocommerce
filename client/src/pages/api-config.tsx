@@ -12,7 +12,7 @@ import { Loader2, Save, TestTube } from "lucide-react";
 
 interface EvolutionApiConfig {
   apiUrl: string;
-  apiKey: string;
+  apiToken: string;
 }
 
 export default function ApiConfig() {
@@ -26,7 +26,7 @@ export default function ApiConfig() {
 
   const { mutate: saveConfig, isPending: isSaving } = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/settings/evolution-api", "POST", { apiUrl, apiKey });
+      return await apiRequest("/api/settings/evolution-api", "POST", { apiUrl, apiToken: apiKey });
     },
     onSuccess: () => {
       toast({
@@ -46,7 +46,7 @@ export default function ApiConfig() {
 
   const { mutate: testConnection, isPending: isTesting } = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/settings/test-evolution-api", "POST");
+      return await apiRequest("/api/settings/test-evolution-api", "POST", { apiUrl, apiToken: apiKey });
     },
     onSuccess: (data: any) => {
       toast({
@@ -68,7 +68,7 @@ export default function ApiConfig() {
   React.useEffect(() => {
     if (config && !apiUrl && !apiKey) {
       setApiUrl(config.apiUrl || "");
-      setApiKey(config.apiKey || "");
+      setApiKey(config.apiToken || "");
     }
   }, [config, apiUrl, apiKey]);
 

@@ -1874,24 +1874,50 @@ Sua instancia esta funcionando perfeitamente!`;
         });
       }
 
-      // Get subscription details from Stripe
-      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId, {
-        expand: ['items.data.price']
-      });
+      // Get subscription details from Stripe with full data
+      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
       
-      console.log('Full Stripe subscription object:', JSON.stringify({
+      // Also get the invoice to find billing period info if subscription doesn't have it
+      let upcomingInvoice = null;
+      try {
+        upcomingInvoice = await stripe.invoices.retrieveUpcoming({
+          subscription: user.stripeSubscriptionId
+        });
+      } catch (error) {
+        console.log('Could not retrieve upcoming invoice:', error);
+      }
+      
+      console.log('Subscription data:', {
         id: subscription.id,
         status: subscription.status,
         current_period_start: subscription.current_period_start,
         current_period_end: subscription.current_period_end,
-        canceled_at: subscription.canceled_at,
-        cancel_at_period_end: subscription.cancel_at_period_end,
-        created: subscription.created
-      }, null, 2));
+        billing_cycle_anchor: subscription.billing_cycle_anchor,
+        created: subscription.created,
+        upcoming_invoice_period_end: upcomingInvoice?.period_end,
+        upcoming_invoice_period_start: upcomingInvoice?.period_start
+      });
       
-      // Use created date as fallback if period dates are missing
-      const periodStart = subscription.current_period_start || subscription.created;
-      const periodEnd = subscription.current_period_end;
+      // Determine period dates with fallbacks
+      let periodStart = subscription.current_period_start;
+      let periodEnd = subscription.current_period_end;
+      
+      // If subscription doesn't have period info, use upcoming invoice or created date
+      if (!periodStart) {
+        periodStart = upcomingInvoice?.period_start || subscription.created;
+      }
+      
+      if (!periodEnd && upcomingInvoice) {
+        periodEnd = upcomingInvoice.period_end;
+      }
+      
+      // If still no end date, calculate based on billing cycle (assume monthly)
+      if (!periodEnd && periodStart) {
+        const startDate = new Date(periodStart * 1000);
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1);
+        periodEnd = Math.floor(endDate.getTime() / 1000);
+      }
       
       res.json({
         hasSubscription: true,

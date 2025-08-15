@@ -1547,9 +1547,17 @@ Sua instancia esta funcionando perfeitamente!`;
             await storage.updateUser(user.id, {
               plan: userPlan,
               subscriptionStatus: 'active',
-              stripeCustomerId: subscription.customer as string,
+              stripeCustomerId: customer.id,
               stripeSubscriptionId: subscription.id
             });
+            // Also update the client's plan to keep them in sync
+            const clients = await storage.getClients();
+            const userClient = clients.find(c => c.userId === user.id);
+            if (userClient) {
+              await storage.updateClient(userClient.id, { plan: userPlan });
+              console.log(`Client ${userClient.id} plan also updated to ${userPlan}`);
+            }
+            
             console.log(`User ${user.id} plan updated to ${userPlan}`);
           }
         } catch (updateError: any) {
@@ -1774,6 +1782,14 @@ Sua instancia esta funcionando perfeitamente!`;
               stripeSubscriptionId: subscription.id
             });
             
+            // Also update the client's plan to keep them in sync
+            const clients = await storage.getClients();
+            const userClient = clients.find(c => c.userId === user.id);
+            if (userClient) {
+              await storage.updateClient(userClient.id, { plan });
+              console.log(`Client ${userClient.id} plan also updated to ${plan}`);
+            }
+            
             console.log(`User ${user.id} plan updated to ${plan} via webhook`);
           }
         } catch (error: any) {
@@ -1794,6 +1810,15 @@ Sua instancia esta funcionando perfeitamente!`;
               plan: 'free',
               subscriptionStatus: 'cancelled'
             });
+            
+            // Also update the client's plan to keep them in sync
+            const clients = await storage.getClients();
+            const userClient = clients.find(c => c.userId === user.id);
+            if (userClient) {
+              await storage.updateClient(userClient.id, { plan: 'free' });
+              console.log(`Client ${userClient.id} plan also downgraded to free`);
+            }
+            
             console.log(`User ${user.id} plan downgraded to free via webhook`);
           }
         } catch (error: any) {

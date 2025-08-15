@@ -34,6 +34,17 @@ export function getSocketServer(): SocketIOServer | null {
   return globalSocketServer;
 }
 
+// Authentication middleware
+const isAuthenticated = async (req: any, res: any, next: any) => {
+  if (req.session?.userId) {
+    // Add user object to request for easy access
+    const user = await storage.getUser(req.session.userId);
+    req.user = user;
+    return next();
+  }
+  return res.status(401).json({ message: 'Not authenticated' });
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Session middleware
@@ -1469,7 +1480,7 @@ Sua instancia esta funcionando perfeitamente!`;
   });
 
   // Stripe subscription endpoint
-  app.post('/api/create-subscription', async (req, res) => {
+  app.post('/api/create-subscription', isAuthenticated, async (req, res) => {
     console.log(`DEBUG: Starting create-subscription endpoint for plan: ${req.body.plan}, user:`, req.user);
     try {
       const { plan, email, name } = req.body;

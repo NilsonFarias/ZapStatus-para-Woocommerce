@@ -20,6 +20,7 @@ const adminNavigation = [
   { path: "/clients", label: "Clientes", icon: Users },
   { path: "/billing", label: "Faturamento", icon: CreditCard },
   { path: "/api-config", label: "API", icon: Zap },
+  { path: "/stripe-settings", label: "Stripe", icon: CreditCard },
   { path: "/settings", label: "Configurações", icon: Settings },
 ];
 

@@ -1544,5 +1544,116 @@ Sua instancia esta funcionando perfeitamente!`;
     }
   });
 
-  return httpServer;
+  // Admin Stripe configuration
+  app.get('/api/admin/stripe-config', async (req, res) => {
+    try {
+      // Return current configuration (without exposing secret key)
+      const config = {
+        stripePublicKey: process.env.VITE_STRIPE_PUBLIC_KEY || '',
+        basicPriceId: process.env.STRIPE_BASIC_PRICE_ID || '',
+        proPriceId: process.env.STRIPE_PRO_PRICE_ID || '',
+        enterprisePriceId: process.env.STRIPE_ENTERPRISE_PRICE_ID || '',
+        stripeSecretKey: process.env.STRIPE_SECRET_KEY ? '***' + process.env.STRIPE_SECRET_KEY.slice(-4) : ''
+      };
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/admin/stripe-config', async (req, res) => {
+    try {
+      const { stripeSecretKey, stripePublicKey, basicPriceId, proPriceId, enterprisePriceId } = req.body;
+      
+      // Validate price IDs format
+      const priceIds = { basicPriceId, proPriceId, enterprisePriceId };
+      
+      for (const [key, priceId] of Object.entries(priceIds)) {
+        if (!priceId.startsWith('price_')) {
+          return res.status(400).json({ 
+            message: `Invalid format for ${key}. Expected price ID starting with 'price_', got: ${priceId}` 
+          });
+        }
+      }
+
+      // Validate keys format
+      if (stripeSecretKey && !stripeSecretKey.startsWith('sk_')) {
+        return res.status(400).json({ 
+          message: 'Invalid Stripe Secret Key format. Expected key starting with sk_' 
+        });
+      }
+
+      if (stripePublicKey && !stripePublicKey.startsWith('pk_')) {
+        return res.status(400).json({ 
+          message: 'Invalid Stripe Public Key format. Expected key starting with pk_' 
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Configuration validated successfully. In production, these would be saved securely.' 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/admin/test-stripe-config', async (req, res) => {
+    try {
+      const results = {
+        apiConnection: { success: false, message: '' },
+        priceValidation: {} as any
+      };
+
+      // Test API connection
+      try {
+        if (process.env.STRIPE_SECRET_KEY) {
+          const customers = await stripe.customers.list({ limit: 1 });
+          results.apiConnection = { success: true, message: 'API connection successful' };
+        } else {
+          results.apiConnection = { success: false, message: 'No Stripe Secret Key configured' };
+        }
+      } catch (error: any) {
+        results.apiConnection = { success: false, message: `API Error: ${error.message}` };
+      }
+
+      // Test price validation
+      const priceIds = {
+        basic: process.env.STRIPE_BASIC_PRICE_ID,
+        pro: process.env.STRIPE_PRO_PRICE_ID,
+        enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID,
+      };
+
+      for (const [plan, priceId] of Object.entries(priceIds)) {
+        if (!priceId) {
+          results.priceValidation[plan] = { valid: false, message: 'Price ID not configured' };
+          continue;
+        }
+
+        if (!priceId.startsWith('price_')) {
+          results.priceValidation[plan] = { valid: false, message: 'Invalid format - must start with price_' };
+          continue;
+        }
+
+        try {
+          const price = await stripe.prices.retrieve(priceId);
+          results.priceValidation[plan] = { 
+            valid: true, 
+            message: `Valid - ${price.currency.toUpperCase()} ${price.unit_amount! / 100}` 
+          };
+        } catch (error: any) {
+          results.priceValidation[plan] = { 
+            valid: false, 
+            message: `Stripe Error: ${error.message}` 
+          };
+        }
+      }
+
+      res.json(results);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  return createServer(app);
 }

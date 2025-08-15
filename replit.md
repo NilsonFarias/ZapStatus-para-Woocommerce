@@ -24,6 +24,12 @@ Preferred communication style: Simple, everyday language.
   - ✅ Implementado busca dinâmica do clientId por usuário logado
   - ✅ URLs webhook específicas: `/api/webhook/woocommerce/{clientId}` por cliente
   - ✅ Queries isoladas: `enabled: !!clientId` para evitar conflitos
+- **Correção Crítica Fila de Mensagens (15/08/2025)**:
+  - ✅ **PROBLEMA**: Usuário Nilson via mensagens do usuário Maiara na fila
+  - ✅ **CAUSA**: Endpoint `/api/message-queue` retornava todas as mensagens sem filtrar por usuário
+  - ✅ **SOLUÇÃO**: Implementado método `getQueuedMessagesByUser(userId)` com JOIN nas tabelas
+  - ✅ **ISOLAMENTO PERFEITO**: Cada usuário vê apenas suas próprias mensagens na fila
+  - ✅ **VALIDAÇÃO**: Usuário Maiara (3 msgs) vs Usuário Nilson (0 msgs) - funcionando perfeitamente
 - **Arquitetura**: Multi-tenant perfeito - dados isolados por usuário, admins veem tudo
 - **UX Simplificado (15/08/2025)**:
   - ✅ Removido campo "Cliente" do formulário criar instância

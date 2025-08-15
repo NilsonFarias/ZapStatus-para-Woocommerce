@@ -415,6 +415,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validatedData = insertClientSchema.partial().parse(req.body);
       const client = await storage.updateClient(id, validatedData);
+      
+      // If plan was updated, sync it with the user table
+      if (validatedData.plan && client.userId) {
+        await storage.updateUser(client.userId, { plan: validatedData.plan });
+      }
+      
       res.json(client);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

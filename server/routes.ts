@@ -36,12 +36,15 @@ export function getSocketServer(): SocketIOServer | null {
 
 // Authentication middleware
 const isAuthenticated = async (req: any, res: any, next: any) => {
+  console.log(`DEBUG Auth: Session userId: ${req.session?.userId}`);
   if (req.session?.userId) {
     // Add user object to request for easy access
     const user = await storage.getUser(req.session.userId);
+    console.log(`DEBUG Auth: User found:`, user?.id, user?.name);
     req.user = user;
     return next();
   }
+  console.log(`DEBUG Auth: No session userId found`);
   return res.status(401).json({ message: 'Not authenticated' });
 };
 

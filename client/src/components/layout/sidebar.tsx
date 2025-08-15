@@ -12,7 +12,8 @@ import {
   Settings,
   LogOut,
   User,
-  Zap
+  Zap,
+  FileText
 } from "lucide-react";
 
 const adminNavigation = [
@@ -21,6 +22,7 @@ const adminNavigation = [
   { path: "/billing", label: "Faturamento", icon: CreditCard },
   { path: "/api-config", label: "API", icon: Zap },
   { path: "/stripe-settings", label: "Stripe", icon: CreditCard },
+  { path: "/evolution-docs", label: "Evolution API", icon: FileText },
   { path: "/settings", label: "Configurações", icon: Settings },
 ];
 

@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
-import PlanUsageCard from "@/components/layout/plan-usage-card";
+
 import InstanceCard from "@/components/instances/instance-card";
 import QRModal from "@/components/instances/qr-modal";
 import CreateInstanceModal from "@/components/instances/create-instance-modal";
@@ -221,7 +221,7 @@ export default function Instances() {
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Header
-          title="Instâncias WhatsApp"
+          title="Conectar WhatsApp"
           description="Uma instância por cliente - Gerencie conexões WhatsApp via Evolution API"
           action={{
             label: "Nova Instância",
@@ -256,7 +256,6 @@ export default function Instances() {
         </div>
         
         <div className="p-6">
-          <PlanUsageCard />
           
           {/* Instances Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

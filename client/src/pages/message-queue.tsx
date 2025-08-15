@@ -50,6 +50,8 @@ export default function MessageQueue() {
     queryKey: ['/api/message-queue'],
     queryFn: () => apiRequest("GET", '/api/message-queue').then(res => res.json()),
     refetchInterval: 5000, // Refresh every 5 seconds
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0, // Don't cache the data
   });
 
   const deleteMessageMutation = useMutation({

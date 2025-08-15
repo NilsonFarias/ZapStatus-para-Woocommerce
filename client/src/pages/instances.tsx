@@ -195,7 +195,7 @@ export default function Instances() {
     onSuccess: (data) => {
       toast({
         title: "Conexão testada",
-        description: data.success ? "Evolution API conectada com sucesso!" : "Falha na conexão",
+        description: data.success ? "API Conectada com sucesso!" : "Falha na conexão",
         variant: data.success ? "default" : "destructive",
       });
     },

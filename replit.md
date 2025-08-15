@@ -10,6 +10,21 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Public Registration System Implementation (August 15, 2025)
+- **Status**: ✅ **IMPLEMENTADO** - Sistema completo de registro público funcionando
+- **Funcionalidades**:
+  - Páginas de registro (`/register`) e login (`/login`) totalmente funcionais
+  - Sistema de autenticação baseado em sessões com bcryptjs
+  - Criação automática de cliente ao registrar novo usuário
+  - Middleware de autenticação aplicado a todas as rotas protegidas
+  - Página de onboarding (`/welcome`) para guiar novos usuários
+  - Navegação condicional: usuários não autenticados veem login/registro
+- **Transformação Arquitetural**: 
+  - Sistema convertido de admin-only para SaaS público
+  - Rotas protegidas por middleware `requireAuth`
+  - Dados específicos por usuário em todas as funcionalidades
+- **Fluxo do Usuário**: Registro → Cliente criado automaticamente → Onboarding → Configuração instância
+
 ### Business Model Simplification: One Instance Per Client (August 15, 2025)
 - **Status**: ✅ **IMPLEMENTED** - Simplified business model with focus on message limits
 - **Key Changes**:

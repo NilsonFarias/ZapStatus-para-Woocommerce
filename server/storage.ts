@@ -187,7 +187,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAllQueuedMessages(): Promise<MessageQueueItem[]> {
     console.log('Executing getAllQueuedMessages query...');
-    const result = await db.select().from(messageQueue);
+    const result = await db.select().from(messageQueue).orderBy(desc(messageQueue.createdAt));
     console.log(`Database returned ${result.length} messages`);
     return result;
   }

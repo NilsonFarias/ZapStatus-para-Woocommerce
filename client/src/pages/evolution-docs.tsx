@@ -351,7 +351,7 @@ export default function EvolutionDocs() {
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
                   <ol className="list-decimal list-inside space-y-1 text-amber-800">
                     <li>Sistema detecta instância em estado <code>CLOSE</code></li>
-                    <li>Executa <code>DELETE /instance/logout/{instanceName}</code></li>
+                    <li>Executa <code>DELETE /instance/logout/[instanceName]</code></li>
                     <li>Aguarda 3 segundos para processamento</li>
                     <li>Inicia novo processo de conexão</li>
                     <li>Gera QR code automaticamente</li>

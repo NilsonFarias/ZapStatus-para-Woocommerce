@@ -1875,13 +1875,23 @@ Sua instancia esta funcionando perfeitamente!`;
       }
 
       // Get subscription details from Stripe
-      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId, {
+        expand: ['items.data.price']
+      });
       
-      console.log('Raw Stripe subscription data:', {
+      console.log('Full Stripe subscription object:', JSON.stringify({
+        id: subscription.id,
+        status: subscription.status,
         current_period_start: subscription.current_period_start,
         current_period_end: subscription.current_period_end,
-        canceled_at: subscription.canceled_at
-      });
+        canceled_at: subscription.canceled_at,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        created: subscription.created
+      }, null, 2));
+      
+      // Use created date as fallback if period dates are missing
+      const periodStart = subscription.current_period_start || subscription.created;
+      const periodEnd = subscription.current_period_end;
       
       res.json({
         hasSubscription: true,
@@ -1889,8 +1899,8 @@ Sua instancia esta funcionando perfeitamente!`;
           id: subscription.id,
           status: subscription.status,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          currentPeriodStart: subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null,
-          currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
+          currentPeriodStart: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+          currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
           canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
         },
         plan: user.plan,

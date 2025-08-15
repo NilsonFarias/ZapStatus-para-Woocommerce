@@ -1544,21 +1544,26 @@ Sua instancia esta funcionando perfeitamente!`;
           
           const userPlan = planMapping[plan as keyof typeof planMapping];
           if (userPlan) {
-            await storage.updateUser(user.id, {
+            console.log(`Updating user ${user.id} with plan: ${userPlan}, customerId: ${customer.id}, subscriptionId: ${subscription.id}`);
+            
+            // Update user with all subscription details
+            const updateResult = await storage.updateUser(user.id, {
               plan: userPlan,
               subscriptionStatus: 'active',
               stripeCustomerId: customer.id,
               stripeSubscriptionId: subscription.id
             });
+            console.log(`User update result:`, updateResult);
+            
             // Also update the client's plan to keep them in sync
             const clients = await storage.getClients();
             const userClient = clients.find(c => c.userId === user.id);
             if (userClient) {
-              await storage.updateClient(userClient.id, { plan: userPlan });
-              console.log(`Client ${userClient.id} plan also updated to ${userPlan}`);
+              const clientUpdateResult = await storage.updateClient(userClient.id, { plan: userPlan });
+              console.log(`Client ${userClient.id} plan updated to ${userPlan}:`, clientUpdateResult);
             }
             
-            console.log(`User ${user.id} plan updated to ${userPlan}`);
+            console.log(`User ${user.id} plan updated to ${userPlan} successfully`);
           }
         } catch (updateError: any) {
           console.error('Error updating user plan:', updateError.message);

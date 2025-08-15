@@ -230,6 +230,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/instances", async (req, res) => {
     try {
       const { clientId, name } = req.body;
+      
+      // Check if client already has an instance (1 instance per client limit)
+      const existingInstances = await storage.getInstances(clientId);
+      if (existingInstances.length > 0) {
+        return res.status(400).json({ 
+          message: "Cliente já possui uma instância WhatsApp. Limite: 1 instância por cliente." 
+        });
+      }
+      
       const instanceId = `whatsflow_${Date.now()}`;
       
       console.log(`Creating Evolution API instance: ${instanceId}`);

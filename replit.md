@@ -10,6 +10,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Business Model Simplification: One Instance Per Client (August 15, 2025)
+- **Status**: ✅ **IMPLEMENTED** - Simplified business model with focus on message limits
+- **Key Changes**:
+  - Backend validation: Maximum 1 instance per client enforced in POST /api/instances
+  - Frontend filtering: Create instance modal only shows clients without instances
+  - Clear messaging: Updated UI descriptions to reflect "Uma instância por cliente"
+  - Plan pricing updated: Focused on message limits (1k, 10k, unlimited)
+  - Interface improvements: Better labels showing message limits in parentheses
+- **Business Logic**:
+  - **Básico (R$29)**: 1.000 mensagens/mês, 1 instância WhatsApp
+  - **Pro (R$89)**: 10.000 mensagens/mês, 1 instância WhatsApp  
+  - **Enterprise (R$199)**: Mensagens ilimitadas, 1 instância WhatsApp
+- **Rationale**: Simplified management, reduced complexity, focus on core value (message volume)
+
 ### Database Cleanup and Message Queue Management (August 14, 2025)
 - **Status**: ✅ **FUNCIONAL** - Sistema de gerenciamento da fila de mensagens completo
 - **Funcionalidades**:

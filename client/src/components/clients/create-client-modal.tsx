@@ -93,9 +93,9 @@ export default function CreateClientModal({ open, onOpenChange }: CreateClientMo
                 <SelectValue placeholder="Selecione um plano" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="basic">Básico - R$ 29/mês</SelectItem>
-                <SelectItem value="pro">Pro - R$ 79/mês</SelectItem>
-                <SelectItem value="enterprise">Enterprise - R$ 199/mês</SelectItem>
+                <SelectItem value="basic">Básico - R$ 29/mês (1.000 mensagens)</SelectItem>
+                <SelectItem value="pro">Pro - R$ 89/mês (10.000 mensagens)</SelectItem>
+                <SelectItem value="enterprise">Enterprise - R$ 199/mês (Ilimitado)</SelectItem>
               </SelectContent>
             </Select>
           </div>

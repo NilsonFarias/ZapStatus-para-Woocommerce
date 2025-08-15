@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,15 @@ export default function CreateInstanceModal({ open, onOpenChange, clients }: Cre
     name: "",
     clientId: "",
   });
+
+  // Filter clients that don't have instances yet (1 instance per client)
+  const { data: instances = [] } = useQuery({
+    queryKey: ['/api/instances'],
+  });
+
+  const availableClients = clients.filter(client => 
+    !instances.some((instance: any) => instance.clientId === client.id)
+  );
 
   const createInstanceMutation = useMutation({
     mutationFn: (data: { name: string; clientId: string }) =>
@@ -53,6 +62,16 @@ export default function CreateInstanceModal({ open, onOpenChange, clients }: Cre
       });
       return;
     }
+    
+    if (availableClients.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Todos os clientes já possuem uma instância WhatsApp.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     createInstanceMutation.mutate(formData);
   };
 
@@ -83,11 +102,17 @@ export default function CreateInstanceModal({ open, onOpenChange, clients }: Cre
                 <SelectValue placeholder="Selecione um cliente" />
               </SelectTrigger>
               <SelectContent>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
+                {availableClients.length === 0 ? (
+                  <div className="px-2 py-1 text-sm text-muted-foreground">
+                    Todos os clientes já possuem instância
+                  </div>
+                ) : (
+                  availableClients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

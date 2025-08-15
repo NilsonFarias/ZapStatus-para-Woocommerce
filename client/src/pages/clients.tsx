@@ -84,11 +84,11 @@ export default function Clients() {
   const getPlanLabel = (plan: string) => {
     switch (plan) {
       case 'basic':
-        return 'Básico';
+        return 'Básico (1k msgs)';
       case 'pro':
-        return 'Pro';
+        return 'Pro (10k msgs)';
       case 'enterprise':
-        return 'Enterprise';
+        return 'Enterprise (∞)';
       default:
         return plan;
     }
@@ -121,7 +121,7 @@ export default function Clients() {
       <main className="flex-1 overflow-auto">
         <Header
           title="Gestão de Clientes"
-          description="Gerencie todos os seus clientes e suas configurações"
+          description="Uma instância por cliente - Planos baseados em limite de mensagens"
           action={{
             label: "Adicionar Cliente",
             onClick: () => setCreateModalOpen(true),

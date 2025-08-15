@@ -221,7 +221,7 @@ export default function Instances() {
       <main className="flex-1 overflow-auto">
         <Header
           title="Instâncias WhatsApp"
-          description="Gerencie conexões WhatsApp via Evolution API"
+          description="Uma instância por cliente - Gerencie conexões WhatsApp via Evolution API"
           action={{
             label: "Nova Instância",
             onClick: () => setCreateModalOpen(true),
@@ -262,7 +262,7 @@ export default function Instances() {
                   <Plus className="text-slate-500" size={24} />
                 </div>
                 <h3 className="font-semibold text-slate-900 mb-2">Criar Nova Instância</h3>
-                <p className="text-sm text-slate-500 mb-4">Adicione uma nova conexão WhatsApp para um cliente</p>
+                <p className="text-sm text-slate-500 mb-4">Uma instância WhatsApp por cliente (máximo 1)</p>
                 <Button 
                   onClick={() => setCreateModalOpen(true)}
                   data-testid="button-create-instance"

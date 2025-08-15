@@ -177,9 +177,9 @@ export default function EditClientModal({ client, open, onOpenChange }: EditClie
                   <SelectValue placeholder="Selecionar plano" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="basic">{getPlanLabel("basic")}</SelectItem>
-                  <SelectItem value="pro">{getPlanLabel("pro")}</SelectItem>
-                  <SelectItem value="enterprise">{getPlanLabel("enterprise")}</SelectItem>
+                  <SelectItem value="basic">Básico - R$ 29/mês (1.000 mensagens)</SelectItem>
+                  <SelectItem value="pro">Pro - R$ 89/mês (10.000 mensagens)</SelectItem>
+                  <SelectItem value="enterprise">Enterprise - R$ 199/mês (Ilimitado)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

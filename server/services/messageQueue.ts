@@ -26,18 +26,24 @@ export class MessageQueueService {
     try {
       // Get all pending messages that are scheduled for now or earlier
       const now = new Date();
+      console.log(`Checking for pending messages at ${now.toISOString()}`);
       
-      // This is a simplified approach - in a real implementation, you'd want to
-      // query the database more efficiently
-      const instances = await storage.getWhatsappInstances();
+      // Get all pending messages directly
+      const allMessages = await storage.getAllQueuedMessages();
+      const pendingMessages = allMessages.filter(msg => 
+        msg.status === 'pending' && new Date(msg.scheduledFor) <= now
+      );
       
-      for (const instance of instances) {
-        const queuedMessages = await storage.getQueuedMessages(instance.instanceId);
-        
-        for (const message of queuedMessages) {
-          if (message.status === 'pending' && message.scheduledFor <= now) {
-            await this.sendQueuedMessage(message.id, instance.instanceId);
-          }
+      console.log(`Found ${pendingMessages.length} pending messages to process`);
+      
+      for (const message of pendingMessages) {
+        // Get the instance for this message
+        const instance = await storage.getWhatsappInstance(message.instanceId);
+        if (instance) {
+          console.log(`Processing pending message ${message.id} for instance ${instance.instanceId}`);
+          await this.sendQueuedMessage(message.id, instance.instanceId);
+        } else {
+          console.error(`Instance not found for message ${message.id}`);
         }
       }
     } catch (error) {

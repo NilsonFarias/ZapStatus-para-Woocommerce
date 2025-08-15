@@ -28,9 +28,17 @@ export default function Dashboard() {
     queryKey: ['/api/dashboard/metrics'],
   });
 
-  const { data: planLimits } = useQuery<PlanLimits>({
+  const { data: planLimits, isLoading: planLimitsLoading } = useQuery<PlanLimits>({
     queryKey: ['/api/plan-limits'],
     enabled: !!user && user.role !== 'admin',
+  });
+
+  // Debug logs
+  console.log('Dashboard debug:', {
+    user,
+    planLimits,
+    planLimitsLoading,
+    shouldShowCard: user?.role !== 'admin' && planLimits
   });
 
   if (isLoading) {
@@ -58,39 +66,45 @@ export default function Dashboard() {
         
         <div className="p-6">
           {/* Plan Usage for Users */}
-          {user?.role !== 'admin' && planLimits && (
-            <Card className="mb-6">
+          {user?.role !== 'admin' && (
+            <Card className="mb-6 border-2 border-blue-200 bg-blue-50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  {planLimits.plan === 'free' && <AlertTriangle className="w-5 h-5 text-yellow-500" />}
-                  Uso do Plano {planLimits.plan.charAt(0).toUpperCase() + planLimits.plan.slice(1)}
+                  {planLimits?.plan === 'free' && <AlertTriangle className="w-5 h-5 text-yellow-500" />}
+                  {planLimits ? `Uso do Plano ${planLimits.plan.charAt(0).toUpperCase() + planLimits.plan.slice(1)}` : 'Carregando plano...'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between text-sm">
-                    <span>Mensagens Mensais</span>
-                    <span>
-                      {planLimits.current} / {planLimits.limit === -1 ? 'Ilimitado' : planLimits.limit}
-                    </span>
+                {planLimitsLoading ? (
+                  <div className="text-gray-500">Carregando informações do plano...</div>
+                ) : planLimits ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-sm">
+                      <span>Mensagens Mensais</span>
+                      <span>
+                        {planLimits.current} / {planLimits.limit === -1 ? 'Ilimitado' : planLimits.limit}
+                      </span>
+                    </div>
+                    {planLimits.limit !== -1 && (
+                      <Progress 
+                        value={(planLimits.current / planLimits.limit) * 100} 
+                        className="w-full"
+                      />
+                    )}
+                    {!planLimits.allowed && (
+                      <div className="text-red-600 text-sm font-medium">
+                        ⚠️ Limite atingido! Atualize seu plano para continuar enviando mensagens.
+                      </div>
+                    )}
+                    {planLimits.plan === 'free' && planLimits.allowed && (
+                      <div className="text-blue-600 text-sm">
+                        💡 Plano gratuito com 30 mensagens. Atualize para enviar mais!
+                      </div>
+                    )}
                   </div>
-                  {planLimits.limit !== -1 && (
-                    <Progress 
-                      value={(planLimits.current / planLimits.limit) * 100} 
-                      className="w-full"
-                    />
-                  )}
-                  {!planLimits.allowed && (
-                    <div className="text-red-600 text-sm font-medium">
-                      ⚠️ Limite atingido! Atualize seu plano para continuar enviando mensagens.
-                    </div>
-                  )}
-                  {planLimits.plan === 'free' && planLimits.allowed && (
-                    <div className="text-blue-600 text-sm">
-                      💡 Plano gratuito com 30 mensagens. Atualize para enviar mais!
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <div className="text-red-500">Erro ao carregar informações do plano</div>
+                )}
               </CardContent>
             </Card>
           )}

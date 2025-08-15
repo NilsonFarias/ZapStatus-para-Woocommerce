@@ -11,7 +11,8 @@ import {
   CreditCard, 
   Settings,
   LogOut,
-  User
+  User,
+  Zap
 } from "lucide-react";
 
 const navigationItems = [
@@ -22,7 +23,8 @@ const navigationItems = [
   { path: "/webhooks", label: "Webhooks", icon: Webhook },
   { path: "/message-queue", label: "Fila de Mensagens", icon: MessageCircle },
   { path: "/billing", label: "Faturamento", icon: CreditCard },
-  { path: "/settings", label: "Configurações", icon: Settings },
+  { path: "/api-config", label: "API", icon: Zap },
+  { path: "/settings", label: "Configurações", icon: User },
 ];
 
 export default function Sidebar() {

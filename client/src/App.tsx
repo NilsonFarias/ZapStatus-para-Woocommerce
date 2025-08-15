@@ -16,6 +16,7 @@ import Subscribe from "@/pages/subscribe";
 import Register from "@/pages/register";
 import Login from "@/pages/login";
 import Welcome from "@/pages/welcome";
+import ApiConfig from "@/pages/api-config";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/webhooks" component={Webhooks} />
       <Route path="/message-queue" component={MessageQueue} />
       <Route path="/billing" component={Billing} />
+      <Route path="/api-config" component={ApiConfig} />
       <Route path="/settings" component={Settings} />
       <Route path="/subscribe" component={Subscribe} />
       <Route component={NotFound} />

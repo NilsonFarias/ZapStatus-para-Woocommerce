@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { User, Shield, Bell, Save } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -25,6 +27,32 @@ export default function Settings() {
     autoBackup: true,
   });
 
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      return apiRequest("PUT", "/api/auth/change-password", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Senha alterada",
+        description: "Sua senha foi alterada com sucesso.",
+      });
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível alterar a senha.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSave = async () => {
     try {
       toast({
@@ -38,6 +66,40 @@ export default function Settings() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleChangePassword = () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "As senhas não coincidem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A nova senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    changePasswordMutation.mutate({
+      currentPassword: passwordData.currentPassword,
+      newPassword: passwordData.newPassword,
+    });
   };
 
   const renderContent = () => {
@@ -119,6 +181,8 @@ export default function Settings() {
                   id="current-password"
                   type="password"
                   placeholder="Digite sua senha atual"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
                   data-testid="input-current-password"
                 />
               </div>
@@ -128,7 +192,9 @@ export default function Settings() {
                 <Input
                   id="new-password"
                   type="password"
-                  placeholder="Digite sua nova senha"
+                  placeholder="Digite sua nova senha (mínimo 6 caracteres)"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
                   data-testid="input-new-password"
                 />
               </div>
@@ -139,12 +205,18 @@ export default function Settings() {
                   id="confirm-password"
                   type="password"
                   placeholder="Confirme sua nova senha"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                   data-testid="input-confirm-password"
                 />
               </div>
 
-              <Button data-testid="button-change-password">
-                Alterar Senha
+              <Button 
+                onClick={handleChangePassword}
+                disabled={changePasswordMutation.isPending}
+                data-testid="button-change-password"
+              >
+                {changePasswordMutation.isPending ? "Alterando..." : "Alterar Senha"}
               </Button>
             </CardContent>
           </Card>

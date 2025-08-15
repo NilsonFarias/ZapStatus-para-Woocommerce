@@ -3,6 +3,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import CreateClientModal from "@/components/clients/create-client-modal";
+import EditClientModal from "@/components/clients/edit-client-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,6 +21,8 @@ export default function Clients() {
   const [planFilter, setPlanFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const { data: clients = [], isLoading } = useQuery<Client[]>({
     queryKey: ['/api/clients'],
@@ -216,7 +219,15 @@ export default function Clients() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm" data-testid="button-edit-client">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setEditModalOpen(true);
+                            }}
+                            data-testid="button-edit-client"
+                          >
                             <Edit size={16} className="text-primary" />
                           </Button>
                           <Button variant="ghost" size="sm" data-testid="button-view-client">
@@ -260,6 +271,12 @@ export default function Clients() {
         <CreateClientModal
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
+        />
+
+        <EditClientModal
+          client={selectedClient}
+          open={editModalOpen}
+          onOpenChange={setEditModalOpen}
         />
       </main>
     </div>

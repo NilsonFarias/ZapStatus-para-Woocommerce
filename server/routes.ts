@@ -1533,7 +1533,9 @@ Sua instancia esta funcionando perfeitamente!`;
 
       // Update user plan immediately after successful subscription creation
       const user = req.user as any;
+      console.log(`DEBUG: User from request:`, user);
       if (user?.id) {
+        console.log(`DEBUG: User ID found: ${user.id}, proceeding with plan update`);
         try {
           // Map plan to subscription plan
           const planMapping = {
@@ -1567,7 +1569,10 @@ Sua instancia esta funcionando perfeitamente!`;
           }
         } catch (updateError: any) {
           console.error('Error updating user plan:', updateError.message);
+          console.error('Full error:', updateError);
         }
+      } else {
+        console.log(`DEBUG: No user found in request or no user.id. User:`, user);
       }
 
       res.json({

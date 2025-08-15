@@ -46,7 +46,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/welcome" component={Welcome} />
-      <Route path="/" component={Dashboard} />
+      {/* Route based on user role */}
+      <Route path="/" component={user.role === 'admin' ? Dashboard : Instances} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/clients" component={Clients} />
       <Route path="/instances" component={Instances} />
       <Route path="/templates" component={Templates} />

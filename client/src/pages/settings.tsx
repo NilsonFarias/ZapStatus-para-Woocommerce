@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { User, Shield, Bell, Save } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -53,19 +53,35 @@ export default function Settings() {
     },
   });
 
-  const handleSave = async () => {
-    try {
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { name: string; email: string; company: string; phone: string }) => {
+      return apiRequest("PUT", "/api/auth/profile", data);
+    },
+    onSuccess: () => {
+      // Invalidate user data to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      
       toast({
-        title: "Configurações salvas",
-        description: "Suas configurações foram atualizadas com sucesso.",
+        title: "Perfil atualizado",
+        description: "Suas informações foram salvas com sucesso.",
       });
-    } catch (error) {
+    },
+    onError: (error: any) => {
       toast({
         title: "Erro",
-        description: "Não foi possível salvar as configurações.",
+        description: error.message || "Não foi possível salvar as informações.",
         variant: "destructive",
       });
-    }
+    },
+  });
+
+  const handleSave = () => {
+    updateProfileMutation.mutate({
+      name: formData.name,
+      email: formData.email,
+      company: formData.company,
+      phone: formData.phone,
+    });
   };
 
   const handleChangePassword = () => {
@@ -157,9 +173,13 @@ export default function Settings() {
                 </div>
               </div>
 
-              <Button onClick={handleSave} data-testid="button-save-profile">
+              <Button 
+                onClick={handleSave} 
+                disabled={updateProfileMutation.isPending}
+                data-testid="button-save-profile"
+              >
                 <Save className="mr-2 h-4 w-4" />
-                Salvar Alterações
+                {updateProfileMutation.isPending ? "Salvando..." : "Salvar Alterações"}
               </Button>
             </CardContent>
           </Card>

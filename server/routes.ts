@@ -305,6 +305,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/auth/profile", requireAuth, async (req: any, res) => {
+    try {
+      const { name, email, company, phone } = req.body;
+      
+      if (!name || !email) {
+        return res.status(400).json({ message: "Nome e email são obrigatórios" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Update user profile
+      const updatedUser = await storage.updateUser(user.id, {
+        name,
+        email,
+        company,
+        phone,
+      });
+
+      // Also update the client record if it exists
+      const clients = await storage.getClients(user.id);
+      if (clients.length > 0) {
+        await storage.updateClient(clients[0].id, {
+          name,
+          email,
+          company,
+          phone,
+        });
+      }
+
+      // Return updated user without password
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   // Dashboard metrics (Admin only)
   app.get("/api/dashboard/metrics", requireAdmin, async (req: any, res) => {
     try {

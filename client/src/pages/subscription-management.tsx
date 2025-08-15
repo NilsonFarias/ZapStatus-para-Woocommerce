@@ -18,9 +18,9 @@ interface SubscriptionDetails {
     id: string;
     status: string;
     cancelAtPeriodEnd: boolean;
-    currentPeriodStart: Date;
-    currentPeriodEnd: Date;
-    canceledAt?: Date;
+    currentPeriodStart: string | null;
+    currentPeriodEnd: string | null;
+    canceledAt?: string | null;
   };
   plan: string;
   subscriptionStatus: string;
@@ -134,8 +134,17 @@ export default function SubscriptionManagement() {
     }
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('pt-BR', {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Data não disponível';
+    
+    const date = new Date(dateString);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return 'Data inválida';
+    }
+    
+    return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

@@ -1877,15 +1877,21 @@ Sua instancia esta funcionando perfeitamente!`;
       // Get subscription details from Stripe
       const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
       
+      console.log('Raw Stripe subscription data:', {
+        current_period_start: subscription.current_period_start,
+        current_period_end: subscription.current_period_end,
+        canceled_at: subscription.canceled_at
+      });
+      
       res.json({
         hasSubscription: true,
         subscription: {
           id: subscription.id,
           status: subscription.status,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          currentPeriodStart: new Date(subscription.current_period_start * 1000),
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+          currentPeriodStart: subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null,
+          currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
+          canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
         },
         plan: user.plan,
         subscriptionStatus: user.subscriptionStatus

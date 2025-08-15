@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MessageQueueItem } from "@shared/schema";
-import { Clock, CheckCircle, XCircle, RefreshCw, Phone, Trash2, Send, Edit3, MoreVertical } from "lucide-react";
+import { Clock, CheckCircle, XCircle, RefreshCw, Phone, Send, Edit3, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,23 +54,7 @@ export default function MessageQueue() {
     gcTime: 0, // Don't cache the data
   });
 
-  const deleteMessageMutation = useMutation({
-    mutationFn: (messageId: string) => apiRequest("DELETE", `/api/message-queue/${messageId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/message-queue'] });
-      toast({
-        title: "Mensagem removida",
-        description: "A mensagem foi removida da fila com sucesso.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const resendMessageMutation = useMutation({
     mutationFn: (messageId: string) => apiRequest("POST", `/api/message-queue/${messageId}/resend`),
@@ -274,14 +258,7 @@ export default function MessageQueue() {
                                   Tentar Novamente
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem 
-                                onClick={() => deleteMessageMutation.mutate(item.id)}
-                                className="text-red-600"
-                                data-testid={`delete-${item.id}`}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Excluir
-                              </DropdownMenuItem>
+
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>

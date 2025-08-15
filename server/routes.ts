@@ -1483,8 +1483,27 @@ Sua instancia esta funcionando perfeitamente!`;
   });
 
   // Stripe subscription endpoint
-  app.post('/api/create-subscription', isAuthenticated, async (req, res) => {
-    console.log(`DEBUG: Starting create-subscription endpoint for plan: ${req.body.plan}, user:`, req.user);
+  app.post('/api/create-subscription', async (req, res) => {
+    console.log(`DEBUG: Starting create-subscription endpoint for plan: ${req.body.plan}`);
+    console.log(`DEBUG: Session:`, req.session);
+    console.log(`DEBUG: Session userId:`, req.session?.userId);
+    
+    // Manual authentication check with detailed logging
+    if (!req.session?.userId) {
+      console.log(`DEBUG: No session userId found, authentication failed`);
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    // Get user manually with detailed logging
+    const user = await storage.getUser(req.session.userId);
+    console.log(`DEBUG: User found:`, user?.id, user?.name, user?.plan);
+    if (!user) {
+      console.log(`DEBUG: User not found in database`);
+      return res.status(401).json({ message: 'User not found' });
+    }
+    
+    req.user = user;
+    console.log(`DEBUG: Authentication successful, proceeding with user:`, user.id);
     try {
       const { plan, email, name } = req.body;
       

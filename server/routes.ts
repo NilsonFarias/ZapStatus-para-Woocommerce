@@ -77,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
       // Remove socket from all instances
-      for (const [instanceName, socketId] of instanceSockets.entries()) {
+      for (const [instanceName, socketId] of Array.from(instanceSockets.entries())) {
         if (socketId === socket.id) {
           instanceSockets.delete(instanceName);
         }
@@ -165,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser({
         ...userData,
         password: hashedPassword,
-        username: userData.email, // Use email as username
+        name: userData.name,
         company: userData.company || "",
         phone: userData.phone || "",
       });
@@ -173,9 +173,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create corresponding client automatically
       await storage.createClient({
         userId: user.id,
-        name: userData.company,
+        name: userData.company || userData.name,
         email: userData.email,
-        plan: userData.plan,
+        plan: userData.plan || 'basico',
         status: "active",
       });
 
@@ -630,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastConnection: new Date(),
         qrCode: null, // Clear QR code so user can get a fresh one
         phoneNumber: null, // Clear phone number as it will be reassigned
-        profileName: null
+
       });
       
       res.json({ success: true, message: "Instance disconnected. Use 'Reconectar' to get a new QR code." });
@@ -662,7 +662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error restarting instance:', error.message);
       // Revert status on error
-      await storage.updateInstance(id, { status: 'disconnected' });
+      await storage.updateInstance(req.params.id, { status: 'disconnected' });
       res.status(500).json({ message: error.message });
     }
   });
@@ -775,6 +775,18 @@ Sua instancia esta funcionando perfeitamente!`;
   app.delete("/api/templates/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Check if template has messages in queue
+      const messageCount = await storage.countMessagesUsingTemplate(id);
+      
+      if (messageCount > 0) {
+        return res.status(400).json({ 
+          message: `Não é possível remover este template pois existem ${messageCount} mensagem(s) na fila que o utilizam. Remova as mensagens da fila primeiro.`,
+          hasReferences: true,
+          messageCount
+        });
+      }
+      
       await storage.deleteTemplate(id);
       res.json({ success: true });
     } catch (error: any) {
@@ -849,7 +861,11 @@ Sua instancia esta funcionando perfeitamente!`;
       console.log(`Found ${allQueueItems.length} queued messages`);
       
       // Sort by creation time (newest first) - database already does this, but ensuring consistency
-      allQueueItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      allQueueItems.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
       
       res.json(allQueueItems);
     } catch (error: any) {
@@ -896,7 +912,7 @@ Sua instancia esta funcionando perfeitamente!`;
         return res.status(404).json({ success: false, message: "Message not found" });
       }
       
-      const instance = await storage.getWhatsappInstance(message.whatsappInstanceId);
+      const instance = await storage.getInstance(message.instanceId);
       if (!instance) {
         return res.status(404).json({ success: false, message: "Instance not found" });
       }

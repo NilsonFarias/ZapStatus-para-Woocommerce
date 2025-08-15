@@ -156,7 +156,27 @@ export default function Templates() {
 
   const handleDeleteTemplate = async (template: MessageTemplate) => {
     if (confirm('Tem certeza que deseja remover este template?')) {
-      await deleteTemplateMutation.mutateAsync(template.id);
+      try {
+        await deleteTemplateMutation.mutateAsync(template.id);
+        toast({
+          title: "Template removido",
+          description: "Template removido com sucesso!",
+        });
+      } catch (error: any) {
+        if (error.message.includes('mensagem(s) na fila')) {
+          toast({
+            title: "Não foi possível remover o template",
+            description: error.message + " Acesse 'Fila de Mensagens' para gerenciar mensagens pendentes.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro",
+            description: "Erro ao remover template: " + error.message,
+            variant: "destructive",
+          });
+        }
+      }
     }
   };
 

@@ -321,6 +321,15 @@ export class DatabaseStorage implements IStorage {
       .where(sql`message LIKE '%' || ${orderId} || '%'`);
   }
 
+  async countMessagesUsingTemplate(templateId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(messageQueue)
+      .where(eq(messageQueue.templateId, templateId));
+    
+    return result[0]?.count || 0;
+  }
+
   async getDashboardMetrics(userId?: string): Promise<{
     activeClients: number;
     messagesSent: number;

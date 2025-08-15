@@ -24,6 +24,7 @@ const adminNavigation = [
 ];
 
 const userNavigation = [
+  { path: "/", label: "Dashboard", icon: BarChart3 },
   { path: "/instances", label: "Instâncias WhatsApp", icon: Smartphone },
   { path: "/templates", label: "Templates de Mensagem", icon: Mail },
   { path: "/webhooks", label: "Webhooks", icon: Webhook },

@@ -877,6 +877,66 @@ Sua instancia esta funcionando perfeitamente!`;
     }
   });
 
+  // User metrics endpoint
+  app.get("/api/user/metrics", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      // Get user's client
+      const clients = await storage.getClients(userId);
+      if (clients.length === 0) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      const client = clients[0];
+      const instances = await storage.getInstances(client.id);
+      const templates = await storage.getTemplatesByClient(client.id);
+      const messageCount = await storage.getMonthlyMessageCount(client.id);
+      
+      // Calculate metrics
+      const activeInstances = instances.filter(i => i.status === 'connected').length;
+      const templatesConfigured = templates.length;
+      
+      // Mock recent activity for now
+      const recentActivity = [
+        {
+          id: '1',
+          type: 'message_sent' as const,
+          description: 'Mensagem enviada para pedido #12345',
+          timestamp: new Date().toISOString(),
+          status: 'success' as const
+        },
+        {
+          id: '2',
+          type: 'instance_connected' as const,
+          description: 'Instância WhatsApp conectada',
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          status: 'success' as const
+        }
+      ];
+      
+      const metrics = {
+        totalMessages: messageCount,
+        messagesSentToday: 0, // TODO: Calculate today's messages
+        activeInstances,
+        totalInstances: instances.length,
+        templatesConfigured,
+        deliveryRate: 98.5, // TODO: Calculate real delivery rate
+        recentActivity,
+        monthlyUsage: [] // TODO: Get monthly usage data
+      };
+      
+      res.json(metrics);
+    } catch (error: any) {
+      console.error('Error fetching user metrics:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Message Queue endpoints
   app.get("/api/message-queue", requireAuth, async (req: any, res) => {
     try {

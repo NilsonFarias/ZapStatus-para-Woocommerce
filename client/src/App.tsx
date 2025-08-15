@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import Dashboard from "@/pages/dashboard";
+import UserDashboard from "@/pages/user-dashboard";
 import Clients from "@/pages/clients";
 import Instances from "@/pages/instances";
 import Templates from "@/pages/templates";
@@ -47,7 +48,7 @@ function Router() {
     <Switch>
       <Route path="/welcome" component={Welcome} />
       {/* Route based on user role */}
-      <Route path="/" component={user.role === 'admin' ? Dashboard : Instances} />
+      <Route path="/" component={user.role === 'admin' ? Dashboard : UserDashboard} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/clients" component={Clients} />
       <Route path="/instances" component={Instances} />

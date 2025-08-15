@@ -34,6 +34,9 @@ export interface IStorage {
   getMonthlyMessageCount(clientId: string): Promise<number>;
   checkMessageLimits(clientId: string): Promise<{ allowed: boolean; limit: number; current: number; plan: string }>;
   
+  // Template methods for metrics
+  getTemplatesByClient(clientId: string): Promise<MessageTemplate[]>;
+  
   // Template methods
   getTemplates(clientId: string, orderStatus?: string): Promise<MessageTemplate[]>;
   getTemplate(id: string): Promise<MessageTemplate | undefined>;
@@ -437,6 +440,10 @@ export class DatabaseStorage implements IStorage {
       monthlyRevenue,
       deliveryRate,
     };
+  }
+
+  async getTemplatesByClient(clientId: string): Promise<MessageTemplate[]> {
+    return await db.select().from(messageTemplates).where(eq(messageTemplates.clientId, clientId));
   }
 }
 

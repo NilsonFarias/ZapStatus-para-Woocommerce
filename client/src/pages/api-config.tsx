@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import Sidebar from "@/components/layout/sidebar";
+import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2 } from "lucide-react";
+import { Loader2, Save, TestTube } from "lucide-react";
 
 interface EvolutionApiConfig {
   apiUrl: string;
@@ -70,68 +72,80 @@ export default function ApiConfig() {
     }
   }, [config, apiUrl, apiKey]);
 
-  return (
-    <div className="space-y-6" data-testid="api-config-page">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configuração de API</h1>
-        <p className="text-muted-foreground">
-          Configure as integrações com APIs externas
-        </p>
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
+    );
+  }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Evolution API</CardTitle>
-          <CardDescription>
-            Configure a conexão com o servidor Evolution API para gerenciar instâncias WhatsApp
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="api-url">URL da API</Label>
-            <Input
-              id="api-url"
-              placeholder="https://evolution-api.exemplo.com"
-              value={apiUrl}
-              onChange={(e) => setApiUrl(e.target.value)}
-              data-testid="input-api-url"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="api-key">Chave da API</Label>
-            <Input
-              id="api-key"
-              type="password"
-              placeholder="sua-chave-da-api"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              data-testid="input-api-key"
-            />
-          </div>
+  return (
+    <div className="flex h-screen bg-slate-50">
+      <Sidebar />
+      <main className="flex-1 overflow-auto">
+        <Header
+          title="Configuração de API"
+          description="Configure as integrações com APIs externas"
+        />
+        <div className="p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Evolution API</CardTitle>
+              <CardDescription>
+                Configure a conexão com o servidor Evolution API para gerenciar instâncias WhatsApp
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="api-url">URL da API</Label>
+                <Input
+                  id="api-url"
+                  placeholder="https://evolution-api.exemplo.com"
+                  value={apiUrl}
+                  onChange={(e) => setApiUrl(e.target.value)}
+                  data-testid="input-api-url"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="api-key">Chave da API</Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="sua-chave-da-api"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  data-testid="input-api-key"
+                />
+              </div>
 
-          <div className="flex space-x-2">
-            <Button
-              onClick={() => saveConfig()}
-              disabled={isSaving || !apiUrl || !apiKey}
-              data-testid="button-save-config"
-            >
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar Configuração
-            </Button>
-            
-            <Button
-              variant="outline"
-              onClick={() => testConnection()}
-              disabled={isTesting || !config}
-              data-testid="button-test-connection"
-            >
-              {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Testar Conexão
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() => saveConfig()}
+                  disabled={isSaving || !apiUrl || !apiKey}
+                  data-testid="button-save-config"
+                >
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Save className="mr-2 h-4 w-4" />
+                  Salvar Configuração
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => testConnection()}
+                  disabled={isTesting || !config}
+                  data-testid="button-test-connection"
+                >
+                  {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <TestTube className="mr-2 h-4 w-4" />
+                  Testar Conexão
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     </div>
   );
 }

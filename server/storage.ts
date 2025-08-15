@@ -28,6 +28,7 @@ export interface IStorage {
   deleteInstance(id: string): Promise<void>;
   getWhatsappInstances(): Promise<WhatsappInstance[]>;
   getAllQueuedMessages(): Promise<MessageQueueItem[]>;
+  getQueuedMessagesByUser(userId: string): Promise<MessageQueueItem[]>;
   
   // Template methods
   getTemplates(clientId: string, orderStatus?: string): Promise<MessageTemplate[]>;
@@ -203,6 +204,31 @@ export class DatabaseStorage implements IStorage {
     console.log('Executing getAllQueuedMessages query...');
     const result = await db.select().from(messageQueue).orderBy(desc(messageQueue.createdAt));
     console.log(`Database returned ${result.length} messages`);
+    return result;
+  }
+
+  async getQueuedMessagesByUser(userId: string): Promise<MessageQueueItem[]> {
+    console.log(`Executing getQueuedMessagesByUser query for user: ${userId}...`);
+    const result = await db
+      .select({
+        id: messageQueue.id,
+        instanceId: messageQueue.instanceId,
+        templateId: messageQueue.templateId,
+        recipientPhone: messageQueue.recipientPhone,
+        message: messageQueue.message,
+        scheduledFor: messageQueue.scheduledFor,
+        status: messageQueue.status,
+        sentAt: messageQueue.sentAt,
+        error: messageQueue.error,
+        createdAt: messageQueue.createdAt,
+      })
+      .from(messageQueue)
+      .innerJoin(whatsappInstances, eq(messageQueue.instanceId, whatsappInstances.id))
+      .innerJoin(clients, eq(whatsappInstances.clientId, clients.id))
+      .where(eq(clients.userId, userId))
+      .orderBy(desc(messageQueue.createdAt));
+    
+    console.log(`Database returned ${result.length} messages for user ${userId}`);
     return result;
   }
 

@@ -853,21 +853,20 @@ Sua instancia esta funcionando perfeitamente!`;
   });
 
   // Message Queue endpoints
-  app.get("/api/message-queue", async (req, res) => {
+  app.get("/api/message-queue", requireAuth, async (req: any, res) => {
     try {
-      // Get all queued messages directly from the database
-      console.log('Fetching message queue...');
-      const allQueueItems = await storage.getAllQueuedMessages();
-      console.log(`Found ${allQueueItems.length} queued messages`);
+      const userId = req.session.userId;
       
-      // Sort by creation time (newest first) - database already does this, but ensuring consistency
-      allQueueItems.sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      });
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
       
-      res.json(allQueueItems);
+      // Get queued messages filtered by user
+      console.log(`Fetching message queue for user: ${userId}...`);
+      const userQueueItems = await storage.getQueuedMessagesByUser(userId);
+      console.log(`Found ${userQueueItems.length} queued messages for user ${userId}`);
+      
+      res.json(userQueueItems);
     } catch (error: any) {
       console.error('Error fetching message queue:', error);
       res.status(500).json({ message: error.message });

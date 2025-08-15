@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { useToast } from "@/hooks/use-toast";
 
 interface CreateClientModalProps {
@@ -18,7 +18,7 @@ export default function CreateClientModal({ open, onOpenChange }: CreateClientMo
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    plan: "basic",
+    plan: "free",
   });
 
   const createClientMutation = useMutation({
@@ -31,7 +31,7 @@ export default function CreateClientModal({ open, onOpenChange }: CreateClientMo
         description: "O novo cliente foi adicionado com sucesso!",
       });
       onOpenChange(false);
-      setFormData({ name: "", email: "", plan: "basic" });
+      setFormData({ name: "", email: "", plan: "free" });
     },
     onError: (error: any) => {
       toast({
@@ -85,19 +85,17 @@ export default function CreateClientModal({ open, onOpenChange }: CreateClientMo
           </div>
           <div className="space-y-2">
             <Label htmlFor="client-plan">Plano</Label>
-            <Select 
-              value={formData.plan} 
-              onValueChange={(value) => setFormData({ ...formData, plan: value })}
-            >
-              <SelectTrigger data-testid="select-plan">
-                <SelectValue placeholder="Selecione um plano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="basic">Básico - R$ 29/mês (1.000 mensagens)</SelectItem>
-                <SelectItem value="pro">Pro - R$ 89/mês (10.000 mensagens)</SelectItem>
-                <SelectItem value="enterprise">Enterprise - R$ 199/mês (Ilimitado)</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input
+              id="client-plan"
+              value="Plano Free"
+              readOnly
+              disabled
+              className="bg-gray-50 text-gray-600"
+              data-testid="input-plan-display"
+            />
+            <p className="text-xs text-gray-500">
+              Todos os novos clientes começam com o plano Free. Eles podem fazer upgrade posteriormente.
+            </p>
           </div>
           <DialogFooter>
             <Button

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, Crown, Zap } from "lucide-react";
+import { AlertTriangle, Crown, Zap, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 interface PlanLimits {
@@ -27,6 +27,7 @@ export default function PlanUsageCard() {
   const getPlanIcon = (plan: string) => {
     switch (plan) {
       case 'free': return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
+      case 'basic': return <Shield className="w-5 h-5 text-blue-500" />;
       case 'pro': return <Crown className="w-5 h-5 text-purple-500" />;
       case 'enterprise': return <Zap className="w-5 h-5 text-green-500" />;
       default: return null;
@@ -43,12 +44,22 @@ export default function PlanUsageCard() {
     }
   };
 
+  const getPlanDisplayName = (plan: string) => {
+    switch (plan) {
+      case 'free': return 'Gratuito';
+      case 'basic': return 'Básico';
+      case 'pro': return 'Pro';
+      case 'enterprise': return 'Enterprise';
+      default: return 'Gratuito';
+    }
+  };
+
   return (
     <Card className={`mb-6 border-2 ${planLimits ? getPlanColor(planLimits.plan) : 'border-gray-200 bg-gray-50'}`}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {planLimits && getPlanIcon(planLimits.plan)}
-          {isLoading ? 'Carregando plano...' : planLimits ? `Plano ${planLimits.plan.charAt(0).toUpperCase() + planLimits.plan.slice(1)}` : 'Erro ao carregar plano'}
+          {isLoading ? 'Carregando plano...' : planLimits ? `Plano ${getPlanDisplayName(planLimits.plan)}` : 'Erro ao carregar plano'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -79,6 +90,12 @@ export default function PlanUsageCard() {
             {planLimits.plan === 'free' && planLimits.allowed && (
               <div className="text-yellow-700 text-sm bg-yellow-100 p-3 rounded-lg">
                 💡 Plano gratuito - {30 - planLimits.current} mensagens restantes este mês
+              </div>
+            )}
+            
+            {planLimits.plan === 'basic' && planLimits.allowed && (
+              <div className="text-blue-700 text-sm bg-blue-100 p-3 rounded-lg">
+                ⭐ Plano Básico - {planLimits.limit - planLimits.current} mensagens restantes este mês
               </div>
             )}
             

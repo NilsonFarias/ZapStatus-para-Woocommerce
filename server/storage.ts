@@ -129,9 +129,11 @@ export class DatabaseStorage implements IStorage {
         userId: clients.userId,
         name: clients.name,
         email: clients.email,
+        phone: clients.phone,
         plan: clients.plan,
         status: clients.status,
         monthlyMessages: clients.monthlyMessages,
+        lastAccess: clients.lastAccess,
         createdAt: clients.createdAt,
         // Include user information
         userName: users.name,

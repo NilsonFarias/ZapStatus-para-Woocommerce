@@ -26,6 +26,7 @@ export const clients = pgTable("clients", {
   userId: varchar("user_id").notNull().references(() => users.id),
   name: text("name").notNull(),
   email: text("email").notNull(),
+  phone: text("phone"),
   plan: text("plan").notNull(),
   status: text("status").notNull().default("active"),
   monthlyMessages: integer("monthly_messages").default(0),

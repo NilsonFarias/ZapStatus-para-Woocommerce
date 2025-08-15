@@ -16,7 +16,7 @@ import { Building2, Mail, User } from "lucide-react";
 const updateClientSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido"),
-  phone: z.string().min(1, "Telefone é obrigatório"),
+  phone: z.string().optional(),
   plan: z.enum(["basic", "pro", "enterprise"]),
   status: z.enum(["active", "inactive", "suspended"]),
 });
@@ -49,7 +49,7 @@ export default function EditClientModal({ client, open, onOpenChange }: EditClie
       form.reset({
         name: client.name,
         email: client.email,
-        phone: client.phone,
+        phone: client.phone || "+55 (11) 99999-9999",
         plan: client.plan as "basic" | "pro" | "enterprise",
         status: client.status as "active" | "inactive" | "suspended",
       });

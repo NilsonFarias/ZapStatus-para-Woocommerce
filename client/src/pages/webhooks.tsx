@@ -312,10 +312,25 @@ export default function Webhooks() {
                       <CheckCircle className="text-blue-600 mt-0.5" size={16} />
                       <div>
                         <p className="text-sm font-medium text-blue-800">Configuração WooCommerce</p>
-                        <p className="text-sm text-blue-700 mt-1">
-                          Configure estes eventos no seu WooCommerce em: 
-                          <strong> WooCommerce → Configurações → Avançado → Webhooks</strong>
-                        </p>
+                        <div className="text-sm text-blue-700 mt-1 space-y-2">
+                          <p><strong>Passo a passo:</strong></p>
+                          <ol className="list-decimal list-inside space-y-1">
+                            <li>Acesse: <strong>WooCommerce → Configurações → Avançado → Webhooks</strong></li>
+                            <li>Clique em <strong>"Adicionar webhook"</strong></li>
+                            <li>Preencha os campos:
+                              <ul className="list-disc list-inside ml-4 mt-1 space-y-0.5">
+                                <li><strong>Nome:</strong> WhatsFlow Webhook</li>
+                                <li><strong>Status:</strong> Ativo</li>
+                                <li><strong>Tópico:</strong> Selecione o evento desejado</li>
+                                <li><strong>URL de entrega:</strong> Cole a URL do webhook acima</li>
+                                <li><strong>Segredo:</strong> Cole a chave secreta acima</li>
+                                <li><strong>Versão da API:</strong> WP REST API Integration v3</li>
+                              </ul>
+                            </li>
+                            <li>Clique em <strong>"Salvar webhook"</strong></li>
+                            <li>Repita o processo para cada evento que deseja monitorar</li>
+                          </ol>
+                        </div>
                       </div>
                     </div>
                   </div>

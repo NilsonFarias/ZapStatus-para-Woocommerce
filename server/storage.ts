@@ -301,6 +301,12 @@ export class DatabaseStorage implements IStorage {
     await db.delete(messageQueue).where(eq(messageQueue.id, id));
   }
 
+  async getQueuedMessagesByOrderId(orderId: string): Promise<MessageQueueItem[]> {
+    return await db.select()
+      .from(messageQueue)
+      .where(sql`message LIKE '%' || ${orderId} || '%'`);
+  }
+
   async getDashboardMetrics(userId: string): Promise<{
     activeClients: number;
     messagesSent: number;

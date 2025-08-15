@@ -1446,33 +1446,54 @@ Sua instancia esta funcionando perfeitamente!`;
       
       console.log(`Creating subscription for plan: ${plan}`);
       
+      // Get price IDs from database first, then fallback to environment variables
+      const basicPriceId = (await storage.getSystemSetting('stripe_basic_price_id'))?.value || process.env.STRIPE_BASIC_PRICE_ID;
+      const proPriceId = (await storage.getSystemSetting('stripe_pro_price_id'))?.value || process.env.STRIPE_PRO_PRICE_ID;
+      const enterprisePriceId = (await storage.getSystemSetting('stripe_enterprise_price_id'))?.value || process.env.STRIPE_ENTERPRISE_PRICE_ID;
+
       // Define plan prices
       const planPrices = {
-        basic: process.env.STRIPE_BASIC_PRICE_ID || 'price_basic',
-        pro: process.env.STRIPE_PRO_PRICE_ID || 'price_pro',
-        enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID || 'price_enterprise',
+        basic: basicPriceId,
+        pro: proPriceId,
+        enterprise: enterprisePriceId,
       };
 
       const selectedPriceId = planPrices[plan as keyof typeof planPrices];
       console.log(`Using price ID: ${selectedPriceId} for plan: ${plan}`);
       
       // Validate that we have a valid price ID
-      if (!selectedPriceId || selectedPriceId.startsWith('price_basic') || selectedPriceId.startsWith('price_pro') || selectedPriceId.startsWith('price_enterprise')) {
-        throw new Error(`Invalid or missing Stripe price ID for plan: ${plan}. Please check environment variables.`);
+      if (!selectedPriceId) {
+        throw new Error(`Missing Stripe price ID for plan: ${plan}. Please configure price IDs in admin settings.`);
       }
       
       // Validate price ID format
       if (selectedPriceId.startsWith('prod_')) {
         throw new Error(`Invalid price ID format: ${selectedPriceId}. Expected a price ID starting with 'price_', but received a product ID starting with 'prod_'. Please use the price ID from your Stripe dashboard.`);
       }
+
+      if (!selectedPriceId.startsWith('price_')) {
+        throw new Error(`Invalid price ID format: ${selectedPriceId}. Expected a price ID starting with 'price_'.`);
+      }
+      // Get Stripe secret key from database or environment
+      const secretKeySetting = await storage.getSystemSetting('stripe_secret_key');
+      const secretKey = secretKeySetting?.value || process.env.STRIPE_SECRET_KEY;
+
+      if (!secretKey) {
+        throw new Error('Stripe Secret Key not configured. Please configure Stripe settings in admin panel.');
+      }
+
+      // Create Stripe instance with the configured secret key
+      const stripeInstance = new (await import('stripe')).default(secretKey, {
+        apiVersion: '2023-10-16',
+      });
       
       // Create Stripe customer
-      const customer = await stripe.customers.create({
+      const customer = await stripeInstance.customers.create({
         email,
         name,
       });
 
-      const subscription = await stripe.subscriptions.create({
+      const subscription = await stripeInstance.subscriptions.create({
         customer: customer.id,
         items: [{
           price: selectedPriceId,

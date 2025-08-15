@@ -8,12 +8,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Zap, Building, AlertTriangle, Shield } from "lucide-react";
 
-// Make sure to call `loadStripe` outside of a component's render to avoid
-// recreating the `Stripe` object on every render.
-if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
-  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
-}
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+// Initialize Stripe with dynamic configuration
+let stripePromise: Promise<any> | null = null;
+
+const initializeStripe = async () => {
+  try {
+    // Get Stripe configuration from API
+    const response = await fetch('/api/admin/stripe-config');
+    const config = await response.json();
+    
+    const publicKey = config.stripePublicKey || import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    
+    if (!publicKey) {
+      throw new Error('Missing Stripe public key in both database and environment variables');
+    }
+    
+    return loadStripe(publicKey);
+  } catch (error) {
+    console.error('Failed to initialize Stripe:', error);
+    // Fallback to environment variable
+    const fallbackKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    if (!fallbackKey) {
+      throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
+    }
+    return loadStripe(fallbackKey);
+  }
+};
+
+stripePromise = initializeStripe();
 
 const PLANS = [
   {

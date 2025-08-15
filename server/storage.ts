@@ -1,19 +1,23 @@
 import { users, clients, whatsappInstances, messageTemplates, webhookConfigs, webhookLogs, messageQueue, systemSettings, type User, type InsertUser, type Client, type InsertClient, type WhatsappInstance, type InsertInstance, type MessageTemplate, type InsertTemplate, type WebhookConfig, type InsertWebhookConfig, type WebhookLog, type MessageQueueItem, type SystemSetting, type InsertSystemSetting } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, gt, gte } from "drizzle-orm";
+import { eq, desc, and, sql, gt, gte, or } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUsers(): Promise<User[]>;
+  getAllUsers(): Promise<User[]>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByUsernameOrEmail(username: string, email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
   updateUserStripeInfo(userId: string, customerId: string, subscriptionId: string): Promise<User>;
+  deleteUser(id: string): Promise<void>;
   
   // Client methods
   getClients(userId: string): Promise<Client[]>;
+  getAllClients(): Promise<Client[]>;
   getClient(id: string): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, updates: Partial<InsertClient>): Promise<Client>;
@@ -116,6 +120,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async getUserByUsernameOrEmail(username: string, email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(
+      or(
+        eq(users.username, username),
+        eq(users.email, email)
+      )
+    );
+    return user || undefined;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
   }
 
   async getClients(userId: string): Promise<Client[]> {

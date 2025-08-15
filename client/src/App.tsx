@@ -21,6 +21,7 @@ import Welcome from "@/pages/welcome";
 import ApiConfig from "@/pages/api-config";
 import StripeSettings from "@/pages/stripe-settings";
 import EvolutionDocs from "@/pages/evolution-docs";
+import UserManagement from "@/pages/user-management";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/api-config" component={ApiConfig} />
       <Route path="/stripe-settings" component={StripeSettings} />
       <Route path="/evolution-docs" component={EvolutionDocs} />
+      <Route path="/user-management" component={UserManagement} />
       <Route path="/settings" component={Settings} />
       <Route path="/subscribe" component={Subscribe} />
       <Route path="/subscription-success" component={SubscriptionSuccess} />

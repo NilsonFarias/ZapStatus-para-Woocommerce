@@ -346,6 +346,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin user management routes
+  app.get("/api/admin/users", requireAdmin, async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Remove passwords from response
+      const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+      res.json(usersWithoutPasswords);
+    } catch (error: any) {
+      console.error("Get all users error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/admin/users", requireAdmin, async (req: any, res) => {
+    try {
+      const { username, email, password, name, company, phone, role } = req.body;
+      
+      if (!username || !email || !password || !name) {
+        return res.status(400).json({ message: "Username, email, senha e nome são obrigatórios" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres" });
+      }
+
+      // Check if username or email already exists
+      const existingUser = await storage.getUserByUsernameOrEmail(username, email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username ou email já está em uso" });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 12);
+      
+      // Create user
+      const newUser = await storage.createUser({
+        username,
+        email,
+        password: hashedPassword,
+        name,
+        company: company || '',
+        phone: phone || '',
+        role: role || 'admin',
+        plan: 'basic',
+        subscriptionStatus: 'active',
+      });
+
+      // Create associated client
+      await storage.createClient({
+        name,
+        email,
+        company: company || '',
+        phone: phone || '',
+        plan: 'basic',
+        status: 'active',
+        userId: newUser.id,
+      });
+
+      // Return user without password
+      const { password: _, ...userWithoutPassword } = newUser;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Create user error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.delete("/api/admin/users/:userId", requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Don't allow deleting the current admin user
+      if (userId === req.session.userId) {
+        return res.status(400).json({ message: "Você não pode excluir sua própria conta" });
+      }
+
+      // Get user to check if exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Delete associated clients first (cascade should handle this but let's be explicit)
+      const clients = await storage.getClients(userId);
+      for (const client of clients) {
+        await storage.deleteClient(client.id);
+      }
+
+      // Delete user
+      await storage.deleteUser(userId);
+      
+      res.json({ message: "Usuário excluído com sucesso" });
+    } catch (error: any) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   // Dashboard metrics (Admin only)
   app.get("/api/dashboard/metrics", requireAdmin, async (req: any, res) => {
     try {

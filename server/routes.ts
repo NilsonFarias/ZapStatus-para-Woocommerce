@@ -274,7 +274,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User routes for their own instances, templates, etc.
+  // User routes for their own data
+  app.get("/api/user/clients", requireAuth, async (req: any, res) => {
+    try {
+      const clients = await storage.getClients(req.session.userId);
+      res.json(clients);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/user/instances", requireAuth, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.session.userId);

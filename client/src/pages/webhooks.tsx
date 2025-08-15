@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Copy, TestTube, Save, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 const WEBHOOK_EVENTS = [
   { id: 'order.created', label: 'Pedido Criado', description: 'Quando um novo pedido é criado' },
@@ -30,7 +31,15 @@ const WEBHOOK_EVENTS = [
 export default function Webhooks() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const clientId = "demo-client-id";
+  const { user } = useAuth();
+  
+  // Get user's client data
+  const { data: userClients = [] } = useQuery({
+    queryKey: ['/api/user/clients'],
+    enabled: !!user && user.role !== 'admin',
+  });
+  
+  const clientId = userClients.length > 0 ? userClients[0].id : null;
   
   const [webhookConfig, setWebhookConfig] = useState({
     webhookUrl: '',
@@ -43,14 +52,18 @@ export default function Webhooks() {
   
   const { data: existingConfig } = useQuery({
     queryKey: [`/api/webhook-config/${clientId}`],
+    enabled: !!clientId,
   });
   
   const { data: webhookLogs = [] } = useQuery({
     queryKey: [`/api/webhook-logs/${clientId}`],
+    enabled: !!clientId,
   });
 
   // Load existing configuration
   useEffect(() => {
+    if (!clientId) return;
+    
     if (existingConfig) {
       setWebhookConfig({
         webhookUrl: existingConfig.webhookUrl || '',
@@ -66,11 +79,11 @@ export default function Webhooks() {
       
       setWebhookConfig(prev => ({
         ...prev,
-        webhookUrl: `${replitUrl}/api/webhook/woocommerce`,
+        webhookUrl: `${replitUrl}/api/webhook/woocommerce/${clientId}`,
         secretKey: generateSecretKey()
       }));
     }
-  }, [existingConfig]);
+  }, [existingConfig, clientId]);
 
   const generateSecretKey = () => {
     return 'whatsflow_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -99,6 +112,7 @@ export default function Webhooks() {
         description: "Webhook configurado com sucesso!",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/webhook-config/${clientId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/webhook-logs/${clientId}`] });
     },
     onError: () => {
       toast({
@@ -169,6 +183,27 @@ export default function Webhooks() {
       });
     });
   };
+
+  // Show loading if no client available
+  if (!clientId) {
+    return (
+      <div className="flex h-screen bg-slate-50">
+        <Sidebar />
+        <main className="flex-1 overflow-auto">
+          <Header title="Configuração de Webhooks" />
+          <div className="p-6 space-y-6">
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-center text-slate-600">
+                  Carregando configurações do cliente...
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-50">

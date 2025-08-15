@@ -10,6 +10,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Role-Based Access Control & Multi-Tenant Isolation (August 15, 2025)
+- **Status**: ✅ **SISTEMA COMPLETO DE ROLES E ISOLAMENTO** - Separação total admin/usuário funcionando
+- **Funcionalidades**:
+  - Sistema de roles: 'admin' e 'user' com menus e rotas específicas
+  - **Admin**: Dashboard global, Gestão de clientes, Faturamento, Config API, Configurações
+  - **User**: Instâncias, Templates, Webhooks, Fila mensagens, Configurações pessoais
+  - Middleware `requireAdmin` protegendo rotas administrativas
+  - Rotas específicas: `/api/user/clients`, `/api/user/instances` para usuários
+  - **Isolamento de Webhooks**: Cada usuário tem configurações isoladas por clientId
+- **Correção Crítica (15/08/2025)**: 
+  - ✅ Webhook config estava compartilhado entre usuários (hardcoded "demo-client-id")
+  - ✅ Implementado busca dinâmica do clientId por usuário logado
+  - ✅ URLs webhook específicas: `/api/webhook/woocommerce/{clientId}` por cliente
+  - ✅ Queries isoladas: `enabled: !!clientId` para evitar conflitos
+- **Arquitetura**: Multi-tenant perfeito - dados isolados por usuário, admins veem tudo
+
 ### Public Registration System Implementation (August 15, 2025)
 - **Status**: ✅ **IMPLEMENTADO** - Sistema completo de registro público funcionando
 - **Funcionalidades**:

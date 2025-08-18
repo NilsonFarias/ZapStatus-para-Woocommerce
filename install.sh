@@ -72,59 +72,71 @@ detect_system() {
     esac
 }
 
-# Verificar se está executando como root
-check_root() {
+# Criar usuário whatsflow se executando como root
+create_whatsflow_user() {
     if [[ $EUID -eq 0 ]]; then
-        log_warning "Executando como root."
-        echo
-        read -p "Deseja criar usuário 'whatsflow' e continuar instalação com ele? (y/n): " CREATE_USER
+        log_warning "Executando como root - criando usuário dedicado..."
         
-        if [[ $CREATE_USER =~ ^[Yy]$ ]]; then
-            # Criar usuário whatsflow
-            if ! id "whatsflow" &>/dev/null; then
-                log_info "Criando usuário 'whatsflow'..."
-                
-                # Usar adduser no Ubuntu/Debian, useradd no CentOS/RHEL
-                case $OS in
-                    ubuntu|debian)
-                        adduser --disabled-password --gecos "" whatsflow
-                        usermod -aG sudo whatsflow
-                        # Definir senha
-                        echo
-                        log_info "Defina uma senha para o usuário 'whatsflow':"
-                        passwd whatsflow
-                        ;;
-                    centos|rhel)
-                        useradd -m -s /bin/bash whatsflow
-                        usermod -aG wheel whatsflow
-                        # Definir senha
-                        echo
-                        log_info "Defina uma senha para o usuário 'whatsflow':"
-                        passwd whatsflow
-                        ;;
-                esac
-                
-                log_success "Usuário 'whatsflow' criado com sucesso!"
-            else
-                log_info "Usuário 'whatsflow' já existe."
-            fi
+        # Criar usuário whatsflow se não existir
+        if ! id "whatsflow" &>/dev/null; then
+            log_info "Criando usuário 'whatsflow'..."
             
-            # Copiar script para o usuário
-            cp "$0" /home/whatsflow/
-            chown whatsflow:whatsflow /home/whatsflow/$(basename "$0")
-            chmod +x /home/whatsflow/$(basename "$0")
+            # Usar adduser no Ubuntu/Debian, useradd no CentOS/RHEL
+            case $OS in
+                ubuntu|debian)
+                    adduser --disabled-password --gecos "" whatsflow
+                    usermod -aG sudo whatsflow
+                    ;;
+                centos|rhel)
+                    useradd -m -s /bin/bash whatsflow
+                    usermod -aG wheel whatsflow
+                    ;;
+            esac
             
-            log_info "Execute agora como usuário whatsflow:"
-            echo "su - whatsflow"
-            echo "bash $(basename "$0")"
-            exit 0
+            # Definir senha automática (pode ser alterada depois)
+            TEMP_PASSWORD=$(openssl rand -base64 12)
+            echo "whatsflow:$TEMP_PASSWORD" | chpasswd
+            
+            log_success "Usuário 'whatsflow' criado!"
+            log_info "Senha temporária: $TEMP_PASSWORD"
+            log_warning "Altere a senha após a instalação com: passwd"
         else
-            log_warning "Continuando com instalação como root (não recomendado)..."
-            ROOT_USER=true
+            log_info "Usuário 'whatsflow' já existe."
         fi
+        
+        # Alternar para o usuário whatsflow e continuar instalação
+        log_info "Continuando instalação como usuário 'whatsflow'..."
+        
+        # Copiar script para whatsflow temporariamente
+        SCRIPT_PATH="/tmp/whatsflow_install_$(date +%s).sh"
+        cp "$0" "$SCRIPT_PATH"
+        chown whatsflow:whatsflow "$SCRIPT_PATH"
+        chmod +x "$SCRIPT_PATH"
+        
+        # Exportar argumentos para o novo processo
+        export ORIGINAL_ARGS="$*"
+        export WHATSFLOW_INSTALL=true
+        
+        # Executar como whatsflow
+        sudo -u whatsflow -H bash -c "cd /home/whatsflow && $SCRIPT_PATH $*"
+        
+        # Limpar script temporário
+        rm -f "$SCRIPT_PATH"
+        
+        log_success "Instalação concluída!"
+        exit 0
     else
-        ROOT_USER=false
+        # Já executando como usuário não-root
         log_info "Executando como usuário: $(whoami)"
+        
+        # Verificar se tem privilégios sudo
+        if ! sudo -n true 2>/dev/null; then
+            log_error "Usuário $(whoami) não tem privilégios sudo."
+            log_info "Execute como root ou adicione $(whoami) ao grupo sudo:"
+            echo "usermod -aG sudo $(whoami)  # Ubuntu/Debian"
+            echo "usermod -aG wheel $(whoami) # CentOS/RHEL"
+            exit 1
+        fi
     fi
 }
 
@@ -134,30 +146,16 @@ install_system_deps() {
     
     case $OS in
         ubuntu|debian)
-            if [[ $ROOT_USER == true ]]; then
-                apt update
-                apt install -y curl wget git build-essential software-properties-common \
-                    postgresql postgresql-contrib nginx certbot python3-certbot-nginx \
-                    ufw bc unzip
-            else
-                sudo apt update
-                sudo apt install -y curl wget git build-essential software-properties-common \
-                    postgresql postgresql-contrib nginx certbot python3-certbot-nginx \
-                    ufw bc unzip
-            fi
+            sudo apt update
+            sudo apt install -y curl wget git build-essential software-properties-common \
+                postgresql postgresql-contrib nginx certbot python3-certbot-nginx \
+                ufw bc unzip
             ;;
         centos|rhel)
-            if [[ $ROOT_USER == true ]]; then
-                dnf update -y
-                dnf install -y curl wget git gcc gcc-c++ make \
-                    postgresql postgresql-server postgresql-contrib \
-                    nginx certbot python3-certbot-nginx firewalld bc unzip
-            else
-                sudo dnf update -y
-                sudo dnf install -y curl wget git gcc gcc-c++ make \
-                    postgresql postgresql-server postgresql-contrib \
-                    nginx certbot python3-certbot-nginx firewalld bc unzip
-            fi
+            sudo dnf update -y
+            sudo dnf install -y curl wget git gcc gcc-c++ make \
+                postgresql postgresql-server postgresql-contrib \
+                nginx certbot python3-certbot-nginx firewalld bc unzip
             ;;
     esac
     
@@ -186,26 +184,14 @@ install_nodejs() {
     esac
     
     # Instalar via NodeSource
-    if [[ $ROOT_USER == true ]]; then
-        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    else
-        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    fi
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
     
     case $OS in
         ubuntu|debian)
-            if [[ $ROOT_USER == true ]]; then
-                apt-get install -y nodejs
-            else
-                sudo apt-get install -y nodejs
-            fi
+            sudo apt-get install -y nodejs
             ;;
         centos|rhel)
-            if [[ $ROOT_USER == true ]]; then
-                dnf install -y nodejs
-            else
-                sudo dnf install -y nodejs
-            fi
+            sudo dnf install -y nodejs
             ;;
     esac
     
@@ -215,11 +201,7 @@ install_nodejs() {
     log_success "Node.js $NODE_VERSION e npm $NPM_VERSION instalados"
     
     # Instalar PM2 globalmente
-    if [[ $ROOT_USER == true ]]; then
-        npm install -g pm2
-    else
-        sudo npm install -g pm2
-    fi
+    sudo npm install -g pm2
     log_success "PM2 instalado globalmente"
 }
 
@@ -229,23 +211,13 @@ setup_postgresql() {
     
     case $OS in
         centos|rhel)
-            if [[ $ROOT_USER == true ]]; then
-                postgresql-setup --initdb
-                systemctl enable postgresql
-            else
-                sudo postgresql-setup --initdb
-                sudo systemctl enable postgresql
-            fi
+            sudo postgresql-setup --initdb
+            sudo systemctl enable postgresql
             ;;
     esac
     
-    if [[ $ROOT_USER == true ]]; then
-        systemctl start postgresql
-        systemctl enable postgresql
-    else
-        sudo systemctl start postgresql
-        sudo systemctl enable postgresql
-    fi
+    sudo systemctl start postgresql
+    sudo systemctl enable postgresql
     
     # Criar usuário e banco
     log_info "Criando usuário e banco de dados..."
@@ -253,23 +225,13 @@ setup_postgresql() {
     read -s -p "Digite uma senha forte para o usuário PostgreSQL 'whatsflow': " DB_PASSWORD
     echo
     
-    if [[ $ROOT_USER == true ]]; then
-        su - postgres -c "psql" << EOF
+    sudo -u postgres psql << EOF
 CREATE USER whatsflow WITH PASSWORD '$DB_PASSWORD';
 CREATE DATABASE whatsflow;
 GRANT ALL PRIVILEGES ON DATABASE whatsflow TO whatsflow;
 ALTER USER whatsflow CREATEDB;
 \q
 EOF
-    else
-        sudo -u postgres psql << EOF
-CREATE USER whatsflow WITH PASSWORD '$DB_PASSWORD';
-CREATE DATABASE whatsflow;
-GRANT ALL PRIVILEGES ON DATABASE whatsflow TO whatsflow;
-ALTER USER whatsflow CREATEDB;
-\q
-EOF
-    fi
     
     log_success "PostgreSQL configurado com sucesso"
 }
@@ -538,7 +500,7 @@ show_menu() {
 main() {
     log_info "Iniciando instalação do WhatsFlow..."
     
-    check_root
+    create_whatsflow_user
     detect_system
     
     if [[ $# -eq 0 ]]; then

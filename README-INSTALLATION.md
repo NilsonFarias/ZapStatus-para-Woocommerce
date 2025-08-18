@@ -20,18 +20,14 @@ su - whatsflow
 
 ## 🚀 Instalação Rápida (Recomendado)
 
-⚠️ **ATENÇÃO**: Execute sempre como usuário não-root!
-
 ### One-liner - Instalação Completa
 ```bash
-# Execute como usuário normal (não root)
+# Execute como root ou usuário com sudo
 curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/quick-install.sh | bash
 ```
 
 ### Instalação Manual
 ```bash
-# Execute como usuário normal (não root)
-
 # 1. Baixar script
 wget https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install.sh
 
@@ -42,29 +38,22 @@ chmod +x install.sh
 ./install.sh --full
 ```
 
-### Se Conectou como Root
-```bash
-# Ubuntu/Debian:
-adduser whatsflow
-usermod -aG sudo whatsflow
-su - whatsflow
-
-# CentOS/RHEL:
-useradd -m -s /bin/bash whatsflow
-usermod -aG wheel whatsflow
-passwd whatsflow
-su - whatsflow
-
-# Executar instalação:
-curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/quick-install.sh | bash
-```
+**Como Funciona:**
+- ✅ Se executar como **root**: cria usuário `whatsflow` automaticamente e continua
+- ✅ Se executar como **usuário com sudo**: procede diretamente
+- ❌ Se usuário não tem sudo: exibe instruções para corrigir
 
 ## 📋 Pré-requisitos
 
 ### Preparação do Servidor
-**IMPORTANTE: Nunca execute como root!**
+**Opção 1: Execute como root (Recomendado)**
+```bash
+# O script criará automaticamente o usuário 'whatsflow' 
+# e continuará a instalação sem parar
+ssh root@seu-servidor
+```
 
-1. **Crie um usuário dedicado:**
+**Opção 2: Crie usuário dedicado manualmente**
 ```bash
 # Ubuntu/Debian:
 adduser whatsflow
@@ -76,11 +65,6 @@ useradd -m -s /bin/bash whatsflow
 usermod -aG wheel whatsflow
 passwd whatsflow
 su - whatsflow
-```
-
-2. **Ou conecte diretamente como usuário não-root:**
-```bash
-ssh usuario@seu-servidor
 ```
 
 ### Sistemas Suportados
@@ -125,10 +109,10 @@ ssh usuario@seu-servidor
 ### Durante a Instalação
 O script solicitará apenas:
 
-1. **Senha PostgreSQL**: Para usuário `whatsflow`
+1. **Senha PostgreSQL**: Para usuário `whatsflow`  
 2. **Branch**: Padrão `main` (apenas pressione Enter)
 
-**Nota de Segurança**: Se executar como root, o script oferecerá criar usuário `whatsflow` automaticamente e solicitará que reexecute com esse usuário.
+**Instalação Automática**: Se executar como root, o script criará automaticamente o usuário `whatsflow` e continuará a instalação sem interrupção.
 
 ### Após a Instalação
 **Todas as configurações são feitas pela interface admin:**

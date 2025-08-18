@@ -91,3 +91,28 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - Evolution API service dynamically retrieves domain from database settings
 
 **Benefits**: Simplified deployment process - admins can configure system domain through interface instead of modifying environment variables on server.
+
+### Admin Navigation Consolidation - COMPLETED (August 18, 2025)
+**Features Implemented**:
+- Consolidated "Clientes" and "Usuários Admin" menus into single "Gerenciar" menu
+- Created tabbed interface with "Clientes" and "Usuários Admin" tabs
+- Maintained all original functionalities without loss
+- Enhanced user experience with cleaner navigation structure
+
+### Billing Metrics System Overhaul - COMPLETED (August 18, 2025)
+**Problem Identified**: Billing dashboard displayed static/mockup data instead of real system metrics
+**Solution Implemented**:
+- Created new `/api/billing/metrics` endpoint with real database calculations
+- Replaced all hardcoded values with dynamic data from active clients
+- Implemented accurate revenue calculations based on client plans (Basic R$ 29, Pro R$ 89, Enterprise R$ 199)
+- Added real-time churn rate calculation based on inactive vs total clients
+- Dynamic plan distribution showing actual client counts and percentages
+- Upcoming renewals based on real client data
+
+**Technical Details**:
+- New `getBillingMetrics()` method in storage layer
+- Real-time calculation of: monthly revenue, active subscriptions, churn rate, average ticket
+- Plan distribution filtered to show only plans with active clients
+- Frontend connected to authentic data source with loading states
+
+**Impact**: Billing dashboard now provides accurate business intelligence for decision making instead of fictional metrics.

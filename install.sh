@@ -93,13 +93,11 @@ create_whatsflow_user() {
                     ;;
             esac
             
-            # Definir senha automática (pode ser alterada depois)
-            TEMP_PASSWORD=$(openssl rand -base64 12)
-            echo "whatsflow:$TEMP_PASSWORD" | chpasswd
+            # Permitir sudo sem senha temporariamente para instalação
+            echo "whatsflow ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/whatsflow-install
             
             log_success "Usuário 'whatsflow' criado!"
-            log_info "Senha temporária: $TEMP_PASSWORD"
-            log_warning "Altere a senha após a instalação com: passwd"
+            log_info "Senha pode ser definida após instalação com: sudo passwd whatsflow"
         else
             log_info "Usuário 'whatsflow' já existe."
         fi
@@ -117,13 +115,20 @@ create_whatsflow_user() {
         export ORIGINAL_ARGS="$*"
         export WHATSFLOW_INSTALL=true
         
-        # Executar como whatsflow
-        sudo -u whatsflow -H bash -c "cd /home/whatsflow && $SCRIPT_PATH $*"
+        # Executar como whatsflow (permite sudo sem senha durante instalação)
+        sudo -u whatsflow -H bash -c "cd /home/whatsflow && SUDO_USER=root $SCRIPT_PATH $*"
         
-        # Limpar script temporário
+        # Limpar script temporário e configuração sudo temporária
         rm -f "$SCRIPT_PATH"
+        rm -f /etc/sudoers.d/whatsflow-install
+        
+        # Configurar sudoers permanente (com senha)
+        if [[ ! -f /etc/sudoers.d/whatsflow ]]; then
+            echo "whatsflow ALL=(ALL:ALL) ALL" > /etc/sudoers.d/whatsflow
+        fi
         
         log_success "Instalação concluída!"
+        log_warning "Configure senha para o usuário whatsflow: passwd whatsflow"
         exit 0
     else
         # Já executando como usuário não-root

@@ -20,7 +20,13 @@ su - whatsflow
 
 ## 🚀 Instalação Rápida (Recomendado)
 
-### One-liner - Instalação Completa
+### Opção 1: Script Simplificado (Recomendado)
+```bash
+# Execute como root - mais estável
+curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install-simple.sh | bash -s -- --full
+```
+
+### Opção 2: Script Completo
 ```bash
 # Execute como root ou usuário com sudo
 curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/quick-install.sh | bash
@@ -28,13 +34,14 @@ curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocomm
 
 ### Instalação Manual
 ```bash
-# 1. Baixar script
+# Opção A: Script Simplificado (Recomendado)
+wget https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install-simple.sh
+chmod +x install-simple.sh
+./install-simple.sh --full
+
+# Opção B: Script Completo
 wget https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install.sh
-
-# 2. Tornar executável
 chmod +x install.sh
-
-# 3. Executar instalação completa
 ./install.sh --full
 ```
 

@@ -76,18 +76,20 @@ install_dependencies() {
         ubuntu|debian)
             sudo apt update
             sudo apt install -y curl wget git build-essential postgresql postgresql-contrib nginx certbot python3-certbot-nginx
+            # Node.js 18 para Ubuntu/Debian
+            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            sudo apt-get install -y nodejs
             ;;
         centos|rhel|rocky|alma)
             sudo dnf update -y
             sudo dnf install -y curl wget git gcc gcc-c++ make postgresql postgresql-server postgresql-contrib nginx certbot python3-certbot-nginx
+            # Node.js 18 para CentOS/RHEL
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            sudo dnf install -y nodejs
             ;;
     esac
     
-    # Node.js 18
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    sudo apt-get install -y nodejs
     sudo npm install -g pm2
-    
     log_success "Dependências instaladas"
 }
 
@@ -105,6 +107,9 @@ setup_database() {
     echo -n "Senha para usuário PostgreSQL 'whatsflow': "
     read -s DB_PASSWORD
     echo
+    
+    # Salvar senha em variável global
+    export DB_PASSWORD
     
     sudo -u postgres psql << EOF
 DROP USER IF EXISTS whatsflow;
@@ -148,18 +153,29 @@ install_application() {
     npm ci
     npm run build
     
+    # Executar migrações do banco
+    log_info "Executando migrações..."
+    npm run db:migrate
+    
     # Parar PM2 anterior
     pm2 delete whatsflow 2>/dev/null || true
     
     # Iniciar aplicação
     pm2 start npm --name "whatsflow" -- start
     
-    # Auto-start
-    STARTUP_CMD=$(pm2 startup systemd -u whatsflow --hp /home/whatsflow 2>&1 | grep "sudo env" | head -1)
-    if [[ -n "$STARTUP_CMD" ]]; then
-        eval "$STARTUP_CMD"
-        pm2 save
+    # Verificar se aplicação subiu
+    sleep 5
+    if pm2 list | grep -q "whatsflow.*online"; then
+        log_success "Aplicação iniciada com sucesso"
+    else
+        log_error "Falha ao iniciar aplicação"
+        pm2 logs whatsflow --lines 20
+        return 1
     fi
+    
+    # Auto-start
+    pm2 startup systemd -u whatsflow --hp /home/whatsflow
+    pm2 save
     
     log_success "Aplicação instalada"
 }

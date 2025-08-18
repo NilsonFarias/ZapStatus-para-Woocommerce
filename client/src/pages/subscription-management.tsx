@@ -354,7 +354,7 @@ export default function SubscriptionManagement() {
               </Dialog>
 
               <p className="text-sm text-slate-600">
-                Cancelar sua assinatura fará com que você retorne ao plano básico com limitações de uso.
+                Cancelar sua assinatura fará com que você retorne ao plano free com limitações de uso.
               </p>
             </div>
           ) : (

@@ -16,9 +16,6 @@ wget https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/m
 chmod +x install.sh
 
 # 3. Executar instalação completa
-./install.sh
-
-# Ou instalação não-interativa
 ./install.sh --full
 ```
 
@@ -64,28 +61,23 @@ chmod +x install.sh
 ## 📝 Configuração Necessária
 
 ### Durante a Instalação
-O script solicitará:
+O script solicitará apenas:
 
 1. **Senha PostgreSQL**: Para usuário `whatsflow`
-2. **Branch**: Padrão `main` (repositório já configurado)
-3. **Domínio**: Para configuração SSL
-4. **Email**: Para certificados Let's Encrypt
+2. **Branch**: Padrão `main` (apenas pressione Enter)
 
 ### Após a Instalação
-Configure no arquivo `.env`:
+**Todas as configurações são feitas pela interface admin:**
 
-```env
-# Stripe (obrigatório)
-STRIPE_SECRET_KEY=sk_live_...
-VITE_STRIPE_PUBLIC_KEY=pk_live_...
-STRIPE_BASIC_PRICE_ID=price_...
-STRIPE_PRO_PRICE_ID=price_...
-STRIPE_ENTERPRISE_PRICE_ID=price_...
+1. Acesse: `http://seu-servidor:5000`
+2. Login: `admin` / `admin123`
+3. Vá em **Configurações** → **Configuração API** 
+4. Configure:
+   - Stripe (chaves e preços)
+   - Evolution API (URL e chave)
+   - Domínio do sistema
 
-# Evolution API (obrigatório)
-EVOLUTION_API_KEY=sua_chave
-EVOLUTION_API_URL=https://sua-api.com
-```
+**Não é necessário editar arquivos manualmente!**
 
 ## 🔄 Atualização Automatizada
 
@@ -107,10 +99,10 @@ chmod +x update.sh
 
 ### Recursos da Atualização
 - ✅ Backup automático (código + banco)
-- ✅ Migração de banco de dados
 - ✅ Zero downtime (PM2)
 - ✅ Rollback em caso de erro
 - ✅ Verificação de saúde
+- ✅ Sistema inicia automaticamente
 
 ## 🏗️ Instalação Modular
 

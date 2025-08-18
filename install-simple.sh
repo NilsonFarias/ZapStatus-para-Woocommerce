@@ -62,15 +62,14 @@ setup_user() {
         
         # Executar como whatsflow
         log_info "Continuando instalação como whatsflow..."
-        sudo -u whatsflow -i bash -s -- "$@" << 'EOF'
-#!/bin/bash
-export USER=whatsflow
-export HOME=/home/whatsflow
-cd /home/whatsflow
-
-# Re-executar este script como whatsflow
-curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install-simple.sh | bash -s -- "$@"
-EOF
+        
+        # Copiar script para usuário whatsflow
+        cp "$0" /home/whatsflow/install-simple.sh
+        chown whatsflow:whatsflow /home/whatsflow/install-simple.sh
+        chmod +x /home/whatsflow/install-simple.sh
+        
+        # Executar como whatsflow com TTY
+        sudo -u whatsflow -i /home/whatsflow/install-simple.sh "$@"
         
         # Limpar configuração temporária
         rm -f /etc/sudoers.d/whatsflow-install

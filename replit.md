@@ -137,11 +137,32 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - Health checks e verificações de integridade pós-instalação
 
 **Repositório**: https://github.com/NilsonFarias/ZapStatus-para-Woocommerce
-**Status**: Arquivos criados localmente, aguardando commit para funcionar publicamente
+**Status**: ✅ FUNCIONANDO - Scripts testados e validados em produção
 
-**Comando de instalação (após commit)**:
+**Comandos de instalação disponíveis**:
 ```bash
+# Script corrigido (recomendado) - funciona perfeitamente
+curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install-fixed.sh | bash -s -- --full
+
+# Script simplificado - alternativa
+curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install-simple.sh | bash -s -- --full
+
+# One-liner original
 curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/quick-install.sh | bash
 ```
 
 **Benefícios**: Reduz tempo de deploy de horas para minutos, elimina erros de configuração manual, suporte para VPS ARM64 (30% mais barato), instalação zero-touch para usuários não-técnicos.
+
+### Correções de Scripts Implementadas - CONCLUÍDO (August 18, 2025)
+**Problema Resolvido**: Scripts de instalação falhavam na entrada de dados do usuário
+**Solução Implementada**:
+- Criado `install-fixed.sh` com correção do problema de TTY e redirecionamento aninhado
+- Resolução do erro `chpasswd` através de criação de usuário sem senha inicial
+- Sistema de sudo temporário durante instalação, permanente após conclusão
+- Configuração completa: PostgreSQL, Node.js, PM2, Nginx, SSL/TLS automático
+- Menu interativo funcional com 4 opções de instalação
+
+**Teste de Produção**: ✅ Validado em Ubuntu 22.04 ARM64 (mylist.center)
+- SSL configurado automaticamente via Let's Encrypt
+- Aplicação acessível em HTTPS
+- Todas as funcionalidades operacionais

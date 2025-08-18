@@ -1,5 +1,23 @@
 # WhatsFlow - Guia de Instalação Automatizada
 
+
+⚠️ **ATENÇÃO**. 
+
+Preparar Servidor
+Conectar no servidor:
+ssh root@SEU_IP_VPS
+
+Atualizar sistema:
+apt update && apt upgrade -y
+
+Criar usuário não-root:
+
+adduser whatsflow
+usermod -aG sudo whatsflow
+su - whatsflow
+
+
+
 ## 🚀 Instalação Rápida (Recomendado)
 
 ⚠️ **ATENÇÃO**: Execute sempre como usuário não-root!

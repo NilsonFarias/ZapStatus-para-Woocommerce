@@ -75,9 +75,11 @@ detect_system() {
 # Verificar se está executando como root
 check_root() {
     if [[ $EUID -eq 0 ]]; then
-        log_error "Este script não deve ser executado como root"
-        log_info "Execute: bash install.sh"
-        exit 1
+        log_warning "Executando como root. Recomenda-se criar um usuário dedicado."
+        log_info "Continuando com instalação como root..."
+        ROOT_USER=true
+    else
+        ROOT_USER=false
     fi
 }
 
@@ -87,16 +89,30 @@ install_system_deps() {
     
     case $OS in
         ubuntu|debian)
-            sudo apt update
-            sudo apt install -y curl wget git build-essential software-properties-common \
-                postgresql postgresql-contrib nginx certbot python3-certbot-nginx \
-                ufw bc unzip
+            if [[ $ROOT_USER == true ]]; then
+                apt update
+                apt install -y curl wget git build-essential software-properties-common \
+                    postgresql postgresql-contrib nginx certbot python3-certbot-nginx \
+                    ufw bc unzip
+            else
+                sudo apt update
+                sudo apt install -y curl wget git build-essential software-properties-common \
+                    postgresql postgresql-contrib nginx certbot python3-certbot-nginx \
+                    ufw bc unzip
+            fi
             ;;
         centos|rhel)
-            sudo dnf update -y
-            sudo dnf install -y curl wget git gcc gcc-c++ make \
-                postgresql postgresql-server postgresql-contrib \
-                nginx certbot python3-certbot-nginx firewalld bc unzip
+            if [[ $ROOT_USER == true ]]; then
+                dnf update -y
+                dnf install -y curl wget git gcc gcc-c++ make \
+                    postgresql postgresql-server postgresql-contrib \
+                    nginx certbot python3-certbot-nginx firewalld bc unzip
+            else
+                sudo dnf update -y
+                sudo dnf install -y curl wget git gcc gcc-c++ make \
+                    postgresql postgresql-server postgresql-contrib \
+                    nginx certbot python3-certbot-nginx firewalld bc unzip
+            fi
             ;;
     esac
     
@@ -125,14 +141,26 @@ install_nodejs() {
     esac
     
     # Instalar via NodeSource
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    if [[ $ROOT_USER == true ]]; then
+        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    else
+        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    fi
     
     case $OS in
         ubuntu|debian)
-            sudo apt-get install -y nodejs
+            if [[ $ROOT_USER == true ]]; then
+                apt-get install -y nodejs
+            else
+                sudo apt-get install -y nodejs
+            fi
             ;;
         centos|rhel)
-            sudo dnf install -y nodejs
+            if [[ $ROOT_USER == true ]]; then
+                dnf install -y nodejs
+            else
+                sudo dnf install -y nodejs
+            fi
             ;;
     esac
     
@@ -142,7 +170,11 @@ install_nodejs() {
     log_success "Node.js $NODE_VERSION e npm $NPM_VERSION instalados"
     
     # Instalar PM2 globalmente
-    sudo npm install -g pm2
+    if [[ $ROOT_USER == true ]]; then
+        npm install -g pm2
+    else
+        sudo npm install -g pm2
+    fi
     log_success "PM2 instalado globalmente"
 }
 
@@ -152,13 +184,23 @@ setup_postgresql() {
     
     case $OS in
         centos|rhel)
-            sudo postgresql-setup --initdb
-            sudo systemctl enable postgresql
+            if [[ $ROOT_USER == true ]]; then
+                postgresql-setup --initdb
+                systemctl enable postgresql
+            else
+                sudo postgresql-setup --initdb
+                sudo systemctl enable postgresql
+            fi
             ;;
     esac
     
-    sudo systemctl start postgresql
-    sudo systemctl enable postgresql
+    if [[ $ROOT_USER == true ]]; then
+        systemctl start postgresql
+        systemctl enable postgresql
+    else
+        sudo systemctl start postgresql
+        sudo systemctl enable postgresql
+    fi
     
     # Criar usuário e banco
     log_info "Criando usuário e banco de dados..."
@@ -166,7 +208,11 @@ setup_postgresql() {
     read -s -p "Digite uma senha forte para o usuário PostgreSQL 'whatsflow': " DB_PASSWORD
     echo
     
-    sudo -u postgres psql << EOF
+    if [[ $ROOT_USER == true ]]; then
+        su - postgres -c "psql" << EOF
+    else
+        sudo -u postgres psql << EOF
+    fi
 CREATE USER whatsflow WITH PASSWORD '$DB_PASSWORD';
 CREATE DATABASE whatsflow;
 GRANT ALL PRIVILEGES ON DATABASE whatsflow TO whatsflow;

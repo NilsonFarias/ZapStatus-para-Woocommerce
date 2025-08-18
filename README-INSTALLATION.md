@@ -2,13 +2,18 @@
 
 ## 🚀 Instalação Rápida (Recomendado)
 
+⚠️ **ATENÇÃO**: Execute sempre como usuário não-root!
+
 ### One-liner - Instalação Completa
 ```bash
+# Execute como usuário normal (não root)
 curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/quick-install.sh | bash
 ```
 
 ### Instalação Manual
 ```bash
+# Execute como usuário normal (não root)
+
 # 1. Baixar script
 wget https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install.sh
 
@@ -19,7 +24,36 @@ chmod +x install.sh
 ./install.sh --full
 ```
 
+### Se Conectou como Root
+```bash
+# 1. Criar usuário dedicado
+adduser whatsflow
+usermod -aG sudo whatsflow
+
+# 2. Trocar para o usuário
+su - whatsflow
+
+# 3. Executar instalação
+curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/quick-install.sh | bash
+```
+
 ## 📋 Pré-requisitos
+
+### Preparação do Servidor
+**IMPORTANTE: Nunca execute como root!**
+
+1. **Crie um usuário dedicado:**
+```bash
+# Se conectou como root, crie usuário primeiro:
+adduser whatsflow
+usermod -aG sudo whatsflow
+su - whatsflow
+```
+
+2. **Ou conecte diretamente como usuário não-root:**
+```bash
+ssh usuario@seu-servidor
+```
 
 ### Sistemas Suportados
 - ✅ Ubuntu 20.04+ (x86_64 / ARM64)
@@ -65,6 +99,8 @@ O script solicitará apenas:
 
 1. **Senha PostgreSQL**: Para usuário `whatsflow`
 2. **Branch**: Padrão `main` (apenas pressione Enter)
+
+**Nota de Segurança**: Se executar como root, o script oferecerá criar usuário `whatsflow` automaticamente e solicitará que reexecute com esse usuário.
 
 ### Após a Instalação
 **Todas as configurações são feitas pela interface admin:**

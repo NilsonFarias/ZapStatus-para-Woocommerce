@@ -242,15 +242,21 @@ setup_postgresql() {
     
     if [[ $ROOT_USER == true ]]; then
         su - postgres -c "psql" << EOF
-    else
-        sudo -u postgres psql << EOF
-    fi
 CREATE USER whatsflow WITH PASSWORD '$DB_PASSWORD';
 CREATE DATABASE whatsflow;
 GRANT ALL PRIVILEGES ON DATABASE whatsflow TO whatsflow;
 ALTER USER whatsflow CREATEDB;
 \q
 EOF
+    else
+        sudo -u postgres psql << EOF
+CREATE USER whatsflow WITH PASSWORD '$DB_PASSWORD';
+CREATE DATABASE whatsflow;
+GRANT ALL PRIVILEGES ON DATABASE whatsflow TO whatsflow;
+ALTER USER whatsflow CREATEDB;
+\q
+EOF
+    fi
     
     log_success "PostgreSQL configurado com sucesso"
 }

@@ -90,6 +90,25 @@ install_dependencies() {
     esac
     
     sudo npm install -g pm2
+    
+    # Configurar firewall
+    log_info "Configurando firewall..."
+    if command -v ufw &> /dev/null; then
+        sudo ufw --force enable
+        sudo ufw allow 22/tcp
+        sudo ufw allow 80/tcp  
+        sudo ufw allow 443/tcp
+        sudo ufw allow 5000/tcp
+    elif command -v firewall-cmd &> /dev/null; then
+        sudo systemctl enable firewalld
+        sudo systemctl start firewalld
+        sudo firewall-cmd --permanent --add-port=22/tcp
+        sudo firewall-cmd --permanent --add-port=80/tcp
+        sudo firewall-cmd --permanent --add-port=443/tcp
+        sudo firewall-cmd --permanent --add-port=5000/tcp
+        sudo firewall-cmd --reload
+    fi
+    
     log_success "Dependências instaladas"
 }
 
@@ -169,7 +188,8 @@ install_application() {
         log_success "Aplicação iniciada com sucesso"
     else
         log_error "Falha ao iniciar aplicação"
-        pm2 logs whatsflow --lines 20
+        log_error "Verificando logs..."
+        pm2 logs whatsflow --lines 10 --nostream
         return 1
     fi
     
@@ -198,8 +218,11 @@ setup_ssl() {
         return
     fi
     
-    # Configuração Nginx
-    sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
+    # Configuração Nginx baseada no sistema
+    case $OS in
+        ubuntu|debian)
+            # Ubuntu/Debian usa sites-available/sites-enabled
+            sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
@@ -213,18 +236,52 @@ server {
     }
 }
 EOF
+            sudo ln -sf /etc/nginx/sites-available/whatsflow /etc/nginx/sites-enabled/
+            sudo rm -f /etc/nginx/sites-enabled/default
+            ;;
+        centos|rhel|rocky|alma)
+            # CentOS/RHEL usa conf.d
+            sudo tee /etc/nginx/conf.d/whatsflow.conf > /dev/null << EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
     
-    sudo ln -sf /etc/nginx/sites-available/whatsflow /etc/nginx/sites-enabled/
-    sudo rm -f /etc/nginx/sites-enabled/default
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+            ;;
+    esac
     
     if sudo nginx -t; then
         sudo systemctl reload nginx
         
+        # Iniciar/reiniciar nginx e services
+        sudo systemctl enable nginx
+        sudo systemctl start nginx
+        
         # SSL
-        if sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --email $EMAIL --agree-tos --no-eff-email --redirect; then
-            log_success "SSL configurado: https://$DOMAIN"
+        log_warning "IMPORTANTE: Antes de configurar SSL, certifique-se que:"
+        log_warning "1. O domínio $DOMAIN aponta para este IP"
+        log_warning "2. O domínio está propagado (pode levar até 24h)"
+        echo -n "Continuar com SSL? (s/N): "
+        read SSL_CONFIRM
+        
+        if [[ "$SSL_CONFIRM" =~ ^[Ss]$ ]]; then
+            if sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --email $EMAIL --agree-tos --no-eff-email --redirect; then
+                log_success "SSL configurado: https://$DOMAIN"
+            else
+                log_warning "SSL falhou: http://$DOMAIN"
+                log_info "Configure SSL depois com: sudo certbot --nginx -d $DOMAIN"
+            fi
         else
-            log_warning "SSL falhou: http://$DOMAIN"
+            log_info "SSL não configurado. Acesse: http://$DOMAIN"
+            log_info "Configure SSL depois com: sudo certbot --nginx -d $DOMAIN"
         fi
     else
         log_error "Erro no Nginx"

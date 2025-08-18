@@ -141,9 +141,6 @@ setup_application() {
     log_info "Building aplicação..."
     npm run build
     
-    log_info "Executando migrações..."
-    npm run migrate
-    
     log_success "Aplicação configurada"
 }
 

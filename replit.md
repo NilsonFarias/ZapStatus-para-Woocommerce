@@ -153,16 +153,17 @@ curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocomm
 
 **Benefícios**: Reduz tempo de deploy de horas para minutos, elimina erros de configuração manual, suporte para VPS ARM64 (30% mais barato), instalação zero-touch para usuários não-técnicos.
 
-### Correções de Scripts Implementadas - CONCLUÍDO (August 18, 2025)
-**Problema Resolvido**: Scripts de instalação falhavam na entrada de dados do usuário
-**Solução Implementada**:
-- Criado `install-fixed.sh` com correção do problema de TTY e redirecionamento aninhado
-- Resolução do erro `chpasswd` através de criação de usuário sem senha inicial
-- Sistema de sudo temporário durante instalação, permanente após conclusão
-- Configuração completa: PostgreSQL, Node.js, PM2, Nginx, SSL/TLS automático
-- Menu interativo funcional com 4 opções de instalação
+### Script de Instalação Final - CONCLUÍDO (August 18, 2025)
+**Problema Resolvido**: Múltiplas iterações de correções em script de instalação
+**Solução Final Implementada**:
+- Script `whatsflow-install.sh` único e robusto com 3 opções principais
+- Correção crítica: `npm run db:push` ao invés de `npm run db:migrate` inexistente
+- Suporte multi-OS: Ubuntu/Debian (sites-available) vs CentOS/RHEL (conf.d)
+- PostgreSQL init compatível com múltiplas versões CentOS 8+/9
+- Firewall automático (UFW/Firewalld) com portas 22,80,443,5000
+- SSL com confirmação do usuário e fallback HTTP
+- Verificações de saúde: PostgreSQL, PM2, Nginx
+- Ordem correta: .env → npm build → db:push → pm2 start
 
-**Teste de Produção**: ✅ Validado em Ubuntu 22.04 ARM64 (mylist.center)
-- SSL configurado automaticamente via Let's Encrypt
-- Aplicação acessível em HTTPS
-- Todas as funcionalidades operacionais
+**Status**: ✅ FUNCIONANDO - Script testado e todas as correções implementadas
+**Comando de migração corrigido**: `npm run db:push` (existente) substituiu `npm run db:migrate` (inexistente)

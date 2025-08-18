@@ -454,6 +454,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/billing/metrics", requireAdmin, async (req: any, res) => {
+    try {
+      const metrics = await storage.getBillingMetrics();
+      res.json(metrics);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Client management (Admin only - all clients)
   app.get("/api/clients", requireAdmin, async (req: any, res) => {
     try {

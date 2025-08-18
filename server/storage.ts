@@ -485,7 +485,7 @@ export class DatabaseStorage implements IStorage {
     
     // Calculate monthly revenue (simplified calculation)
     const monthlyRevenue = allClients.reduce((total, client) => {
-      const planRevenue = client.plan === 'pro' ? 89 : client.plan === 'enterprise' ? 199 : 29;
+      const planRevenue = client.plan === 'pro' ? 89 : client.plan === 'enterprise' ? 199 : client.plan === 'basic' ? 29 : 0;
       return total + (client.status === 'active' ? planRevenue : 0);
     }, 0);
     
@@ -497,6 +497,103 @@ export class DatabaseStorage implements IStorage {
       messagesSent,
       monthlyRevenue,
       deliveryRate,
+    };
+  }
+
+  async getBillingMetrics(): Promise<{
+    monthlyRevenue: number;
+    activeSubscriptions: number;
+    churnRate: number;
+    averageTicket: number;
+    planDistribution: Array<{
+      plan: string;
+      price: string;
+      clients: number;
+      percentage: number;
+      color: string;
+    }>;
+    upcomingRenewals: Array<{
+      name: string;
+      plan: string;
+      amount: string;
+      dueDate: string;
+      status: string;
+    }>;
+  }> {
+    // Get all clients
+    const allClients = await db.select().from(clients);
+    const activeClients = allClients.filter(c => c.status === 'active');
+    
+    // Calculate monthly revenue
+    const monthlyRevenue = activeClients.reduce((total, client) => {
+      const planRevenue = client.plan === 'pro' ? 89 : client.plan === 'enterprise' ? 199 : client.plan === 'basic' ? 29 : 0;
+      return total + planRevenue;
+    }, 0);
+    
+    // Calculate active subscriptions
+    const activeSubscriptions = activeClients.length;
+    
+    // Calculate churn rate (simplified - based on inactive vs total)
+    const inactiveClients = allClients.filter(c => c.status === 'inactive').length;
+    const churnRate = allClients.length > 0 ? (inactiveClients / allClients.length) * 100 : 0;
+    
+    // Calculate average ticket
+    const averageTicket = activeSubscriptions > 0 ? monthlyRevenue / activeSubscriptions : 0;
+    
+    // Calculate plan distribution
+    const basicClients = activeClients.filter(c => c.plan === 'basic').length;
+    const proClients = activeClients.filter(c => c.plan === 'pro').length;
+    const enterpriseClients = activeClients.filter(c => c.plan === 'enterprise').length;
+    const freeClients = activeClients.filter(c => c.plan === 'free').length;
+    
+    const total = activeSubscriptions || 1; // Avoid division by zero
+    
+    const planDistribution = [
+      {
+        plan: "Plano Básico",
+        price: "R$ 29/mês",
+        clients: basicClients,
+        percentage: Math.round((basicClients / total) * 100),
+        color: "bg-warning"
+      },
+      {
+        plan: "Plano Pro", 
+        price: "R$ 89/mês",
+        clients: proClients,
+        percentage: Math.round((proClients / total) * 100),
+        color: "bg-primary"
+      },
+      {
+        plan: "Plano Enterprise",
+        price: "R$ 199/mês", 
+        clients: enterpriseClients,
+        percentage: Math.round((enterpriseClients / total) * 100),
+        color: "bg-success"
+      }
+    ].filter(p => p.clients > 0); // Only show plans with active clients
+    
+    // Get upcoming renewals (simplified - show some active clients)
+    const upcomingRenewals = activeClients.slice(0, 3).map((client, index) => {
+      const planName = client.plan === 'basic' ? 'Básico' : client.plan === 'pro' ? 'Pro' : 'Enterprise';
+      const amount = client.plan === 'basic' ? 'R$ 29/mês' : client.plan === 'pro' ? 'R$ 89/mês' : 'R$ 199/mês';
+      const dueDate = index === 0 ? 'Hoje' : index === 1 ? 'Amanhã' : 'Em 3 dias';
+      
+      return {
+        name: client.name,
+        plan: planName,
+        amount,
+        dueDate,
+        status: index === 0 ? 'due_today' : 'current'
+      };
+    });
+    
+    return {
+      monthlyRevenue,
+      activeSubscriptions,
+      churnRate: Math.round(churnRate * 10) / 10, // Round to 1 decimal
+      averageTicket: Math.round(averageTicket),
+      planDistribution,
+      upcomingRenewals
     };
   }
 

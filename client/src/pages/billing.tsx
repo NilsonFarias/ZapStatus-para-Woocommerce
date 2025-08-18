@@ -4,55 +4,86 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Users, TrendingDown, CreditCard, Download } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
-const BILLING_METRICS = [
-  {
-    title: "Receita Mensal",
-    value: "R$ 12.480",
-    icon: DollarSign,
-    trend: "+23%",
-    trendLabel: "vs mês anterior",
-    bgColor: "bg-success/10 text-success"
-  },
-  {
-    title: "Assinaturas Ativas",
-    value: "247",
-    icon: Users,
-    trend: "+12",
-    trendLabel: "novos este mês",
-    bgColor: "bg-primary/10 text-primary"
-  },
-  {
-    title: "Taxa de Churn",
-    value: "2.1%",
-    icon: TrendingDown,
-    trend: "+0.3%",
-    trendLabel: "vs mês anterior",
-    bgColor: "bg-warning/10 text-warning"
-  },
-  {
-    title: "Ticket Médio",
-    value: "R$ 89",
-    icon: CreditCard,
-    trend: "+R$ 12",
-    trendLabel: "vs mês anterior",
-    bgColor: "bg-success/10 text-success"
-  },
-];
-
-const PLAN_DISTRIBUTION = [
-  { plan: "Plano Básico", price: "R$ 29/mês", clients: 89, percentage: 36, color: "bg-warning" },
-  { plan: "Plano Pro", price: "R$ 89/mês", clients: 134, percentage: 54, color: "bg-primary" },
-  { plan: "Plano Enterprise", price: "R$ 199/mês", clients: 24, percentage: 10, color: "bg-success" },
-];
-
-const UPCOMING_RENEWALS = [
-  { name: "Loja ABC", plan: "Pro", amount: "R$ 89/mês", dueDate: "Hoje", status: "due_today" },
-  { name: "Loja XYZ", plan: "Básico", amount: "R$ 29/mês", dueDate: "Amanhã", status: "current" },
-  { name: "Loja 123", plan: "Enterprise", amount: "R$ 199/mês", dueDate: "Em 3 dias", status: "current" },
-];
+interface BillingMetrics {
+  monthlyRevenue: number;
+  activeSubscriptions: number;
+  churnRate: number;
+  averageTicket: number;
+  planDistribution: Array<{
+    plan: string;
+    price: string;
+    clients: number;
+    percentage: number;
+    color: string;
+  }>;
+  upcomingRenewals: Array<{
+    name: string;
+    plan: string;
+    amount: string;
+    dueDate: string;
+    status: string;
+  }>;
+}
 
 export default function Billing() {
+  const { data: billingData, isLoading } = useQuery<BillingMetrics>({
+    queryKey: ['/api/billing/metrics'],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen bg-slate-50">
+        <Sidebar />
+        <main className="flex-1 overflow-auto">
+          <Header
+            title="Faturamento"
+            description="Gerencie planos, assinaturas e receita"
+          />
+          <div className="p-6 flex items-center justify-center">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const billingMetrics = billingData ? [
+    {
+      title: "Receita Mensal",
+      value: `R$ ${billingData.monthlyRevenue.toLocaleString()}`,
+      icon: DollarSign,
+      trend: billingData.monthlyRevenue > 0 ? "+100%" : "0%",
+      trendLabel: "receita atual",
+      bgColor: "bg-success/10 text-success"
+    },
+    {
+      title: "Assinaturas Ativas",
+      value: billingData.activeSubscriptions.toString(),
+      icon: Users,
+      trend: `+${billingData.activeSubscriptions}`,
+      trendLabel: "assinaturas",
+      bgColor: "bg-primary/10 text-primary"
+    },
+    {
+      title: "Taxa de Churn",
+      value: `${billingData.churnRate}%`,
+      icon: TrendingDown,
+      trend: billingData.churnRate < 5 ? "Baixa" : "Alta",
+      trendLabel: "taxa atual",
+      bgColor: billingData.churnRate < 5 ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
+    },
+    {
+      title: "Ticket Médio",
+      value: `R$ ${billingData.averageTicket}`,
+      icon: CreditCard,
+      trend: `R$ ${billingData.averageTicket}`,
+      trendLabel: "por cliente",
+      bgColor: "bg-success/10 text-success"
+    },
+  ] : [];
+
   return (
     <div className="flex h-screen bg-slate-50">
       <Sidebar />
@@ -70,7 +101,7 @@ export default function Billing() {
         <div className="p-6">
           {/* Revenue Summary */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            {BILLING_METRICS.map((metric) => {
+            {billingMetrics.map((metric) => {
               const Icon = metric.icon;
               return (
                 <Card key={metric.title} data-testid={`billing-metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -107,7 +138,7 @@ export default function Billing() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {PLAN_DISTRIBUTION.map((plan) => (
+                  {(billingData?.planDistribution || []).map((plan) => (
                     <div 
                       key={plan.plan}
                       className="flex items-center justify-between"
@@ -141,7 +172,7 @@ export default function Billing() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {UPCOMING_RENEWALS.map((renewal, index) => (
+                  {(billingData?.upcomingRenewals || []).map((renewal, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between p-3 border border-slate-200 rounded-lg"

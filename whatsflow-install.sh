@@ -196,7 +196,7 @@ install_application() {
     
     # Executar migrações do banco
     log_info "Executando migrações..."
-    npm run db:migrate
+    npm run db:push
     
     # Parar PM2 anterior
     pm2 delete whatsflow 2>/dev/null || true

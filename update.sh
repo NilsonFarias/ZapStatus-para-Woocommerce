@@ -31,7 +31,7 @@ log_error() {
 # Verificar se está no diretório correto
 check_directory() {
     if [[ ! -f "package.json" ]] || [[ ! -d "server" ]] || [[ ! -d "client" ]]; then
-        log_error "Execute este script no diretório raiz do WhatsFlow"
+        log_error "Execute este script no diretório raiz do ZapStatus (ZapStatus-para-Woocommerce)"
         exit 1
     fi
 }
@@ -40,7 +40,7 @@ check_directory() {
 create_backup() {
     log_info "Criando backup..."
     
-    BACKUP_DIR="../whatsflow-backup-$(date +%Y%m%d-%H%M%S)"
+    BACKUP_DIR="../zapstatus-backup-$(date +%Y%m%d-%H%M%S)"
     
     # Backup de arquivos importantes
     mkdir -p $BACKUP_DIR

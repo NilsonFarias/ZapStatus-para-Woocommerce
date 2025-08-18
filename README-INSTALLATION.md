@@ -4,13 +4,13 @@
 
 ### One-liner - Instalação Completa
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SEU_USUARIO/whatsflow/main/quick-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/quick-install.sh | bash
 ```
 
 ### Instalação Manual
 ```bash
 # 1. Baixar script
-wget https://raw.githubusercontent.com/SEU_USUARIO/whatsflow/main/install.sh
+wget https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install.sh
 
 # 2. Tornar executável
 chmod +x install.sh
@@ -67,10 +67,9 @@ chmod +x install.sh
 O script solicitará:
 
 1. **Senha PostgreSQL**: Para usuário `whatsflow`
-2. **URL do Repositório**: Seu fork do GitHub
-3. **Branch**: Padrão `main`
-4. **Domínio**: Para configuração SSL
-5. **Email**: Para certificados Let's Encrypt
+2. **Branch**: Padrão `main` (repositório já configurado)
+3. **Domínio**: Para configuração SSL
+4. **Email**: Para certificados Let's Encrypt
 
 ### Após a Instalação
 Configure no arquivo `.env`:
@@ -93,7 +92,7 @@ EVOLUTION_API_URL=https://sua-api.com
 ### Script de Atualização
 ```bash
 # Baixar script de atualização
-wget https://raw.githubusercontent.com/SEU_USUARIO/whatsflow/main/update.sh
+wget https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/update.sh
 chmod +x update.sh
 
 # Atualização completa

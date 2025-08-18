@@ -181,11 +181,13 @@ EOF
 setup_application() {
     log_info "Configurando aplicação WhatsFlow..."
     
-    # Solicitar informações do repositório
+    # Configurações do repositório
+    REPO_URL="https://github.com/NilsonFarias/ZapStatus-para-Woocommerce"
     echo
-    read -p "URL do repositório Git: " REPO_URL
     read -p "Branch (padrão: main): " BRANCH
     BRANCH=${BRANCH:-main}
+    
+    log_info "Usando repositório: $REPO_URL"
     
     # Clonar repositório
     if [[ -d "whatsflow" ]]; then
@@ -193,8 +195,8 @@ setup_application() {
         rm -rf whatsflow
     fi
     
-    git clone -b $BRANCH $REPO_URL whatsflow
-    cd whatsflow
+    git clone -b $BRANCH $REPO_URL ZapStatus-para-Woocommerce
+    cd ZapStatus-para-Woocommerce
     
     # Instalar dependências
     log_info "Instalando dependências da aplicação..."

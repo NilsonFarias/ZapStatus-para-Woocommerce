@@ -91,8 +91,8 @@ sudo npm install -g pm2
 
 \`\`\`bash
 # Clonar repositório
-git clone https://github.com/SEU_USUARIO/whatsflow.git
-cd whatsflow
+git clone https://github.com/NilsonFarias/ZapStatus-para-Woocommerce.git
+cd ZapStatus-para-Woocommerce
 
 # Instalar dependências
 npm install
@@ -306,7 +306,7 @@ git push origin main
 - Tipo: "App from Source"
 
 ### 2.2. Configurar Source
-- Repository: https://github.com/SEU_USUARIO/whatsflow
+- Repository: https://github.com/NilsonFarias/ZapStatus-para-Woocommerce
 - Branch: main
 - Build Command: npm run build
 - Start Command: npm start

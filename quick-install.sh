@@ -15,7 +15,7 @@ echo
 
 # Baixar script principal
 echo -e "${BLUE}[INFO]${NC} Baixando script de instalação..."
-curl -fsSL https://raw.githubusercontent.com/SEU_USUARIO/whatsflow/main/install.sh -o /tmp/whatsflow-install.sh
+curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install.sh -o /tmp/whatsflow-install.sh
 
 # Tornar executável
 chmod +x /tmp/whatsflow-install.sh

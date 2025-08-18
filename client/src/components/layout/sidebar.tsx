@@ -19,8 +19,7 @@ import {
 
 const adminNavigation = [
   { path: "/", label: "Dashboard", icon: BarChart3 },
-  { path: "/clients", label: "Clientes", icon: Users },
-  { path: "/user-management", label: "Usuários Admin", icon: UserPlus },
+  { path: "/management", label: "Gerenciar", icon: Users },
   { path: "/billing", label: "Faturamento", icon: CreditCard },
   { path: "/api-config", label: "API", icon: Zap },
   { path: "/stripe-settings", label: "Stripe", icon: CreditCard },

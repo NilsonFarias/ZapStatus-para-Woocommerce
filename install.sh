@@ -75,11 +75,43 @@ detect_system() {
 # Verificar se está executando como root
 check_root() {
     if [[ $EUID -eq 0 ]]; then
-        log_warning "Executando como root. Recomenda-se criar um usuário dedicado."
-        log_info "Continuando com instalação como root..."
-        ROOT_USER=true
+        log_warning "Executando como root."
+        echo
+        read -p "Deseja criar usuário 'whatsflow' e continuar instalação com ele? (y/n): " CREATE_USER
+        
+        if [[ $CREATE_USER =~ ^[Yy]$ ]]; then
+            # Criar usuário whatsflow
+            if ! id "whatsflow" &>/dev/null; then
+                log_info "Criando usuário 'whatsflow'..."
+                useradd -m -s /bin/bash whatsflow
+                usermod -aG sudo whatsflow
+                
+                # Definir senha
+                echo
+                log_info "Defina uma senha para o usuário 'whatsflow':"
+                passwd whatsflow
+                
+                log_success "Usuário 'whatsflow' criado com sucesso!"
+            else
+                log_info "Usuário 'whatsflow' já existe."
+            fi
+            
+            # Copiar script para o usuário
+            cp "$0" /home/whatsflow/
+            chown whatsflow:whatsflow /home/whatsflow/$(basename "$0")
+            chmod +x /home/whatsflow/$(basename "$0")
+            
+            log_info "Execute agora como usuário whatsflow:"
+            echo "su - whatsflow"
+            echo "bash $(basename "$0")"
+            exit 0
+        else
+            log_warning "Continuando com instalação como root (não recomendado)..."
+            ROOT_USER=true
+        fi
     else
         ROOT_USER=false
+        log_info "Executando como usuário: $(whoami)"
     fi
 }
 

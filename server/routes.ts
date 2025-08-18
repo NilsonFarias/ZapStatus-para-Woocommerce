@@ -1196,10 +1196,15 @@ Sua instancia esta funcionando perfeitamente!`;
   // Settings endpoints
   app.get("/api/settings/evolution-api-current", async (req, res) => {
     try {
-      // Return current Evolution API configuration
+      // Get settings from database first, then fallback to environment variables
+      const apiUrlSetting = await storage.getSystemSetting('evolution_api_url');
+      const apiKeySetting = await storage.getSystemSetting('evolution_api_key');
+      const domainSetting = await storage.getSystemSetting('system_domain');
+      
       res.json({
-        apiUrl: process.env.EVOLUTION_API_URL || '',
-        apiToken: process.env.EVOLUTION_API_KEY || ''
+        apiUrl: apiUrlSetting?.value || process.env.EVOLUTION_API_URL || '',
+        apiToken: apiKeySetting?.value || process.env.EVOLUTION_API_KEY || '',
+        systemDomain: domainSetting?.value || process.env.REPL_DOMAIN || ''
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1208,13 +1213,24 @@ Sua instancia esta funcionando perfeitamente!`;
 
   app.post("/api/settings/evolution-api", async (req, res) => {
     try {
-      const { apiUrl, apiToken } = req.body;
+      const { apiUrl, apiToken, systemDomain } = req.body;
       
-      // Here you would save the settings to your database or environment
-      // For now, we'll just validate the format
-      if (!apiUrl || !apiToken) {
-        return res.status(400).json({ message: "URL da API e Token são obrigatórios" });
+      if (!apiUrl || !apiToken || !systemDomain) {
+        return res.status(400).json({ message: "URL da API, Token e Domínio do Sistema são obrigatórios" });
       }
+
+      // Validate URL format
+      try {
+        new URL(apiUrl);
+        new URL(systemDomain);
+      } catch {
+        return res.status(400).json({ message: "Formato de URL inválido" });
+      }
+
+      // Save settings to database
+      await storage.setSystemSetting('evolution_api_url', apiUrl, false, 'URL da Evolution API para integração WhatsApp');
+      await storage.setSystemSetting('evolution_api_key', apiToken, true, 'Token de autenticação da Evolution API');
+      await storage.setSystemSetting('system_domain', systemDomain, false, 'Domínio do sistema para configuração de webhooks');
       
       res.json({ success: true, message: "Configurações salvas com sucesso" });
     } catch (error: any) {

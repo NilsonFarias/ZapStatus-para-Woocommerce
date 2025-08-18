@@ -13,12 +13,14 @@ import { Loader2, Save, TestTube } from "lucide-react";
 interface EvolutionApiConfig {
   apiUrl: string;
   apiToken: string;
+  systemDomain: string;
 }
 
 export default function ApiConfig() {
   const { toast } = useToast();
   const [apiUrl, setApiUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [systemDomain, setSystemDomain] = useState("");
 
   const { data: config, isLoading } = useQuery<EvolutionApiConfig>({
     queryKey: ["/api/settings/evolution-api-current"],
@@ -26,7 +28,11 @@ export default function ApiConfig() {
 
   const { mutate: saveConfig, isPending: isSaving } = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/settings/evolution-api", { apiUrl, apiToken: apiKey });
+      const response = await apiRequest("POST", "/api/settings/evolution-api", { 
+        apiUrl, 
+        apiToken: apiKey,
+        systemDomain 
+      });
       return await response.json();
     },
     onSuccess: () => {
@@ -68,11 +74,12 @@ export default function ApiConfig() {
 
   // Initialize form when config loads
   React.useEffect(() => {
-    if (config && !apiUrl && !apiKey) {
+    if (config && !apiUrl && !apiKey && !systemDomain) {
       setApiUrl(config.apiUrl || "");
       setApiKey(config.apiToken || "");
+      setSystemDomain(config.systemDomain || "");
     }
-  }, [config, apiUrl, apiKey]);
+  }, [config, apiUrl, apiKey, systemDomain]);
 
   if (isLoading) {
     return (
@@ -122,10 +129,25 @@ export default function ApiConfig() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="system-domain">Domínio do Sistema</Label>
+                <Input
+                  id="system-domain"
+                  placeholder="https://seu-dominio.replit.app"
+                  value={systemDomain}
+                  onChange={(e) => setSystemDomain(e.target.value)}
+                  data-testid="input-system-domain"
+                />
+                <p className="text-sm text-muted-foreground">
+                  URL base onde este sistema está hospedado. Usado para configurar webhooks do Evolution API. 
+                  Exemplo: https://seu-projeto.replit.app
+                </p>
+              </div>
+
               <div className="flex space-x-2">
                 <Button
                   onClick={() => saveConfig()}
-                  disabled={isSaving || !apiUrl || !apiKey}
+                  disabled={isSaving || !apiUrl || !apiKey || !systemDomain}
                   data-testid="button-save-config"
                 >
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

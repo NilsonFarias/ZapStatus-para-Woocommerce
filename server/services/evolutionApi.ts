@@ -28,8 +28,22 @@ export class EvolutionApiService {
   private apiKey: string;
 
   constructor() {
-    this.baseUrl = process.env.EVOLUTION_API_URL || 'https://api.evolution.com';
-    this.apiKey = process.env.EVOLUTION_API_KEY || '';
+    this.initializeClient();
+  }
+
+  private async initializeClient() {
+    try {
+      const storage = require('../storage').storage;
+      const apiUrlSetting = await storage.getSystemSetting('evolution_api_url');
+      const apiKeySetting = await storage.getSystemSetting('evolution_api_key');
+      
+      this.baseUrl = apiUrlSetting?.value || process.env.EVOLUTION_API_URL || 'https://api.evolution.com';
+      this.apiKey = apiKeySetting?.value || process.env.EVOLUTION_API_KEY || '';
+    } catch (error) {
+      // Fallback to environment variables if database is not available
+      this.baseUrl = process.env.EVOLUTION_API_URL || 'https://api.evolution.com';
+      this.apiKey = process.env.EVOLUTION_API_KEY || '';
+    }
     
     this.client = axios.create({
       baseURL: this.baseUrl,
@@ -38,6 +52,11 @@ export class EvolutionApiService {
         'Content-Type': 'application/json',
       },
     });
+  }
+
+  // Method to refresh client configuration when settings change
+  async refreshConfig() {
+    await this.initializeClient();
   }
 
   async createInstance(instanceName: string): Promise<EvolutionInstance> {
@@ -62,7 +81,12 @@ export class EvolutionApiService {
       
       // Configure webhook for the instance
       try {
-        const webhookUrl = `${process.env.REPL_DOMAIN || 'http://localhost:5000'}/webhook/evolution`;
+        // Get system domain from database or fall back to environment variable
+        const storage = require('../storage').storage;
+        const systemDomainSetting = await storage.getSystemSetting('system_domain');
+        const systemDomain = systemDomainSetting?.value || process.env.REPL_DOMAIN || 'http://localhost:5000';
+        
+        const webhookUrl = `${systemDomain}/webhook/evolution`;
         await this.client.post(`/webhook/set/${instanceName}`, {
           url: webhookUrl,
           enabled: true,

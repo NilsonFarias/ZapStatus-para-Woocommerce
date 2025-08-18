@@ -185,8 +185,15 @@ install_application() {
     # Configurar PM2
     pm2 delete whatsflow 2>/dev/null || true
     pm2 start npm --name "whatsflow" -- start
-    pm2 startup
-    pm2 save
+    
+    # Configurar startup automático
+    STARTUP_CMD=$(pm2 startup systemd -u whatsflow --hp /home/whatsflow 2>&1 | grep "sudo env" | head -1)
+    if [[ -n "$STARTUP_CMD" ]]; then
+        log_info "Configurando auto-start do PM2..."
+        eval "$STARTUP_CMD"
+        pm2 save
+        log_success "Auto-start configurado"
+    fi
     
     log_success "Aplicação instalada e iniciada"
 }

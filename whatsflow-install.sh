@@ -41,8 +41,15 @@ setup_user() {
             esac
         fi
         echo "whatsflow ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/whatsflow-temp
+        
+        # Copiar script para diretório acessível
+        SCRIPT_PATH=$(realpath "$0")
+        cp "$SCRIPT_PATH" /home/whatsflow/whatsflow-install.sh
+        chown whatsflow:whatsflow /home/whatsflow/whatsflow-install.sh
+        chmod +x /home/whatsflow/whatsflow-install.sh
+        
         log_info "Continuando como whatsflow..."
-        exec sudo -u whatsflow -i bash "$0" "$@"
+        exec sudo -u whatsflow /home/whatsflow/whatsflow-install.sh "$@"
     fi
 }
 

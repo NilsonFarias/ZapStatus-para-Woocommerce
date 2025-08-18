@@ -75,3 +75,19 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - Backend already configured to default to "free" plan when none specified
 
 **Impact**: Streamlined onboarding process - new users start with free tier and can upgrade through subscription system.
+
+### Domain Configuration System - COMPLETED (August 18, 2025)
+**Features Implemented**:
+- Added "System Domain" field to API Configuration page for admin interface
+- System settings stored in database instead of environment variables only
+- Evolution API service now uses configured domain for webhook setup
+- Enhanced validation for URL formats in test connection functionality
+- Fallback system maintains compatibility with existing environment variables
+
+**Technical Details**:
+- New `system_settings` table with key-value storage for configuration
+- Enhanced `/api/settings/evolution-api` endpoints to handle domain configuration
+- Improved error messages for connection testing with specific failure reasons
+- Evolution API service dynamically retrieves domain from database settings
+
+**Benefits**: Simplified deployment process - admins can configure system domain through interface instead of modifying environment variables on server.

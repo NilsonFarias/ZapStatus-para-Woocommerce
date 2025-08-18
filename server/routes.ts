@@ -1240,10 +1240,23 @@ Sua instancia esta funcionando perfeitamente!`;
   
   app.post("/api/settings/test-evolution-api", async (req, res) => {
     try {
-      const { apiUrl, apiToken } = req.body;
+      const { apiUrl, apiToken, systemDomain } = req.body;
       
       if (!apiUrl || !apiToken) {
         return res.status(400).json({ message: "URL da API e Token são obrigatórios" });
+      }
+
+      // Validate URL formats
+      try {
+        new URL(apiUrl);
+        if (systemDomain) {
+          new URL(systemDomain);
+        }
+      } catch {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Formato de URL inválido" 
+        });
       }
       
       // Test connection to Evolution API
@@ -1259,16 +1272,36 @@ Sua instancia esta funcionando perfeitamente!`;
       // Try to fetch instances to test the connection
       const response = await testClient.get('/instance/fetchInstances');
       
+      // Additional validation: check if the API URL actually responds with Evolution API structure
+      if (!Array.isArray(response.data)) {
+        return res.status(400).json({
+          success: false,
+          message: "URL não parece ser uma Evolution API válida"
+        });
+      }
+      
       res.json({ 
         success: true, 
-        message: "Conexão estabelecida com sucesso",
-        instanceCount: response.data?.length || 0
+        message: "Conexão com Evolution API estabelecida com sucesso",
+        instanceCount: response.data?.length || 0,
+        apiUrl: apiUrl,
+        systemDomain: systemDomain || "Não configurado"
       });
     } catch (error: any) {
       console.error('Evolution API test failed:', error.message);
+      
+      let errorMessage = "Falha na conexão com Evolution API";
+      if (error.code === 'ECONNREFUSED') {
+        errorMessage = "Não foi possível conectar - verifique se a URL está correta e acessível";
+      } else if (error.response?.status === 401) {
+        errorMessage = "Token de autenticação inválido";
+      } else if (error.response?.status === 404) {
+        errorMessage = "Endpoint não encontrado - verifique se a URL está correta";
+      }
+      
       res.status(500).json({ 
         success: false,
-        message: "Falha na conexão com Evolution API",
+        message: errorMessage,
         error: error.response?.data?.message || error.message
       });
     }

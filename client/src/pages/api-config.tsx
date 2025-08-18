@@ -53,7 +53,11 @@ export default function ApiConfig() {
 
   const { mutate: testConnection, isPending: isTesting } = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/settings/test-evolution-api", { apiUrl, apiToken: apiKey });
+      const response = await apiRequest("POST", "/api/settings/test-evolution-api", { 
+        apiUrl, 
+        apiToken: apiKey,
+        systemDomain 
+      });
       return await response.json();
     },
     onSuccess: (data: any) => {
@@ -158,7 +162,7 @@ export default function ApiConfig() {
                 <Button
                   variant="outline"
                   onClick={() => testConnection()}
-                  disabled={isTesting || !config}
+                  disabled={isTesting || !apiUrl || !apiKey}
                   data-testid="button-test-connection"
                 >
                   {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

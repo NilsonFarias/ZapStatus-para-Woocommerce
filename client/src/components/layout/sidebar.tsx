@@ -14,7 +14,8 @@ import {
   User,
   Zap,
   FileText,
-  UserPlus
+  UserPlus,
+  BookOpen
 } from "lucide-react";
 
 const adminNavigation = [
@@ -24,6 +25,7 @@ const adminNavigation = [
   { path: "/api-config", label: "API", icon: Zap },
   { path: "/stripe-settings", label: "Stripe", icon: CreditCard },
   { path: "/evolution-docs", label: "Evolution API", icon: FileText },
+  { path: "/documentation", label: "Documentação", icon: BookOpen },
   { path: "/settings", label: "Configurações", icon: Settings },
 ];
 

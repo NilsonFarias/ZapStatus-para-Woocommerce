@@ -36,6 +36,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint for monitoring
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
+  });
+});
+
 (async () => {
   const server = await registerRoutes(app);
 

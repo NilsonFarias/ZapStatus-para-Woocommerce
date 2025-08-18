@@ -215,9 +215,16 @@ install_application() {
         return 1
     fi
     
-    # Auto-start
-    pm2 startup systemd -u whatsflow --hp /home/whatsflow
-    pm2 save
+    # Auto-start PM2
+    log_info "Configurando PM2 startup..."
+    STARTUP_CMD=$(pm2 startup systemd -u whatsflow --hp /home/whatsflow 2>&1 | grep "sudo env" || echo "")
+    if [[ -n "$STARTUP_CMD" ]]; then
+        eval "$STARTUP_CMD"
+        pm2 save
+        log_success "PM2 startup configurado"
+    else
+        log_warning "PM2 startup não configurado automaticamente"
+    fi
     
     log_success "Aplicação instalada"
 }

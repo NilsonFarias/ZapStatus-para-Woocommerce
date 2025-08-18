@@ -116,3 +116,32 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - Frontend connected to authentic data source with loading states
 
 **Impact**: Billing dashboard now provides accurate business intelligence for decision making instead of fictional metrics.
+
+### Scripts de Instalação Automatizada - CRIADOS (August 18, 2025)
+**Features Implementadas**:
+- Script `install.sh` principal com instalação completa multi-OS e multi-arquitetura
+- Suporte completo para Ubuntu 20.04+, Debian 11+, CentOS 8+ em x86_64 e ARM64
+- Configuração automática: PostgreSQL, Node.js 18+, PM2, Nginx, SSL/TLS, Firewall
+- Script `quick-install.sh` para instalação one-liner via curl
+- Script `update.sh` para atualizações com backup automático (código + banco)
+- Documentação completa em `README-INSTALLATION.md`
+- Interface de documentação no painel admin com todos os guias acessíveis
+
+**Detalhes Técnicos**:
+- Detecção automática de SO e arquitetura com validações de compatibilidade
+- Configuração SSL automática com Let's Encrypt e renovação via cron
+- Proxy reverso Nginx otimizado com headers de segurança e compressão gzip
+- PM2 com auto-restart e configuração de startup
+- Firewall configurado automaticamente (UFW/Firewalld)
+- Sistema de backup completo com restauração em caso de falha
+- Health checks e verificações de integridade pós-instalação
+
+**Repositório**: https://github.com/NilsonFarias/ZapStatus-para-Woocommerce
+**Status**: Arquivos criados localmente, aguardando commit para funcionar publicamente
+
+**Comando de instalação (após commit)**:
+```bash
+curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/quick-install.sh | bash
+```
+
+**Benefícios**: Reduz tempo de deploy de horas para minutos, elimina erros de configuração manual, suporte para VPS ARM64 (30% mais barato), instalação zero-touch para usuários não-técnicos.

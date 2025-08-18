@@ -209,27 +209,42 @@ setup_postgresql() {
         sudo systemctl enable postgresql
     fi
     
+    # Aguardar PostgreSQL inicializar
+    sleep 3
+    
     # Criar usuário e banco
     log_info "Criando usuário e banco de dados..."
     
-    read -s -p "Digite uma senha forte para o usuário PostgreSQL 'whatsflow': " DB_PASSWORD
+    echo
+    echo "Digite uma senha forte para o usuário PostgreSQL 'whatsflow':"
+    read -s DB_PASSWORD
     echo
     
-    if [[ $ROOT_USER == true ]]; then
-        su - postgres << EOF
-psql -c "CREATE USER whatsflow WITH PASSWORD '$DB_PASSWORD';"
-psql -c "CREATE DATABASE whatsflow;"
-psql -c "GRANT ALL PRIVILEGES ON DATABASE whatsflow TO whatsflow;"
-psql -c "ALTER USER whatsflow CREATEDB;"
-EOF
-    else
-        sudo -u postgres << EOF
-psql -c "CREATE USER whatsflow WITH PASSWORD '$DB_PASSWORD';"
-psql -c "CREATE DATABASE whatsflow;"
-psql -c "GRANT ALL PRIVILEGES ON DATABASE whatsflow TO whatsflow;"
-psql -c "ALTER USER whatsflow CREATEDB;"
-EOF
+    # Validar que a senha foi informada
+    if [[ -z "$DB_PASSWORD" ]]; then
+        log_error "Senha não pode ser vazia!"
+        exit 1
     fi
+    
+    log_info "Configurando banco de dados..."
+    
+    # Criar comandos SQL em arquivo temporário
+    cat > /tmp/setup_db.sql << EOF
+CREATE USER whatsflow WITH PASSWORD '$DB_PASSWORD';
+CREATE DATABASE whatsflow;
+GRANT ALL PRIVILEGES ON DATABASE whatsflow TO whatsflow;
+ALTER USER whatsflow CREATEDB;
+EOF
+    
+    # Executar comandos
+    if [[ $ROOT_USER == true ]]; then
+        su - postgres -c "psql -f /tmp/setup_db.sql"
+    else
+        sudo -u postgres psql -f /tmp/setup_db.sql
+    fi
+    
+    # Remover arquivo temporário
+    rm -f /tmp/setup_db.sql
     
     log_success "PostgreSQL configurado com sucesso"
 }
@@ -273,14 +288,27 @@ setup_application() {
         sed -i "s|SESSION_SECRET=.*|SESSION_SECRET=$SESSION_SECRET|" .env
         
         echo
-        log_warning "Configure as seguintes variáveis no arquivo .env:"
-        echo "- STRIPE_SECRET_KEY"
-        echo "- VITE_STRIPE_PUBLIC_KEY"
-        echo "- STRIPE_*_PRICE_ID"
-        echo "- EVOLUTION_API_KEY"
-        echo "- EVOLUTION_API_URL"
+        log_warning "IMPORTANTE: Configure as seguintes variáveis no arquivo .env antes de continuar:"
+        echo "- STRIPE_SECRET_KEY (chave secreta do Stripe)"
+        echo "- VITE_STRIPE_PUBLIC_KEY (chave pública do Stripe)"
+        echo "- STRIPE_BASIC_PRICE_ID (ID do plano Básico)"
+        echo "- STRIPE_PRO_PRICE_ID (ID do plano Pro)"
+        echo "- STRIPE_ENTERPRISE_PRICE_ID (ID do plano Enterprise)"
+        echo "- EVOLUTION_API_KEY (chave da Evolution API)"
+        echo "- EVOLUTION_API_URL (URL da Evolution API)"
+        echo
+        echo "Arquivo .env criado em: $(pwd)/.env"
         echo
         read -p "Pressione Enter quando terminar de configurar o .env..."
+        
+        # Verificar se as variáveis principais foram configuradas
+        if ! grep -q "STRIPE_SECRET_KEY=sk_" .env 2>/dev/null; then
+            log_warning "STRIPE_SECRET_KEY não configurada - algumas funcionalidades podem não funcionar"
+        fi
+        
+        if ! grep -q "EVOLUTION_API_KEY=" .env 2>/dev/null || grep -q "EVOLUTION_API_KEY=$" .env; then
+            log_warning "EVOLUTION_API_KEY não configurada - WhatsApp não funcionará"
+        fi
     fi
     
     # Build da aplicação

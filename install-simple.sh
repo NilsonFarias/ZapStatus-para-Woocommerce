@@ -198,12 +198,117 @@ install_application() {
     log_success "Aplicação instalada e iniciada"
 }
 
+# Configurar Nginx e SSL
+setup_nginx() {
+    log_info "Configurando Nginx e SSL..."
+    
+    # Solicitar domínio
+    echo
+    read -p "Domínio da aplicação (ex: whatsflow.com): " DOMAIN
+    if [[ -z "$DOMAIN" ]]; then
+        log_warning "Domínio não informado, pulando configuração Nginx/SSL"
+        return
+    fi
+    
+    # Solicitar email para Let's Encrypt
+    read -p "Email para certificados SSL: " EMAIL
+    if [[ -z "$EMAIL" ]]; then
+        log_warning "Email não informado, pulando configuração SSL"
+        return
+    fi
+    
+    # Criar configuração Nginx
+    sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+    
+    # Security headers
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+    add_header Referrer-Policy "strict-origin-when-cross-origin";
+    
+    # Gzip compression
+    gzip on;
+    gzip_comp_level 6;
+    gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/javascript
+        application/xml+rss
+        application/json;
+    
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_connect_timeout 605;
+        proxy_send_timeout 605;
+        proxy_read_timeout 605;
+        send_timeout 605;
+        keepalive_timeout 605;
+    }
+    
+    location /api/ {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+    }
+    
+    location /health {
+        proxy_pass http://localhost:5000/api/health;
+        access_log off;
+        proxy_set_header Host \$host;
+    }
+}
+EOF
+    
+    # Ativar site
+    sudo ln -sf /etc/nginx/sites-available/whatsflow /etc/nginx/sites-enabled/
+    sudo rm -f /etc/nginx/sites-enabled/default
+    
+    # Testar configuração
+    if sudo nginx -t; then
+        sudo systemctl reload nginx
+        log_success "Nginx configurado"
+        
+        # Configurar SSL com Certbot
+        log_info "Configurando certificado SSL..."
+        if sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --email $EMAIL --agree-tos --no-eff-email --redirect; then
+            log_success "SSL configurado com sucesso!"
+            log_info "Aplicação disponível em: https://$DOMAIN"
+        else
+            log_warning "Erro ao configurar SSL. Verifique DNS e tente novamente"
+            log_info "Aplicação disponível em: http://$DOMAIN"
+        fi
+    else
+        log_error "Erro na configuração do Nginx"
+    fi
+}
+
 # Menu principal
 show_menu() {
     echo "=== WhatsFlow - Instalação Simplificada ==="
     echo "1. Instalação completa"
     echo "2. Apenas dependências"
     echo "3. Apenas aplicação"
+    echo "4. Configurar Nginx/SSL"
     echo "0. Sair"
     read -p "Escolha uma opção: " choice
     
@@ -211,6 +316,7 @@ show_menu() {
         1) full_install ;;
         2) install_dependencies && install_nodejs ;;
         3) setup_postgresql && install_application ;;
+        4) setup_nginx ;;
         0) exit 0 ;;
         *) log_error "Opção inválida" && show_menu ;;
     esac
@@ -222,9 +328,9 @@ full_install() {
     install_nodejs
     setup_postgresql
     install_application
+    setup_nginx
     
     log_success "Instalação completa concluída!"
-    log_info "Acesse: http://seu-servidor:5000"
     log_info "Login: admin / admin123"
 }
 

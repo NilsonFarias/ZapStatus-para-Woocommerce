@@ -39,6 +39,8 @@ setup_user() {
                 ubuntu|debian) usermod -aG sudo whatsflow ;;
                 centos|rhel|rocky|alma) usermod -aG wheel whatsflow ;;
             esac
+            # Definir senha padrão temporária
+            echo "whatsflow:temp123" | chpasswd
         fi
         echo "whatsflow ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/whatsflow-temp
         

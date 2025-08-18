@@ -112,23 +112,45 @@ install_dependencies() {
     log_success "Dependências instaladas"
 }
 
+# Variável global para senha do banco
+DB_PASSWORD=""
+
 # Configurar PostgreSQL
 setup_database() {
     log_info "Configurando PostgreSQL..."
     
+    # Inicializar PostgreSQL baseado no SO
     case $OS in
-        centos|rhel|rocky|alma) sudo postgresql-setup --initdb || true ;;
+        centos|rhel|rocky|alma)
+            if ! sudo -u postgres test -d /var/lib/pgsql/data/base; then
+                sudo /usr/pgsql-*/bin/postgresql-*-setup initdb 2>/dev/null || \
+                sudo postgresql-setup initdb 2>/dev/null || \
+                sudo -u postgres initdb -D /var/lib/pgsql/data
+            fi
+            ;;
     esac
     
-    sudo systemctl start postgresql
     sudo systemctl enable postgresql
+    sudo systemctl start postgresql
+    
+    # Aguardar PostgreSQL iniciar
+    sleep 3
+    
+    # Verificar se PostgreSQL está rodando
+    if ! sudo systemctl is-active --quiet postgresql; then
+        log_error "Falha ao iniciar PostgreSQL"
+        return 1
+    fi
     
     echo -n "Senha para usuário PostgreSQL 'whatsflow': "
     read -s DB_PASSWORD
     echo
     
-    # Salvar senha em variável global
-    export DB_PASSWORD
+    # Validar senha não vazia
+    if [[ -z "$DB_PASSWORD" ]]; then
+        log_error "Senha não pode ser vazia"
+        return 1
+    fi
     
     sudo -u postgres psql << EOF
 DROP USER IF EXISTS whatsflow;
@@ -221,6 +243,9 @@ setup_ssl() {
     # Configuração Nginx baseada no sistema
     case $OS in
         ubuntu|debian)
+            # Criar diretório sites-enabled se não existir
+            sudo mkdir -p /etc/nginx/sites-enabled
+            
             # Ubuntu/Debian usa sites-available/sites-enabled
             sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
 server {
@@ -255,15 +280,17 @@ server {
     }
 }
 EOF
+            # Remover configuração default do CentOS
+            sudo rm -f /etc/nginx/conf.d/default.conf
             ;;
     esac
     
+    # Habilitar e iniciar nginx ANTES de testar
+    sudo systemctl enable nginx
+    sudo systemctl start nginx
+    
     if sudo nginx -t; then
         sudo systemctl reload nginx
-        
-        # Iniciar/reiniciar nginx e services
-        sudo systemctl enable nginx
-        sudo systemctl start nginx
         
         # SSL
         log_warning "IMPORTANTE: Antes de configurar SSL, certifique-se que:"

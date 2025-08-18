@@ -1276,8 +1276,25 @@ Sua instancia esta funcionando perfeitamente!`;
       if (!Array.isArray(response.data)) {
         return res.status(400).json({
           success: false,
-          message: "URL não parece ser uma Evolution API válida"
+          message: "URL não parece ser uma Evolution API válida - resposta esperada não encontrada"
         });
+      }
+
+      // Check if response has expected Evolution API properties
+      if (response.data.length > 0) {
+        const firstInstance = response.data[0];
+        const hasEvolutionProps = firstInstance && (
+          'instanceName' in firstInstance || 
+          'instance' in firstInstance ||
+          'status' in firstInstance
+        );
+        
+        if (!hasEvolutionProps) {
+          return res.status(400).json({
+            success: false,
+            message: "URL responde mas não é uma Evolution API válida - estrutura incorreta"
+          });
+        }
       }
       
       res.json({ 

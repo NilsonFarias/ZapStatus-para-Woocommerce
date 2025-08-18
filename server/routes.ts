@@ -1844,16 +1844,16 @@ Sua instancia esta funcionando perfeitamente!`;
         // Cancel subscription immediately
         canceledSubscription = await stripe.subscriptions.cancel(user.stripeSubscriptionId);
         
-        // Update user plan to basic and status to canceled
+        // Update user plan to free and status to canceled
         await storage.updateUser(user.id, {
-          plan: 'basic',
+          plan: 'free',
           subscriptionStatus: 'canceled'
         });
 
         // Update client plan
         const clients = await storage.getClients(user.id);
         if (clients.length > 0) {
-          await storage.updateClient(clients[0].id, { plan: 'basic' });
+          await storage.updateClient(clients[0].id, { plan: 'free' });
         }
 
         console.log(`Subscription ${user.stripeSubscriptionId} canceled immediately for user ${user.id}. Reason: ${reason || 'Not provided'}`);
@@ -2056,21 +2056,21 @@ Sua instancia esta funcionando perfeitamente!`;
           const subscription = event.data.object;
           console.log(`Subscription canceled: ${subscription.id}`);
           
-          // Update user to basic plan when subscription is canceled
+          // Update user to free plan when subscription is canceled
           const user = await storage.getUserByStripeSubscriptionId(subscription.id);
           if (user) {
             await storage.updateUser(user.id, {
-              plan: 'basic',
+              plan: 'free',
               subscriptionStatus: 'canceled'
             });
             
             // Also update client plan
             const clients = await storage.getClients(user.id);
             if (clients.length > 0) {
-              await storage.updateClient(clients[0].id, { plan: 'basic' });
+              await storage.updateClient(clients[0].id, { plan: 'free' });
             }
             
-            console.log(`Updated user ${user.id} to basic plan after subscription cancellation`);
+            console.log(`Updated user ${user.id} to free plan after subscription cancellation`);
           }
           break;
         }

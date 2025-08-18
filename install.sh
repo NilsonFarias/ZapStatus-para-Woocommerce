@@ -300,23 +300,13 @@ setup_application() {
         sed -i "s|SESSION_SECRET=.*|SESSION_SECRET=$SESSION_SECRET|" .env
         
         echo
-        log_warning "Configure as seguintes variáveis no arquivo .env:"
-        echo "- STRIPE_SECRET_KEY"
-        echo "- VITE_STRIPE_PUBLIC_KEY"
-        echo "- STRIPE_*_PRICE_ID"
-        echo "- EVOLUTION_API_KEY"
-        echo "- EVOLUTION_API_URL"
-        echo
-        read -p "Pressione Enter quando terminar de configurar o .env..."
+        log_success "Arquivo .env configurado com variáveis essenciais"
+        log_info "Configurações de Stripe e Evolution API podem ser feitas pela interface admin"
     fi
     
     # Build da aplicação
     log_info "Fazendo build da aplicação..."
     npm run build
-    
-    # Executar migrações
-    log_info "Executando migrações do banco..."
-    npm run migrate
     
     log_success "Aplicação configurada com sucesso"
 }

@@ -44,14 +44,18 @@ chmod +x install.sh
 
 ### Se Conectou como Root
 ```bash
-# 1. Criar usuário dedicado
+# Ubuntu/Debian:
 adduser whatsflow
 usermod -aG sudo whatsflow
-
-# 2. Trocar para o usuário
 su - whatsflow
 
-# 3. Executar instalação
+# CentOS/RHEL:
+useradd -m -s /bin/bash whatsflow
+usermod -aG wheel whatsflow
+passwd whatsflow
+su - whatsflow
+
+# Executar instalação:
 curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/quick-install.sh | bash
 ```
 
@@ -62,9 +66,15 @@ curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocomm
 
 1. **Crie um usuário dedicado:**
 ```bash
-# Se conectou como root, crie usuário primeiro:
+# Ubuntu/Debian:
 adduser whatsflow
 usermod -aG sudo whatsflow
+su - whatsflow
+
+# CentOS/RHEL:
+useradd -m -s /bin/bash whatsflow
+usermod -aG wheel whatsflow
+passwd whatsflow
 su - whatsflow
 ```
 

@@ -83,13 +83,26 @@ check_root() {
             # Criar usuário whatsflow
             if ! id "whatsflow" &>/dev/null; then
                 log_info "Criando usuário 'whatsflow'..."
-                useradd -m -s /bin/bash whatsflow
-                usermod -aG sudo whatsflow
                 
-                # Definir senha
-                echo
-                log_info "Defina uma senha para o usuário 'whatsflow':"
-                passwd whatsflow
+                # Usar adduser no Ubuntu/Debian, useradd no CentOS/RHEL
+                case $OS in
+                    ubuntu|debian)
+                        adduser --disabled-password --gecos "" whatsflow
+                        usermod -aG sudo whatsflow
+                        # Definir senha
+                        echo
+                        log_info "Defina uma senha para o usuário 'whatsflow':"
+                        passwd whatsflow
+                        ;;
+                    centos|rhel)
+                        useradd -m -s /bin/bash whatsflow
+                        usermod -aG wheel whatsflow
+                        # Definir senha
+                        echo
+                        log_info "Defina uma senha para o usuário 'whatsflow':"
+                        passwd whatsflow
+                        ;;
+                esac
                 
                 log_success "Usuário 'whatsflow' criado com sucesso!"
             else

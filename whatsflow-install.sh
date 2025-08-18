@@ -39,8 +39,22 @@ setup_user() {
                 ubuntu|debian) usermod -aG sudo whatsflow ;;
                 centos|rhel|rocky|alma) usermod -aG wheel whatsflow ;;
             esac
-            # Definir senha padrão temporária
-            echo "whatsflow:temp123" | chpasswd
+            
+            # Solicitar senha do usuário
+            echo -n "Defina uma senha para o usuário whatsflow: "
+            read -s WHATSFLOW_PASSWORD
+            echo
+            echo -n "Confirme a senha: "
+            read -s WHATSFLOW_PASSWORD_CONFIRM
+            echo
+            
+            if [[ "$WHATSFLOW_PASSWORD" != "$WHATSFLOW_PASSWORD_CONFIRM" ]]; then
+                log_error "Senhas não coincidem!"
+                exit 1
+            fi
+            
+            echo "whatsflow:$WHATSFLOW_PASSWORD" | chpasswd
+            log_success "Senha definida para usuário whatsflow"
         fi
         echo "whatsflow ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/whatsflow-temp
         

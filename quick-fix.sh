@@ -1,50 +1,71 @@
 #!/bin/bash
-# Correção rápida para iniciar aplicação
 
-cd /home/whatsflow/ZapStatus-para-Woocommerce
+# CORREÇÃO RÁPIDA - Testando aplicação
+# Execute como: bash quick-fix.sh
 
 echo "=== CORREÇÃO RÁPIDA ==="
 
-# Parar PM2
-pm2 delete all 2>/dev/null || true
+cd /home/whatsflow/ZapStatus-para-Woocommerce
 
-# Testar aplicação diretamente
-echo "Testando aplicação..."
-export NODE_ENV=production
-node dist/index.js &
+echo "1. Parando PM2..."
+pm2 stop whatsflow || true
+
+echo "2. Testando aplicação manual..."
+source .env
+echo "Aplicação testando por 15 segundos..."
+
+# Teste manual da aplicação
+timeout 15s node dist/index.js &
 APP_PID=$!
 
-# Esperar 5 segundos
-sleep 5
+sleep 8
 
-# Verificar se aplicação iniciou
-if curl -s http://localhost:5000 > /dev/null 2>&1; then
-    echo "✅ Aplicação funcionando na porta 5000!"
-    kill $APP_PID
+# Verificar se respondeu
+if curl -s http://localhost:5000/api/health > /dev/null; then
+    echo "✅ Aplicação responde diretamente"
     
-    # Iniciar com PM2
-    echo "Iniciando PM2..."
+    # Parar teste
+    kill $APP_PID 2>/dev/null || true
+    
+    echo "3. Recriando ecosystem com variáveis explícitas..."
+    cat > ecosystem.config.cjs << EOF
+module.exports = {
+  apps: [{
+    name: 'whatsflow',
+    script: 'dist/index.js',
+    cwd: '$(pwd)',
+    instances: 1,
+    exec_mode: 'cluster',
+    env: {
+      NODE_ENV: 'production',
+      PORT: '5000',
+      DATABASE_URL: '${DATABASE_URL}',
+      SESSION_SECRET: '${SESSION_SECRET}',
+      STRIPE_SECRET_KEY: '${STRIPE_SECRET_KEY:-sk_test_placeholder}',
+      VITE_STRIPE_PUBLIC_KEY: '${VITE_STRIPE_PUBLIC_KEY:-pk_test_placeholder}',
+      EVOLUTION_API_KEY: '${EVOLUTION_API_KEY:-placeholder}',
+      EVOLUTION_API_URL: '${EVOLUTION_API_URL:-http://localhost:8080}'
+    }
+  }]
+};
+EOF
+    
+    echo "4. Reiniciando PM2..."
+    pm2 delete whatsflow 2>/dev/null || true
     pm2 start ecosystem.config.cjs
-    pm2 save
     
-    # Verificar PM2
     sleep 5
-    if pm2 list | grep -q "whatsflow.*online"; then
-        echo "✅ PM2 funcionando!"
-        if curl -s http://localhost:5000 > /dev/null 2>&1; then
-            echo "✅ SUCESSO! Aplicação rodando na porta 5000"
-        else
-            echo "❌ PM2 rodando mas porta 5000 não responde"
-        fi
-    else
-        echo "❌ PM2 falhou"
-        pm2 logs whatsflow --lines 10 --nostream
-    fi
-else
-    echo "❌ Aplicação falhou ao iniciar"
-    kill $APP_PID 2>/dev/null
+    pm2 status
     
-    # Mostrar erro
-    export NODE_ENV=production
-    node dist/index.js
+    echo "5. Teste final..."
+    curl -s http://localhost:5000/api/health && echo " ✅" || echo " ❌"
+    
+else
+    echo "❌ Aplicação não responde diretamente"
+    kill $APP_PID 2>/dev/null || true
+    
+    echo "Verificando logs diretos..."
+    wait $APP_PID 2>/dev/null || true
 fi
+
+echo "=== FIM ==="

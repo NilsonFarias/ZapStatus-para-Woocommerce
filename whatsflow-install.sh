@@ -201,8 +201,9 @@ install_application() {
     # Parar PM2 anterior
     pm2 delete whatsflow 2>/dev/null || true
     
-    # Iniciar aplicação
-    pm2 start npm --name "whatsflow" -- start
+    # Iniciar aplicação com diretório correto
+    cd "$APP_DIR"
+    pm2 start npm --name "whatsflow" --cwd "$APP_DIR" -- start
     
     # Verificar se aplicação subiu
     sleep 5

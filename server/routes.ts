@@ -19,13 +19,15 @@ declare module 'express-session' {
   }
 }
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+// Initialize Stripe only if secret key is provided
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2025-07-30.basil",
+  });
+} else {
+  console.warn('STRIPE_SECRET_KEY not configured - Stripe functionality will be disabled');
 }
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-07-30.basil",
-});
 
 // Global variable to store Socket.IO server
 let globalSocketServer: SocketIOServer | null = null;
@@ -1851,6 +1853,9 @@ Sua instancia esta funcionando perfeitamente!`;
       
       if (cancelImmediately) {
         // Cancel subscription immediately
+        if (!stripe) {
+          return res.status(503).json({ message: 'Stripe not configured' });
+        }
         canceledSubscription = await stripe.subscriptions.cancel(user.stripeSubscriptionId);
         
         // Update user plan to free and status to canceled
@@ -1868,6 +1873,9 @@ Sua instancia esta funcionando perfeitamente!`;
         console.log(`Subscription ${user.stripeSubscriptionId} canceled immediately for user ${user.id}. Reason: ${reason || 'Not provided'}`);
       } else {
         // Cancel at period end
+        if (!stripe) {
+          return res.status(503).json({ message: 'Stripe not configured' });
+        }
         canceledSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
           cancel_at_period_end: true
         });
@@ -1908,6 +1916,9 @@ Sua instancia esta funcionando perfeitamente!`;
       }
 
       // Remove cancel_at_period_end flag
+      if (!stripe) {
+        return res.status(503).json({ message: 'Stripe not configured' });
+      }
       const reactivatedSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
         cancel_at_period_end: false
       });
@@ -1950,12 +1961,15 @@ Sua instancia esta funcionando perfeitamente!`;
       }
 
       // Get subscription details from Stripe with full data
+      if (!stripe) {
+        return res.status(503).json({ message: 'Stripe not configured' });
+      }
       const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
       
       // Also get the invoice to find billing period info if subscription doesn't have it
       let upcomingInvoice = null;
       try {
-        upcomingInvoice = await stripe.invoices.retrieveUpcoming({
+        upcomingInvoice = await stripe!.invoices.retrieveUpcoming({
           subscription: user.stripeSubscriptionId
         });
       } catch (error) {
@@ -2022,7 +2036,7 @@ Sua instancia esta funcionando perfeitamente!`;
     try {
       // Verify webhook signature
       const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-      if (endpointSecret) {
+      if (endpointSecret && stripe) {
         event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
       } else {
         // For development, skip signature verification

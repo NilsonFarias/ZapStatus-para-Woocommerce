@@ -182,3 +182,14 @@ curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocomm
 - ❌ Aplicação não conseguia ler DATABASE_URL → ✅ Variável carregada e passada explicitamente
 - ❌ Instalação sem validação → ✅ Teste manual antes do PM2
 - **TESTADO**: Identificadas falhas em instalação mylist.center, correções aplicadas no script
+
+### Tolerância a Configurações Faltando - IMPLEMENTADO (August 19, 2025)
+**Problema Resolvido**: Aplicação exigia STRIPE_SECRET_KEY válida durante inicialização, causando falha em instalações novas
+**Solução Implementada**:
+- Stripe inicializado condicionalmente apenas se chave válida presente
+- Todas as rotas Stripe verificam disponibilidade antes de usar
+- Retornam erro 503 "Stripe not configured" quando não disponível
+- Script usa placeholders válidos (sk_test_placeholder...) durante instalação
+- Admin pode configurar chaves reais através da interface após instalação
+
+**Benefício**: Instalação zero-touch sem necessidade de chaves Stripe/Evolution configuradas previamente

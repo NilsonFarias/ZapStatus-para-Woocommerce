@@ -165,24 +165,31 @@ install_application() {
 NODE_ENV=production
 DATABASE_URL=postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow
 SESSION_SECRET=$SESSION_SECRET
-STRIPE_SECRET_KEY=sk_test_
-VITE_STRIPE_PUBLIC_KEY=pk_test_
-STRIPE_BASIC_PRICE_ID=price_
-STRIPE_PRO_PRICE_ID=price_
-STRIPE_ENTERPRISE_PRICE_ID=price_
-EVOLUTION_API_KEY=your_evolution_api_key
-EVOLUTION_API_URL=your_evolution_api_url
+STRIPE_SECRET_KEY=sk_test_placeholder_stripe_key_configure_in_admin
+VITE_STRIPE_PUBLIC_KEY=pk_test_placeholder_stripe_key_configure_in_admin
+STRIPE_BASIC_PRICE_ID=price_placeholder_configure_in_admin
+STRIPE_PRO_PRICE_ID=price_placeholder_configure_in_admin
+STRIPE_ENTERPRISE_PRICE_ID=price_placeholder_configure_in_admin
+EVOLUTION_API_KEY=placeholder_configure_in_admin
+EVOLUTION_API_URL=https://placeholder-configure-in-admin.com
 EOF
     
     # Testar aplicação ANTES do PM2
     log_info "Testando aplicação..."
     cd /home/whatsflow/ZapStatus-para-Woocommerce
     
-    # Testar com variáveis explícitas
+    # Testar com variáveis explícitas (incluindo Stripe placeholders válidos)
     sudo -u whatsflow env \
         NODE_ENV=production \
         DATABASE_URL="postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow" \
         SESSION_SECRET="$SESSION_SECRET" \
+        STRIPE_SECRET_KEY="sk_test_placeholder_stripe_key_configure_in_admin" \
+        VITE_STRIPE_PUBLIC_KEY="pk_test_placeholder_stripe_key_configure_in_admin" \
+        STRIPE_BASIC_PRICE_ID="price_placeholder_configure_in_admin" \
+        STRIPE_PRO_PRICE_ID="price_placeholder_configure_in_admin" \
+        STRIPE_ENTERPRISE_PRICE_ID="price_placeholder_configure_in_admin" \
+        EVOLUTION_API_KEY="placeholder_configure_in_admin" \
+        EVOLUTION_API_URL="https://placeholder-configure-in-admin.com" \
         timeout 20s node dist/index.js &
     
     TEST_PID=$!
@@ -214,13 +221,13 @@ module.exports = {
       NODE_ENV: 'production',
       DATABASE_URL: 'postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow',
       SESSION_SECRET: '$SESSION_SECRET',
-      STRIPE_SECRET_KEY: 'sk_test_',
-      VITE_STRIPE_PUBLIC_KEY: 'pk_test_',
-      STRIPE_BASIC_PRICE_ID: 'price_',
-      STRIPE_PRO_PRICE_ID: 'price_',
-      STRIPE_ENTERPRISE_PRICE_ID: 'price_',
-      EVOLUTION_API_KEY: 'your_evolution_api_key',
-      EVOLUTION_API_URL: 'your_evolution_api_url'
+      STRIPE_SECRET_KEY: 'sk_test_placeholder_stripe_key_configure_in_admin',
+      VITE_STRIPE_PUBLIC_KEY: 'pk_test_placeholder_stripe_key_configure_in_admin',
+      STRIPE_BASIC_PRICE_ID: 'price_placeholder_configure_in_admin',
+      STRIPE_PRO_PRICE_ID: 'price_placeholder_configure_in_admin',
+      STRIPE_ENTERPRISE_PRICE_ID: 'price_placeholder_configure_in_admin',
+      EVOLUTION_API_KEY: 'placeholder_configure_in_admin',
+      EVOLUTION_API_URL: 'https://placeholder-configure-in-admin.com'
     },
     instances: 1,
     autorestart: true,

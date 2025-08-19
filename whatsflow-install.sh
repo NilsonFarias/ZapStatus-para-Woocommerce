@@ -198,19 +198,34 @@ install_application() {
     log_info "Executando migrações..."
     npm run db:push
     
-    # Criar arquivo de configuração PM2 (extensão .cjs para compatibilidade)
-    cat > ecosystem.config.cjs << 'EOF'
+    # Carregar variáveis do .env para ecosystem.config.cjs
+    source .env
+    
+    # Criar arquivo de configuração PM2 com variáveis explícitas
+    cat > ecosystem.config.cjs << EOF
 module.exports = {
   apps: [{
     name: 'whatsflow',
-    script: 'npm',
-    args: 'start',
+    script: 'dist/index.js',
     cwd: '/home/whatsflow/ZapStatus-para-Woocommerce',
-    env_file: '.env',
+    env: {
+      NODE_ENV: 'production',
+      DATABASE_URL: '$DATABASE_URL',
+      SESSION_SECRET: '$SESSION_SECRET',
+      STRIPE_SECRET_KEY: '$STRIPE_SECRET_KEY',
+      VITE_STRIPE_PUBLIC_KEY: '$VITE_STRIPE_PUBLIC_KEY',
+      STRIPE_BASIC_PRICE_ID: '$STRIPE_BASIC_PRICE_ID',
+      STRIPE_PRO_PRICE_ID: '$STRIPE_PRO_PRICE_ID',
+      STRIPE_ENTERPRISE_PRICE_ID: '$STRIPE_ENTERPRISE_PRICE_ID',
+      EVOLUTION_API_KEY: '$EVOLUTION_API_KEY',
+      EVOLUTION_API_URL: '$EVOLUTION_API_URL'
+    },
     instances: 1,
     autorestart: true,
     watch: false,
-    max_memory_restart: '1G'
+    max_memory_restart: '1G',
+    restart_delay: 5000,
+    max_restarts: 10
   }]
 };
 EOF
@@ -218,18 +233,42 @@ EOF
     # Parar PM2 anterior
     pm2 delete whatsflow 2>/dev/null || true
     
-    # Iniciar aplicação com arquivo de configuração
+    # Testar aplicação antes do PM2
+    log_info "Testando aplicação antes de iniciar PM2..."
     cd "$APP_DIR"
-    pm2 start ecosystem.config.cjs
     
-    # Verificar se aplicação subiu
-    sleep 5
-    if pm2 list | grep -q "whatsflow.*online"; then
-        log_success "Aplicação iniciada com sucesso"
+    # Testar se aplicação funciona com variáveis carregadas
+    source .env
+    NODE_ENV=production node dist/index.js &
+    TEST_PID=$!
+    
+    # Aguardar inicialização
+    sleep 10
+    
+    # Testar conectividade
+    if curl -s http://localhost:5000 >/dev/null 2>&1; then
+        log_success "Aplicação funcionando corretamente"
+        kill $TEST_PID
+        
+        # Iniciar com PM2
+        log_info "Iniciando PM2..."
+        pm2 start ecosystem.config.cjs
+        
+        # Verificar PM2
+        sleep 10
+        if pm2 list | grep -q "whatsflow.*online" && curl -s http://localhost:5000 >/dev/null 2>&1; then
+            log_success "PM2 iniciado e aplicação respondendo na porta 5000"
+        else
+            log_error "PM2 iniciado mas aplicação não responde na porta 5000"
+            log_error "Logs do PM2:"
+            pm2 logs whatsflow --lines 10 --nostream
+            return 1
+        fi
     else
-        log_error "Falha ao iniciar aplicação"
-        log_error "Verificando logs..."
-        pm2 logs whatsflow --lines 10 --nostream
+        log_error "Aplicação falhou no teste inicial"
+        kill $TEST_PID 2>/dev/null
+        log_error "Erro na aplicação:"
+        NODE_ENV=production node dist/index.js || true
         return 1
     fi
     

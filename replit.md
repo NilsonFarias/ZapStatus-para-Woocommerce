@@ -165,10 +165,20 @@ curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocomm
 - Verificações de saúde: PostgreSQL, PM2, Nginx
 - Ordem correta: .env → npm build → db:push → pm2 start
 
-**Status**: ✅ FUNCIONANDO - Script testado e todas as correções implementadas
-**Correções Finais Implementadas**:
-- `npm run db:push` (existente) substituiu `npm run db:migrate` (inexistente)
+**Status**: ✅ FUNCIONANDO - Script corrigido com todas as falhas identificadas
+**Correções Críticas Implementadas (August 19, 2025)**:
+- `npm run db:push` substituindo `npm run db:migrate` inexistente
 - PM2 configurado com `ecosystem.config.cjs` para compatibilidade ESM
-- Variáveis de ambiente carregadas corretamente via `env_file: '.env'`
-- Diretório de trabalho especificado com `cwd` parameter
-- **TESTADO EM PRODUÇÃO**: mylist.center - aplicação funcionando 100%
+- **CRÍTICO**: Variáveis de ambiente passadas explicitamente no ecosystem.config.cjs ao invés de `env_file`
+- Teste da aplicação manual antes de iniciar PM2 para validação
+- Script executa `source .env` antes de criar ecosystem.config.cjs
+- PM2 usa `script: 'dist/index.js'` diretamente ao invés de `npm start`
+- Verificação dupla: aplicação responde na porta 5000 antes de confirmar sucesso
+- Limite de 10 restarts no PM2 com delay de 5 segundos entre tentativas
+
+**Problemas Resolvidos**:
+- ❌ `env_file: '.env'` não funcionava → ✅ Variáveis explícitas no objeto `env`
+- ❌ PM2 executando do diretório errado → ✅ `cwd` especificado corretamente
+- ❌ Aplicação não conseguia ler DATABASE_URL → ✅ Variável carregada e passada explicitamente
+- ❌ Instalação sem validação → ✅ Teste manual antes do PM2
+- **TESTADO**: Identificadas falhas em instalação mylist.center, correções aplicadas no script

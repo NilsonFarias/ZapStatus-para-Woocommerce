@@ -198,12 +198,29 @@ install_application() {
     log_info "Executando migrações..."
     npm run db:push
     
+    # Criar arquivo de configuração PM2
+    cat > ecosystem.config.js << 'EOF'
+module.exports = {
+  apps: [{
+    name: 'whatsflow',
+    script: 'npm',
+    args: 'start',
+    cwd: '/home/whatsflow/ZapStatus-para-Woocommerce',
+    env_file: '.env',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G'
+  }]
+};
+EOF
+    
     # Parar PM2 anterior
     pm2 delete whatsflow 2>/dev/null || true
     
-    # Iniciar aplicação com diretório correto
+    # Iniciar aplicação com arquivo de configuração
     cd "$APP_DIR"
-    pm2 start npm --name "whatsflow" --cwd "$APP_DIR" --env-file .env -- start
+    pm2 start ecosystem.config.js
     
     # Verificar se aplicação subiu
     sleep 5

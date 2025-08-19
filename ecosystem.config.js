@@ -1,27 +1,13 @@
 module.exports = {
-  apps: [
-    {
-      name: 'whatsflow',
-      script: 'npm',
-      args: 'start',
-      cwd: '/home/whatsflow/whatsflow',
-      env: {
-        NODE_ENV: 'production',
-        PORT: 5000
-      },
-      instances: 1,
-      exec_mode: 'fork',
-      watch: false,
-      max_memory_restart: '1G',
-      error_file: './logs/err.log',
-      out_file: './logs/out.log',
-      log_file: './logs/combined.log',
-      time: true,
-      autorestart: true,
-      max_restarts: 10,
-      min_uptime: '10s',
-      restart_delay: 4000,
-      kill_timeout: 5000
-    }
-  ]
+  apps: [{
+    name: 'whatsflow',
+    script: 'npm',
+    args: 'start',
+    cwd: '/home/whatsflow/ZapStatus-para-Woocommerce',
+    env_file: '.env',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G'
+  }]
 };

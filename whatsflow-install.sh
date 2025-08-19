@@ -298,9 +298,93 @@ EOF
     fi
     
     log_success "Aplicação instalada"
+    
+    # Configurar domínio e SSL automaticamente
+    log_info "Configurando domínio e SSL..."
+    echo -n "Deseja configurar um domínio e SSL agora? (s/N): "
+    read SETUP_DOMAIN
+    
+    if [[ "$SETUP_DOMAIN" =~ ^[Ss]$ ]]; then
+        echo -n "Domínio (ex: mylist.center): "
+        read DOMAIN
+        if [[ -n "$DOMAIN" ]]; then
+            echo -n "Email para SSL: "
+            read EMAIL
+            if [[ -n "$EMAIL" ]]; then
+                setup_ssl_internal "$DOMAIN" "$EMAIL"
+            fi
+        fi
+    fi
 }
 
-# Configurar SSL/Domínio
+# Configurar SSL/Domínio (função interna)
+setup_ssl_internal() {
+    local DOMAIN=$1
+    local EMAIL=$2
+    
+    log_info "Configurando Nginx para $DOMAIN..."
+    
+    # Configuração Nginx baseada no sistema
+    case $OS in
+        ubuntu|debian)
+            # Ubuntu/Debian usa sites-available/sites-enabled
+            sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+    
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+            sudo ln -sf /etc/nginx/sites-available/whatsflow /etc/nginx/sites-enabled/
+            sudo rm -f /etc/nginx/sites-enabled/default
+            ;;
+        centos|rhel|rocky|alma)
+            # CentOS/RHEL usa conf.d
+            sudo tee /etc/nginx/conf.d/whatsflow.conf > /dev/null << EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+    
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+            sudo rm -f /etc/nginx/conf.d/default.conf
+            ;;
+    esac
+    
+    # Testar e recarregar Nginx
+    if sudo nginx -t; then
+        sudo systemctl reload nginx
+        log_success "Nginx configurado para $DOMAIN"
+        
+        # Configurar SSL
+        log_info "Configurando SSL com Let's Encrypt..."
+        if sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --email $EMAIL --agree-tos --no-eff-email --redirect --non-interactive; then
+            log_success "SSL configurado com sucesso!"
+            log_success "Site disponível em: https://$DOMAIN"
+        else
+            log_warning "SSL falhou, mas site está disponível em: http://$DOMAIN"
+        fi
+    else
+        log_error "Erro na configuração do Nginx"
+        return 1
+    fi
+}
+
+# Configurar SSL/Domínio (opção standalone)
 setup_ssl() {
     log_info "Configurando SSL e domínio..."
     

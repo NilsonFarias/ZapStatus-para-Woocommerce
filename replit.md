@@ -193,3 +193,14 @@ curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocomm
 - Admin pode configurar chaves reais através da interface após instalação
 
 **Benefício**: Instalação zero-touch sem necessidade de chaves Stripe/Evolution configuradas previamente
+
+### Correção Node.js Compatibility - IMPLEMENTADO (August 19, 2025)
+**Problema Identificado**: Aplicação usava `import.meta.dirname` (Node.js 20+) mas scripts instalavam Node.js 18
+**Erro Específico**: `TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined`
+**Solução Implementada**:
+- Atualizado scripts de instalação para usar Node.js 20 ao invés de 18
+- `whatsflow-install-fixed.sh` corrigido para instalar Node.js 20
+- Criado `whatsflow-install-nodejs20.sh` como versão nova específica para Node.js 20
+- Mantida compatibilidade para Ubuntu/Debian (setup_20.x) e CentOS/RHEL (setup_20.x)
+
+**Benefício**: Elimina erro de inicialização causado por incompatibilidade de versão Node.js

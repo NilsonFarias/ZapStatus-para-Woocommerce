@@ -40,15 +40,15 @@ install_dependencies() {
         ubuntu|debian)
             sudo apt update
             sudo apt install -y curl wget git build-essential postgresql postgresql-contrib nginx certbot python3-certbot-nginx ufw
-            # Node.js 18
-            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            # Node.js 20
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
             sudo apt install -y nodejs
             ;;
         centos|rhel|rocky|alma)
             sudo dnf update -y
             sudo dnf install -y curl wget git gcc gcc-c++ make postgresql postgresql-server postgresql-contrib nginx certbot python3-certbot-nginx firewalld
-            # Node.js 18
-            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            # Node.js 20
+            curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
             sudo dnf install -y nodejs
             ;;
         *)

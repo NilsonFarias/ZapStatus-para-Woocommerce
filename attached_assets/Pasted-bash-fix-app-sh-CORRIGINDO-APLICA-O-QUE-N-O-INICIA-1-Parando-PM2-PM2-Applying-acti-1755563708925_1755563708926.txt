@@ -1,0 +1,61 @@
+bash fix-app.sh
+=== CORRIGINDO APLICAÇÃO QUE NÃO INICIA ===
+1. Parando PM2...
+[PM2] Applying action deleteProcessId on app [all](ids: [ 0 ])
+[PM2] [whatsflow](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2][WARN] No process found
+[PM2] [v] All Applications Stopped
+[PM2] [v] PM2 Daemon Stopped
+2. Verificando .env...
+Conteúdo do .env:
+# Database
+DATABASE_URL=postgresql://whatsflow:JPN@22zk76@localhost:5432/whatsflow
+POSTGRES_DB=whatsflow
+POSTGRES_USER=whatsflow
+POSTGRES_PASSWORD=senha123
+
+# Stripe
+STRIPE_SECRET_KEY=sk_test_...
+VITE_STRIPE_PUBLIC_KEY=pk_test_...
+STRIPE_BASIC_PRICE_ID=price_...
+STRIPE_PRO_PRICE_ID=price_...
+STRIPE_ENTERPRISE_PRICE_ID=price_...
+
+# Evolution API
+EVOLUTION_API_KEY=your_api_key
+EVOLUTION_API_URL=https://your-evolution-api.com
+
+# Session
+SESSION_SECRET=xgKwZSaaDkdvHx9QsXQHIIZE7KeVcovgZCfPgmouiZbulttnAxo7jSSMfmwRuDm+XrrUnoPHR7QbQ3g5uWypAg==
+
+# Environment
+NODE_ENV=production3. Verificando build...
+4. Testando conexão com banco...
+could not change directory to "/home/whatsflow/ZapStatus-para-Woocommerce": Permission denied
+ whatsflow | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =Tc/postgres          +
+           |          |          |             |             | whatsflow=CTc/postgres
+5. Executando migrações do banco...
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/home/whatsflow/ZapStatus-para-Woocommerce/drizzle.config.ts'
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
+[i] No changes detected
+6. Testando aplicação manualmente...
+Executando: NODE_ENV=production node dist/index.js
+timeout: failed to run command ‘NODE_ENV=production’: No such file or directory
+❌ Aplicação falhou ao iniciar manualmente
+Verificando logs de erro...
+Status final:
+[PM2] Spawning PM2 daemon with pm2_home=/root/.pm2
+[PM2] PM2 Successfully daemonized
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+Porta 5000 não está em uso

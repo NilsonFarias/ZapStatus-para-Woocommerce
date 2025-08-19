@@ -53,7 +53,7 @@ echo "6. Testando aplicação manualmente..."
 echo "Executando: NODE_ENV=production node dist/index.js"
 
 # Executar por 10 segundos para ver se inicia
-timeout 10 NODE_ENV=production node dist/index.js &
+NODE_ENV=production timeout 10 node dist/index.js &
 PID=$!
 sleep 5
 

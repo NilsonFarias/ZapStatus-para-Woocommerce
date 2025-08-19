@@ -203,7 +203,7 @@ install_application() {
     
     # Iniciar aplicação com diretório correto
     cd "$APP_DIR"
-    pm2 start npm --name "whatsflow" --cwd "$APP_DIR" -- start
+    pm2 start npm --name "whatsflow" --cwd "$APP_DIR" --env-file .env -- start
     
     # Verificar se aplicação subiu
     sleep 5

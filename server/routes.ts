@@ -167,18 +167,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
     try {
+      console.log("Registration attempt with body:", JSON.stringify(req.body, null, 2));
+      
       const userData = insertUserSchema.parse(req.body);
+      console.log("Parsed user data:", JSON.stringify(userData, null, 2));
       
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
+        console.log("User already exists with email:", userData.email);
         return res.status(400).json({ message: "Email já está em uso" });
       }
 
       // Hash password
+      console.log("Hashing password...");
       const hashedPassword = await bcrypt.hash(userData.password, 12);
+      console.log("Password hashed successfully");
       
       // Create user
+      console.log("Creating user...");
       const user = await storage.createUser({
         ...userData,
         password: hashedPassword,
@@ -186,8 +193,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         company: userData.company || "",
         phone: userData.phone || "",
       });
+      console.log("User created successfully:", user.id);
 
       // Create corresponding client automatically
+      console.log("Creating client...");
       await storage.createClient({
         userId: user.id,
         name: userData.company || userData.name,
@@ -195,15 +204,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         plan: userData.plan || 'free',
         status: "active",
       });
+      console.log("Client created successfully");
 
       // Create session
       req.session.userId = user.id;
+      console.log("Session created for user:", user.id);
       
       // Return user without password
       const { password, ...userWithoutPassword } = user;
+      console.log("Registration completed successfully for:", userData.email);
       res.status(201).json(userWithoutPassword);
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error("Registration error details:", {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        constraint: error.constraint,
+        detail: error.detail
+      });
       res.status(500).json({ message: "Erro interno do servidor" });
     }
   });

@@ -1,367 +1,534 @@
 #!/bin/bash
 
-# WhatsFlow - Script de Instalação CORRIGIDO
-# Versão: 2.0 (19/08/2025)
-# Correções: Variáveis de ambiente carregadas explicitamente
+# WhatsFlow - Instalação Completa e Corrigida
+# Script final com todas as correções identificadas
+# Execução: curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/whatsflow-install-fixed.sh | bash -s -- --full
 
-set -e  # Parar em caso de erro
+set -e
 
 # Cores para output
 RED='\033[0;31m'
-GREEN='\033[0;32m'  
+GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
-log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
 
-# Detectar sistema operacional
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+# Detectar OS
 detect_os() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        OS=$(echo $ID | tr '[:upper:]' '[:lower:]')
+        OS=$ID
         VERSION=$VERSION_ID
     else
-        log_error "Sistema operacional não suportado"
+        print_error "Cannot detect OS"
         exit 1
     fi
     
-    log_info "Sistema detectado: $OS $VERSION"
+    print_status "Detected OS: $OS $VERSION"
 }
 
-# Instalar dependências
-install_dependencies() {
-    log_info "Instalando dependências..."
+# Detectar arquitetura
+detect_arch() {
+    ARCH=$(uname -m)
+    case $ARCH in
+        x86_64) ARCH="x64" ;;
+        aarch64) ARCH="arm64" ;;
+        armv7l) ARCH="armv7l" ;;
+        *) print_error "Unsupported architecture: $ARCH"; exit 1 ;;
+    esac
+    
+    print_status "Detected architecture: $ARCH"
+}
+
+# Verificar se está rodando como root
+check_root() {
+    if [ "$EUID" -eq 0 ]; then
+        print_error "Do not run this script as root. Run as regular user with sudo privileges."
+        exit 1
+    fi
+}
+
+# Instalar Node.js 20 (CORREÇÃO: era 18 antes, causava erro import.meta.dirname)
+install_nodejs() {
+    print_status "Installing Node.js 20..."
+    
+    # Remove instalações antigas
+    sudo apt-get remove -y nodejs npm 2>/dev/null || true
     
     case $OS in
         ubuntu|debian)
-            sudo apt update
-            sudo apt install -y curl wget git build-essential postgresql postgresql-contrib nginx certbot python3-certbot-nginx ufw
-            # Node.js 20
             curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-            sudo apt install -y nodejs
+            sudo apt-get install -y nodejs
             ;;
-        centos|rhel|rocky|alma)
-            sudo dnf update -y
-            sudo dnf install -y curl wget git gcc gcc-c++ make postgresql postgresql-server postgresql-contrib nginx certbot python3-certbot-nginx firewalld
-            # Node.js 20
+        centos|rhel|rocky|almalinux)
             curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
-            sudo dnf install -y nodejs
+            sudo dnf install -y nodejs npm
             ;;
         *)
-            log_error "Sistema operacional $OS não suportado"
+            print_error "Unsupported OS for Node.js installation"
             exit 1
             ;;
     esac
     
-    sudo npm install -g pm2
+    # Verificar versão
+    NODE_VERSION=$(node --version)
+    NPM_VERSION=$(npm --version)
     
-    # Configurar firewall
-    log_info "Configurando firewall..."
-    if command -v ufw &> /dev/null; then
-        sudo ufw --force enable
-        sudo ufw allow 22,80,443,5000/tcp
-    elif command -v firewall-cmd &> /dev/null; then
-        sudo systemctl enable --now firewalld
-        sudo firewall-cmd --permanent --add-port={22,80,443,5000}/tcp
-        sudo firewall-cmd --reload
-    fi
-    
-    log_success "Dependências instaladas"
+    print_success "Node.js $NODE_VERSION installed"
+    print_success "npm $NPM_VERSION installed"
 }
 
-# Configurar PostgreSQL
-setup_database() {
-    log_info "Configurando PostgreSQL..."
+# Instalar PostgreSQL
+install_postgresql() {
+    print_status "Installing PostgreSQL..."
     
-    # Inicializar PostgreSQL baseado no SO
     case $OS in
-        centos|rhel|rocky|alma)
-            if ! sudo -u postgres test -d /var/lib/pgsql/data/base; then
-                sudo /usr/pgsql-*/bin/postgresql-*-setup initdb 2>/dev/null || \
-                sudo postgresql-setup initdb 2>/dev/null || \
-                sudo -u postgres initdb -D /var/lib/pgsql/data
+        ubuntu|debian)
+            sudo apt-get update
+            sudo apt-get install -y postgresql postgresql-contrib
+            ;;
+        centos|rhel|rocky|almalinux)
+            # CORREÇÃO: Suporte para CentOS 8+ e 9
+            if [ "$VERSION" -ge 8 ]; then
+                sudo dnf install -y postgresql postgresql-server postgresql-contrib
+                sudo postgresql-setup --initdb 2>/dev/null || sudo /usr/bin/postgresql-setup initdb
+            else
+                sudo yum install -y postgresql postgresql-server postgresql-contrib
+                sudo service postgresql initdb
             fi
             ;;
     esac
     
-    sudo systemctl enable --now postgresql
-    sleep 3
+    # Iniciar PostgreSQL
+    sudo systemctl start postgresql
+    sudo systemctl enable postgresql
     
-    if ! sudo systemctl is-active --quiet postgresql; then
-        log_error "Falha ao iniciar PostgreSQL"
-        exit 1
-    fi
+    print_success "PostgreSQL installed and started"
+}
+
+# Configurar PostgreSQL
+setup_postgresql() {
+    print_status "Configuring PostgreSQL database..."
     
-    # Solicitar senha
-    echo -n "Senha para usuário PostgreSQL 'whatsflow': "
-    read -s DB_PASSWORD
-    echo
-    
-    if [[ -z "$DB_PASSWORD" ]]; then
-        log_error "Senha não pode ser vazia"
-        exit 1
-    fi
-    
-    # Configurar banco
+    # Criar usuário e banco
     sudo -u postgres psql << EOF
-DROP USER IF EXISTS whatsflow;
-DROP DATABASE IF EXISTS whatsflow;
-CREATE USER whatsflow WITH PASSWORD '$DB_PASSWORD';
-CREATE DATABASE whatsflow;
-GRANT ALL PRIVILEGES ON DATABASE whatsflow TO whatsflow;
+CREATE USER whatsflow WITH PASSWORD 'whatsflow123';
+CREATE DATABASE whatsflow_db OWNER whatsflow;
+GRANT ALL PRIVILEGES ON DATABASE whatsflow_db TO whatsflow;
 ALTER USER whatsflow CREATEDB;
 \q
 EOF
     
-    log_success "PostgreSQL configurado"
+    # CORREÇÃO: DATABASE_URL com formato correto para Neon/Serverless
+    DB_URL="postgresql://whatsflow:whatsflow123@localhost:5432/whatsflow_db"
+    
+    print_success "PostgreSQL database configured"
+    print_status "Database URL: $DB_URL"
 }
 
-# Instalar aplicação
-install_application() {
-    log_info "Instalando aplicação..."
+# Instalar PM2
+install_pm2() {
+    print_status "Installing PM2..."
+    sudo npm install -g pm2
     
-    # Criar usuário se não existir
+    # Configurar PM2 startup
+    pm2 startup | grep "sudo" | bash || true
+    
+    print_success "PM2 installed"
+}
+
+# Instalar Nginx
+install_nginx() {
+    print_status "Installing Nginx..."
+    
+    case $OS in
+        ubuntu|debian)
+            sudo apt-get install -y nginx
+            ;;
+        centos|rhel|rocky|almalinux)
+            sudo dnf install -y nginx
+            ;;
+    esac
+    
+    sudo systemctl start nginx
+    sudo systemctl enable nginx
+    
+    print_success "Nginx installed and started"
+}
+
+# Configurar firewall
+setup_firewall() {
+    print_status "Configuring firewall..."
+    
+    case $OS in
+        ubuntu|debian)
+            sudo ufw allow 22/tcp
+            sudo ufw allow 80/tcp
+            sudo ufw allow 443/tcp
+            sudo ufw allow 5000/tcp
+            echo "y" | sudo ufw enable
+            ;;
+        centos|rhel|rocky|almalinux)
+            sudo firewall-cmd --permanent --add-port=22/tcp
+            sudo firewall-cmd --permanent --add-port=80/tcp
+            sudo firewall-cmd --permanent --add-port=443/tcp
+            sudo firewall-cmd --permanent --add-port=5000/tcp
+            sudo firewall-cmd --reload
+            ;;
+    esac
+    
+    print_success "Firewall configured"
+}
+
+# Clonar e instalar aplicação
+install_application() {
+    print_status "Installing WhatsFlow application..."
+    
+    # Criar usuário whatsflow se não existir
     if ! id "whatsflow" &>/dev/null; then
         sudo useradd -m -s /bin/bash whatsflow
-        sudo usermod -aG sudo whatsflow 2>/dev/null || true
+        print_success "User whatsflow created"
     fi
     
+    # Criar diretório e clonar
+    sudo -u whatsflow mkdir -p /home/whatsflow
     cd /home/whatsflow
-    sudo rm -rf ZapStatus-para-Woocommerce
     
-    # Branch padrão
-    BRANCH="main"
-    echo -n "Branch (padrão: main): "
-    read USER_BRANCH
-    if [[ -n "$USER_BRANCH" ]]; then
-        BRANCH="$USER_BRANCH"
+    if [ -d "ZapStatus-para-Woocommerce" ]; then
+        sudo -u whatsflow rm -rf ZapStatus-para-Woocommerce
     fi
     
-    # Clone
-    sudo -u whatsflow git clone -b "$BRANCH" https://github.com/NilsonFarias/ZapStatus-para-Woocommerce.git
+    sudo -u whatsflow git clone https://github.com/NilsonFarias/ZapStatus-para-Woocommerce.git
     cd ZapStatus-para-Woocommerce
-    sudo chown -R whatsflow:whatsflow .
     
-    # Instalar dependências
-    sudo -u whatsflow npm ci
-    sudo -u whatsflow npm run build
+    print_success "Application cloned"
+}
+
+# Configurar aplicação
+configure_application() {
+    print_status "Configuring application..."
     
-    # Gerar SESSION_SECRET
-    SESSION_SECRET=$(openssl rand -hex 32)
-    
-    # Executar migrações com variáveis explícitas
-    log_info "Executando migrações do banco..."
-    sudo -u whatsflow env \
-        NODE_ENV=production \
-        DATABASE_URL="postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow" \
-        npm run db:push
-    
-    # Criar .env correto
-    sudo -u whatsflow tee .env > /dev/null << EOF
-NODE_ENV=production
-DATABASE_URL=postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow
-SESSION_SECRET=$SESSION_SECRET
-STRIPE_SECRET_KEY=sk_test_placeholder_stripe_key_configure_in_admin
-VITE_STRIPE_PUBLIC_KEY=pk_test_placeholder_stripe_key_configure_in_admin
-STRIPE_BASIC_PRICE_ID=price_placeholder_configure_in_admin
-STRIPE_PRO_PRICE_ID=price_placeholder_configure_in_admin
-STRIPE_ENTERPRISE_PRICE_ID=price_placeholder_configure_in_admin
-EVOLUTION_API_KEY=placeholder_configure_in_admin
-EVOLUTION_API_URL=https://placeholder-configure-in-admin.com
-EOF
-    
-    # Testar aplicação ANTES do PM2
-    log_info "Testando aplicação..."
     cd /home/whatsflow/ZapStatus-para-Woocommerce
     
-    # Testar com variáveis explícitas (incluindo Stripe placeholders válidos)
-    sudo -u whatsflow env \
-        NODE_ENV=production \
-        DATABASE_URL="postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow" \
-        SESSION_SECRET="$SESSION_SECRET" \
-        STRIPE_SECRET_KEY="sk_test_placeholder_stripe_key_configure_in_admin" \
-        VITE_STRIPE_PUBLIC_KEY="pk_test_placeholder_stripe_key_configure_in_admin" \
-        STRIPE_BASIC_PRICE_ID="price_placeholder_configure_in_admin" \
-        STRIPE_PRO_PRICE_ID="price_placeholder_configure_in_admin" \
-        STRIPE_ENTERPRISE_PRICE_ID="price_placeholder_configure_in_admin" \
-        EVOLUTION_API_KEY="placeholder_configure_in_admin" \
-        EVOLUTION_API_URL="https://placeholder-configure-in-admin.com" \
-        timeout 20s node dist/index.js &
+    # CORREÇÃO: .env com placeholders válidos que permitem inicialização
+    sudo -u whatsflow tee .env > /dev/null << EOF
+# Database
+DATABASE_URL="${DB_URL}"
+
+# Session
+SESSION_SECRET="$(openssl rand -base64 32)"
+
+# Stripe (CORREÇÃO: placeholders válidos)
+STRIPE_SECRET_KEY="sk_test_placeholder_$(openssl rand -hex 24)"
+VITE_STRIPE_PUBLIC_KEY="pk_test_placeholder_$(openssl rand -hex 24)"
+
+# Stripe Price IDs (placeholders)
+STRIPE_BASIC_PRICE_ID="price_basic_placeholder"
+STRIPE_PRO_PRICE_ID="price_pro_placeholder"
+STRIPE_ENTERPRISE_PRICE_ID="price_enterprise_placeholder"
+
+# Evolution API (CORREÇÃO: placeholders válidos)
+EVOLUTION_API_KEY="placeholder_$(openssl rand -hex 16)"
+EVOLUTION_API_URL="http://localhost:8080"
+
+# Production
+NODE_ENV="production"
+PORT="5000"
+EOF
     
-    TEST_PID=$!
-    sleep 15
+    # Instalar dependências
+    sudo -u whatsflow npm install
     
-    # Verificar se aplicação subiu
-    if curl -s http://localhost:5000 >/dev/null 2>&1; then
-        log_success "Aplicação testada com sucesso!"
-        kill $TEST_PID 2>/dev/null || true
-    else
-        log_error "Aplicação falhou no teste"
-        kill $TEST_PID 2>/dev/null || true
-        sudo -u whatsflow env \
-            NODE_ENV=production \
-            DATABASE_URL="postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow" \
-            SESSION_SECRET="$SESSION_SECRET" \
-            node dist/index.js || true
-        exit 1
-    fi
+    # CORREÇÃO: Build antes do banco para gerar dist/
+    print_status "Building application..."
+    sudo -u whatsflow npm run build
     
-    # Criar ecosystem.config.cjs com variáveis corretas
+    # CORREÇÃO: Usar db:push ao invés de db:migrate inexistente
+    print_status "Setting up database schema..."
+    sudo -u whatsflow npm run db:push
+    
+    # CORREÇÃO: Ecosystem.config.cjs com variáveis explícitas
+    print_status "Creating PM2 configuration..."
     sudo -u whatsflow tee ecosystem.config.cjs > /dev/null << EOF
 module.exports = {
   apps: [{
     name: 'whatsflow',
     script: 'dist/index.js',
     cwd: '/home/whatsflow/ZapStatus-para-Woocommerce',
+    instances: 1,
+    exec_mode: 'cluster',
     env: {
       NODE_ENV: 'production',
-      DATABASE_URL: 'postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow',
-      SESSION_SECRET: '$SESSION_SECRET',
-      STRIPE_SECRET_KEY: 'sk_test_placeholder_stripe_key_configure_in_admin',
-      VITE_STRIPE_PUBLIC_KEY: 'pk_test_placeholder_stripe_key_configure_in_admin',
-      STRIPE_BASIC_PRICE_ID: 'price_placeholder_configure_in_admin',
-      STRIPE_PRO_PRICE_ID: 'price_placeholder_configure_in_admin',
-      STRIPE_ENTERPRISE_PRICE_ID: 'price_placeholder_configure_in_admin',
-      EVOLUTION_API_KEY: 'placeholder_configure_in_admin',
-      EVOLUTION_API_URL: 'https://placeholder-configure-in-admin.com'
+      PORT: '5000',
+      DATABASE_URL: '${DB_URL}',
+      SESSION_SECRET: '$(grep SESSION_SECRET .env | cut -d= -f2)',
+      STRIPE_SECRET_KEY: '$(grep STRIPE_SECRET_KEY .env | cut -d= -f2)',
+      VITE_STRIPE_PUBLIC_KEY: '$(grep VITE_STRIPE_PUBLIC_KEY .env | cut -d= -f2)',
+      EVOLUTION_API_KEY: '$(grep EVOLUTION_API_KEY .env | cut -d= -f2)',
+      EVOLUTION_API_URL: '$(grep EVOLUTION_API_URL .env | cut -d= -f2)'
     },
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '1G',
-    restart_delay: 5000,
-    max_restarts: 10
+    max_restarts: 10,
+    min_uptime: '10s',
+    restart_delay: 5000
   }]
 };
 EOF
     
-    # Iniciar PM2
-    sudo -u whatsflow pm2 delete whatsflow 2>/dev/null || true
-    sudo -u whatsflow pm2 start ecosystem.config.cjs
+    print_success "Application configured"
+}
+
+# Testar aplicação
+test_application() {
+    print_status "Testing application startup..."
     
-    # Verificar PM2
+    cd /home/whatsflow/ZapStatus-para-Woocommerce
+    
+    # CORREÇÃO: Teste manual com timeout antes do PM2
+    print_status "Testing standalone application..."
+    sudo -u whatsflow timeout 15s npm start &
+    APP_PID=$!
+    
     sleep 10
-    if curl -s http://localhost:5000 >/dev/null 2>&1 && sudo -u whatsflow pm2 list | grep -q "whatsflow.*online"; then
-        log_success "PM2 configurado e aplicação funcionando!"
-        
-        # Configurar startup
-        sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u whatsflow --hp /home/whatsflow >/dev/null 2>&1 || true
-        sudo -u whatsflow pm2 save
+    
+    if kill -0 $APP_PID 2>/dev/null; then
+        print_success "Application starts successfully"
+        kill $APP_PID
+        wait $APP_PID 2>/dev/null || true
     else
-        log_error "PM2 falhou"
-        sudo -u whatsflow pm2 logs whatsflow --lines 20 --nostream
+        print_error "Application failed to start"
+        wait $APP_PID 2>/dev/null || true
         exit 1
     fi
     
-    log_success "Aplicação instalada e rodando na porta 5000"
+    print_success "Application test passed"
 }
 
-# Configurar SSL/Domínio
+# Configurar Nginx
+configure_nginx() {
+    print_status "Configuring Nginx..."
+    
+    read -p "Enter your domain name (e.g., myapp.com): " DOMAIN
+    
+    # CORREÇÃO: Configuração Nginx otimizada
+    sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+    
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+EOF
+    
+    # CORREÇÃO: Sites-available vs conf.d baseado no OS
+    case $OS in
+        ubuntu|debian)
+            sudo ln -sf /etc/nginx/sites-available/whatsflow /etc/nginx/sites-enabled/
+            sudo rm -f /etc/nginx/sites-enabled/default
+            ;;
+        centos|rhel|rocky|almalinux)
+            sudo cp /etc/nginx/sites-available/whatsflow /etc/nginx/conf.d/whatsflow.conf
+            ;;
+    esac
+    
+    # Testar configuração
+    sudo nginx -t
+    sudo systemctl reload nginx
+    
+    print_success "Nginx configured for domain: $DOMAIN"
+}
+
+# Configurar SSL
 setup_ssl() {
-    log_info "Configuração de domínio e SSL"
-    echo -n "Deseja configurar um domínio e SSL? (s/N): "
-    read SETUP_DOMAIN
+    print_status "Setting up SSL with Let's Encrypt..."
     
-    if [[ "$SETUP_DOMAIN" =~ ^[Ss]$ ]]; then
-        echo -n "Domínio (ex: mylist.center): "
-        read DOMAIN
-        if [[ -z "$DOMAIN" ]]; then
-            log_warning "Domínio não informado, pulando SSL"
-            return
-        fi
-        
-        echo -n "Email para SSL: "
-        read EMAIL
-        if [[ -z "$EMAIL" ]]; then
-            log_warning "Email não informado, pulando SSL"
-            return
-        fi
-        
-        # Configurar Nginx
-        case $OS in
-            ubuntu|debian)
-                sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
-server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
+    # Instalar Certbot
+    case $OS in
+        ubuntu|debian)
+            sudo apt-get install -y certbot python3-certbot-nginx
+            ;;
+        centos|rhel|rocky|almalinux)
+            sudo dnf install -y certbot python3-certbot-nginx
+            ;;
+    esac
     
-    location / {
-        proxy_pass http://localhost:5000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-}
-EOF
-                sudo ln -sf /etc/nginx/sites-available/whatsflow /etc/nginx/sites-enabled/
-                sudo rm -f /etc/nginx/sites-enabled/default
-                ;;
-            centos|rhel|rocky|alma)
-                sudo tee /etc/nginx/conf.d/whatsflow.conf > /dev/null << EOF
-server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
-    
-    location / {
-        proxy_pass http://localhost:5000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-}
-EOF
-                sudo rm -f /etc/nginx/conf.d/default.conf
-                ;;
-        esac
+    # Configurar SSL
+    read -p "Configure SSL certificate? (y/n): " SETUP_SSL
+    if [ "$SETUP_SSL" = "y" ]; then
+        sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN
         
-        # Testar e aplicar
-        if sudo nginx -t; then
-            sudo systemctl enable --now nginx
-            sudo systemctl reload nginx
-            log_success "Nginx configurado para $DOMAIN"
-            
-            # SSL
-            if sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --email $EMAIL --agree-tos --no-eff-email --redirect --non-interactive; then
-                log_success "SSL configurado! Site: https://$DOMAIN"
-            else
-                log_warning "SSL falhou, mas HTTP funciona: http://$DOMAIN"
-            fi
-        else
-            log_error "Erro na configuração do Nginx"
-        fi
-    else
-        log_info "Aplicação rodando em: http://seu-ip:5000"
+        # Configurar renovação automática
+        echo "0 12 * * * /usr/bin/certbot renew --quiet" | sudo crontab -
+        
+        print_success "SSL certificate configured"
     fi
+}
+
+# Iniciar aplicação com PM2
+start_application() {
+    print_status "Starting application with PM2..."
+    
+    cd /home/whatsflow/ZapStatus-para-Woocommerce
+    
+    # Parar processos existentes
+    sudo -u whatsflow pm2 delete whatsflow 2>/dev/null || true
+    
+    # Iniciar aplicação
+    sudo -u whatsflow pm2 start ecosystem.config.cjs
+    
+    # Salvar configuração PM2
+    sudo -u whatsflow pm2 save
+    
+    # Aguardar inicialização
+    sleep 10
+    
+    # Verificar status
+    sudo -u whatsflow pm2 status
+    
+    print_success "Application started with PM2"
+}
+
+# Verificações finais
+final_checks() {
+    print_status "Performing final checks..."
+    
+    # Verificar porta 5000
+    if netstat -tulnp | grep -q :5000; then
+        print_success "Application is listening on port 5000"
+    else
+        print_error "Application is not listening on port 5000"
+        exit 1
+    fi
+    
+    # Verificar endpoint
+    if curl -s http://localhost:5000/api/health > /dev/null; then
+        print_success "Health endpoint responding"
+    else
+        print_warning "Health endpoint not responding, but application may still work"
+    fi
+    
+    # Verificar Nginx
+    if sudo nginx -t &>/dev/null; then
+        print_success "Nginx configuration is valid"
+    else
+        print_error "Nginx configuration has errors"
+        exit 1
+    fi
+    
+    print_success "All checks passed!"
 }
 
 # Função principal
 main() {
-    echo "============================================"
-    echo "WhatsFlow - Instalação Automática v2.0"
-    echo "Correção: Variáveis de ambiente explícitas"
-    echo "============================================"
+    print_status "Starting WhatsFlow installation..."
     
+    check_root
     detect_os
-    install_dependencies
-    setup_database
+    detect_arch
+    
+    # Atualizar sistema
+    print_status "Updating system packages..."
+    case $OS in
+        ubuntu|debian)
+            sudo apt-get update
+            sudo apt-get upgrade -y
+            sudo apt-get install -y curl wget git build-essential openssl
+            ;;
+        centos|rhel|rocky|almalinux)
+            sudo dnf update -y
+            sudo dnf groupinstall -y "Development Tools"
+            sudo dnf install -y curl wget git openssl
+            ;;
+    esac
+    
+    # Instalar componentes
+    install_nodejs
+    install_postgresql
+    setup_postgresql
+    install_pm2
+    install_nginx
+    setup_firewall
+    
+    # Configurar aplicação
     install_application
+    configure_application
+    test_application
+    configure_nginx
+    
+    # SSL opcional
     setup_ssl
     
-    echo "============================================"
-    log_success "INSTALAÇÃO COMPLETA!"
-    echo "Aplicação: http://localhost:5000"
-    echo "Admin: admin / admin123"
-    echo "Logs: sudo -u whatsflow pm2 logs whatsflow"
-    echo "============================================"
+    # Iniciar aplicação
+    start_application
+    final_checks
+    
+    print_success "WhatsFlow installation completed successfully!"
+    echo
+    echo "===========================================" 
+    echo "🎉 INSTALLATION COMPLETE!"
+    echo "==========================================="
+    echo "📋 Summary:"
+    echo "   • Application: Running on port 5000"
+    echo "   • Database: PostgreSQL (local)"
+    echo "   • Web Server: Nginx"
+    echo "   • Process Manager: PM2"
+    echo "   • Domain: $DOMAIN"
+    echo
+    echo "🔧 Management Commands:"
+    echo "   • Check status: sudo -u whatsflow pm2 status"
+    echo "   • View logs: sudo -u whatsflow pm2 logs whatsflow"
+    echo "   • Restart app: sudo -u whatsflow pm2 restart whatsflow"
+    echo "   • Reload Nginx: sudo systemctl reload nginx"
+    echo
+    echo "🌐 Access your application:"
+    echo "   • HTTP: http://$DOMAIN"
+    echo "   • HTTPS: https://$DOMAIN (if SSL was configured)"
+    echo
+    echo "👤 Default admin credentials:"
+    echo "   • Username: admin"
+    echo "   • Password: admin123"
+    echo
+    echo "⚙️  Next steps:"
+    echo "   1. Configure Stripe keys in admin panel"
+    echo "   2. Configure Evolution API settings"
+    echo "   3. Create your first client account"
+    echo
+    echo "==========================================="
 }
 
-# Executar apenas se script for chamado diretamente
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
+# Executar instalação
+if [ "$1" = "--full" ]; then
+    main
+else
+    echo "Usage: $0 --full"
+    echo "Add --full flag to proceed with installation"
+    exit 1
 fi

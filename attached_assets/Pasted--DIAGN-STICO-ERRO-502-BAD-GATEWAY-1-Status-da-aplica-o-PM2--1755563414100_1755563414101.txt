@@ -1,0 +1,92 @@
+=== DIAGNÓSTICO ERRO 502 BAD GATEWAY ===
+
+1. Status da aplicação PM2:
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ whatsflow          │ cluster  │ 153  │ online    │ 100%     │ 54.8mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+
+2. Status da porta 5000:
+ERRO: Porta 5000 não está em uso
+
+3. Status do Nginx:
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled; vendor preset: enabled)
+     Active: active (running) since Mon 2025-08-18 23:56:33 UTC; 33min ago
+       Docs: man:nginx(8)
+    Process: 59483 ExecReload=/usr/sbin/nginx -g daemon on; master_process on; -s reload (code=exited, status=0/SUCCESS)
+   Main PID: 4582 (nginx)
+      Tasks: 3 (limit: 4492)
+     Memory: 6.0M
+        CPU: 264ms
+     CGroup: /system.slice/nginx.service
+             ├─ 4582 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"
+             ├─59484 "nginx: worker process" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+             └─59485 "nginx: worker process" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+
+Aug 18 23:56:33 ubuntu-4gb-hel1-2 systemd[1]: Starting A high performance web server and a reverse proxy server...
+Aug 18 23:56:33 ubuntu-4gb-hel1-2 systemd[1]: Started A high performance web server and a reverse proxy server.
+Aug 19 00:01:03 ubuntu-4gb-hel1-2 systemd[1]: Reloading A high performance web server and a reverse proxy server...
+Aug 19 00:01:03 ubuntu-4gb-hel1-2 systemd[1]: Reloaded A high performance web server and a reverse proxy server.
+Aug 19 00:27:08 ubuntu-4gb-hel1-2 systemd[1]: Reloading A high performance web server and a reverse proxy server...
+Aug 19 00:27:08 ubuntu-4gb-hel1-2 systemd[1]: Reloaded A high performance web server and a reverse proxy server.
+
+4. Teste de conectividade local:
+*   Trying 127.0.0.1:5000...
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* connect to 127.0.0.1 port 5000 failed: Connection refused
+*   Trying ::1:5000...
+* connect to ::1 port 5000 failed: Connection refused
+* Failed to connect to localhost port 5000 after 1 ms: Connection refused
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+* Closing connection 0
+curl: (7) Failed to connect to localhost port 5000 after 1 ms: Connection refused
+
+5. Logs do Nginx (últimas 20 linhas):
+2025/08/19 00:20:35 [error] 10923#10923: *36 connect() failed (111: Unknown error) while connecting to upstream, client: 104.252.191.40, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "mylist.center"
+2025/08/19 00:21:02 [error] 10923#10923: *39 connect() failed (111: Unknown error) while connecting to upstream, client: 103.4.250.244, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:5000/", host: "mylist.center"
+2025/08/19 00:21:02 [error] 10923#10923: *39 connect() failed (111: Unknown error) while connecting to upstream, client: 103.4.250.244, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "mylist.center"
+2025/08/19 00:21:45 [error] 10924#10924: *43 connect() failed (111: Unknown error) while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:5000/", host: "mylist.center"
+2025/08/19 00:21:45 [error] 10924#10924: *43 connect() failed (111: Unknown error) while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "mylist.center"
+2025/08/19 00:21:45 [error] 10924#10924: *43 no live upstreams while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET /favicon.ico HTTP/1.1", upstream: "http://localhost/favicon.ico", host: "mylist.center", referrer: "https://mylist.center/"
+2025/08/19 00:21:52 [error] 10923#10923: *48 connect() failed (111: Unknown error) while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:5000/", host: "www.mylist.center"
+2025/08/19 00:21:52 [error] 10923#10923: *48 connect() failed (111: Unknown error) while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "www.mylist.center"
+2025/08/19 00:21:53 [error] 10923#10923: *48 no live upstreams while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET /favicon.ico HTTP/1.1", upstream: "http://localhost/favicon.ico", host: "www.mylist.center", referrer: "https://www.mylist.center/"
+2025/08/19 00:21:54 [error] 10923#10923: *48 no live upstreams while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://localhost/", host: "www.mylist.center"
+2025/08/19 00:21:54 [error] 10924#10924: *49 no live upstreams while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://localhost/", host: "www.mylist.center"
+2025/08/19 00:21:55 [error] 10923#10923: *52 no live upstreams while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://localhost/", host: "www.mylist.center"
+2025/08/19 00:21:55 [error] 10923#10923: *52 no live upstreams while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET /favicon.ico HTTP/1.1", upstream: "http://localhost/favicon.ico", host: "www.mylist.center", referrer: "https://www.mylist.center/"
+2025/08/19 00:24:46 [error] 10923#10923: *62 connect() failed (111: Unknown error) while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:5000/", host: "46.62.132.81"
+2025/08/19 00:24:46 [error] 10923#10923: *62 connect() failed (111: Unknown error) while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "46.62.132.81"
+2025/08/19 00:24:47 [error] 10923#10923: *62 no live upstreams while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET /favicon.ico HTTP/1.1", upstream: "http://localhost/favicon.ico", host: "46.62.132.81", referrer: "https://46.62.132.81/"
+2025/08/19 00:27:08 [notice] 59483#59483: signal process started
+2025/08/19 00:27:57 [error] 59485#59485: *65 connect() failed (111: Unknown error) while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "www.mylist.center"
+2025/08/19 00:27:57 [error] 59485#59485: *65 connect() failed (111: Unknown error) while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:5000/", host: "www.mylist.center"
+2025/08/19 00:27:57 [error] 59485#59485: *65 no live upstreams while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "GET /favicon.ico HTTP/1.1", upstream: "http://localhost/favicon.ico", host: "www.mylist.center", referrer: "https://www.mylist.center/"
+
+6. Logs da aplicação PM2 (últimas 20 linhas):
+[TAILING] Tailing last 20 lines for [whatsflow] process (change the value with --lines option)
+/root/.pm2/logs/whatsflow-error-0.log last 20 lines:
+/root/.pm2/logs/whatsflow-out-0.log last 20 lines:
+0|whatsflo |
+0|whatsflo | > rest-express@1.0.0 start
+0|whatsflo | > NODE_ENV=production node dist/index.js
+0|whatsflo |
+0|whatsflo |
+0|whatsflo | > rest-express@1.0.0 start
+0|whatsflo | > NODE_ENV=production node dist/index.js
+0|whatsflo |
+0|whatsflo |
+0|whatsflo | > rest-express@1.0.0 start
+0|whatsflo | > NODE_ENV=production node dist/index.js
+0|whatsflo |
+0|whatsflo |
+0|whatsflo | > rest-express@1.0.0 start
+0|whatsflo | > NODE_ENV=production node dist/index.js
+0|whatsflo |
+0|whatsflo |
+0|whatsflo | > rest-express@1.0.0 start
+0|whatsflo | > NODE_ENV=production node dist/index.js
+0|whatsflo |

@@ -15,8 +15,8 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Criar ecosystem.config.js
-cat > ecosystem.config.js << 'EOF'
+# Criar ecosystem.config.cjs (extensão .cjs para compatibilidade)
+cat > ecosystem.config.cjs << 'EOF'
 module.exports = {
   apps: [{
     name: 'whatsflow',
@@ -32,8 +32,8 @@ module.exports = {
 };
 EOF
 
-echo "Iniciando aplicação com ecosystem.config.js..."
-pm2 start ecosystem.config.js
+echo "Iniciando aplicação com ecosystem.config.cjs..."
+pm2 start ecosystem.config.cjs
 
 echo "Salvando configuração PM2..."
 pm2 save

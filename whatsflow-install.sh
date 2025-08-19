@@ -198,8 +198,8 @@ install_application() {
     log_info "Executando migrações..."
     npm run db:push
     
-    # Criar arquivo de configuração PM2
-    cat > ecosystem.config.js << 'EOF'
+    # Criar arquivo de configuração PM2 (extensão .cjs para compatibilidade)
+    cat > ecosystem.config.cjs << 'EOF'
 module.exports = {
   apps: [{
     name: 'whatsflow',
@@ -220,7 +220,7 @@ EOF
     
     # Iniciar aplicação com arquivo de configuração
     cd "$APP_DIR"
-    pm2 start ecosystem.config.js
+    pm2 start ecosystem.config.cjs
     
     # Verificar se aplicação subiu
     sleep 5

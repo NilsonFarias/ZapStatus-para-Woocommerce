@@ -1,13 +1,1 @@
-module.exports = {
-  apps: [{
-    name: 'whatsflow',
-    script: 'npm',
-    args: 'start',
-    cwd: '/home/whatsflow/ZapStatus-para-Woocommerce',
-    env_file: '.env',
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '1G'
-  }]
-};
+// Arquivo removido - usar ecosystem.config.cjs

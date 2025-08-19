@@ -1,116 +1,134 @@
 #!/bin/bash
-# Script para corrigir aplicação que não consegue iniciar na porta 5000
 
-echo "=== CORRIGINDO APLICAÇÃO QUE NÃO INICIA ==="
+# CORREÇÃO APLICAÇÃO - PM2 Aplicação está online mas Nginx não conecta
+# Execute como: bash fix-app.sh
+
+echo "=== CORRIGINDO APLICAÇÃO PM2 + NGINX ==="
 
 cd /home/whatsflow/ZapStatus-para-Woocommerce
 
-# 1. Parar PM2 completamente
 echo "1. Parando PM2..."
-pm2 delete all 2>/dev/null || true
-pm2 kill
+pm2 stop whatsflow
 
-# 2. Verificar se .env existe e tem DATABASE_URL
-echo "2. Verificando .env..."
-if [ ! -f .env ]; then
-    echo "ERRO: .env não encontrado. Criando..."
-    cp .env.example .env
-    # Configurar DATABASE_URL
-    read -p "Senha do PostgreSQL: " DB_PASSWORD
-    sed -i "s|DATABASE_URL=.*|DATABASE_URL=postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow|" .env
-    # Gerar SESSION_SECRET
-    SESSION_SECRET=$(openssl rand -base64 64 | tr -d '\n')
-    sed -i "s|SESSION_SECRET=.*|SESSION_SECRET=$SESSION_SECRET|" .env
-fi
+echo "2. Verificando arquivo .env..."
+source .env
 
-echo "Conteúdo do .env:"
-cat .env
+echo "3. Testando conexão com banco diretamente..."
+DATABASE_URL="$DATABASE_URL" node -e "
+const { neon } = require('@neondatabase/serverless');
+async function test() {
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+    await sql\`SELECT 1\`;
+    console.log('✅ Banco OK');
+  } catch(e) {
+    console.log('❌ Banco:', e.message);
+    process.exit(1);
+  }
+}
+test();
+"
 
-# 3. Testar se aplicação compila
-echo "3. Verificando build..."
-if [ ! -d "dist" ] || [ ! -f "dist/index.js" ]; then
-    echo "Rebuild necessário..."
-    npm run build
-fi
+echo "4. Aplicando migrações do banco..."
+DATABASE_URL="$DATABASE_URL" npm run db:push
 
-# 4. Verificar se consegue conectar no banco
-echo "4. Testando conexão com banco..."
-sudo -u postgres psql -c "\l" | grep whatsflow
-if [ $? -ne 0 ]; then
-    echo "ERRO: Banco whatsflow não encontrado!"
-    echo "Criando banco..."
-    sudo -u postgres createdb whatsflow
-    sudo -u postgres psql -c "CREATE USER whatsflow WITH ENCRYPTED PASSWORD 'JPN@22zk76';" 2>/dev/null || true
-    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE whatsflow TO whatsflow;"
-fi
-
-# 5. Executar migrações do banco
-echo "5. Executando migrações do banco..."
-npm run db:push
-
-# 6. Testar aplicação manualmente primeiro
-echo "6. Testando aplicação manualmente..."
-echo "Executando: NODE_ENV=production node dist/index.js"
-
-# Executar por 10 segundos para ver se inicia
-NODE_ENV=production timeout 10 node dist/index.js &
-PID=$!
-sleep 5
-
-# Verificar se processo ainda está rodando
-if kill -0 $PID 2>/dev/null; then
-    echo "✅ Aplicação iniciou com sucesso manualmente"
-    kill $PID
-    
-    # 5. Iniciar com PM2 usando ecosystem.config.cjs
-    echo "5. Iniciando com PM2..."
-    if [ ! -f ecosystem.config.cjs ]; then
-        echo "Criando ecosystem.config.cjs..."
-        cat > ecosystem.config.cjs << 'EOF'
+echo "5. Recriando ecosystem.config.cjs com bind correto..."
+cat > ecosystem.config.cjs << EOF
 module.exports = {
   apps: [{
     name: 'whatsflow',
-    script: 'npm',
-    args: 'start',
-    cwd: '/home/whatsflow/ZapStatus-para-Woocommerce',
-    env_file: '.env',
+    script: 'dist/index.js',
+    cwd: '$(pwd)',
     instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '1G',
-    restart_delay: 5000,
-    max_restarts: 5
+    exec_mode: 'cluster',
+    env: {
+      NODE_ENV: 'production',
+      PORT: '5000',
+      HOST: '0.0.0.0',
+      DATABASE_URL: '${DATABASE_URL}',
+      SESSION_SECRET: '${SESSION_SECRET}',
+      STRIPE_SECRET_KEY: '${STRIPE_SECRET_KEY:-sk_test_placeholder}',
+      VITE_STRIPE_PUBLIC_KEY: '${VITE_STRIPE_PUBLIC_KEY:-pk_test_placeholder}',
+      EVOLUTION_API_KEY: '${EVOLUTION_API_KEY:-placeholder}',
+      EVOLUTION_API_URL: '${EVOLUTION_API_URL:-http://localhost:8080}'
+    },
+    error_file: '/home/whatsflow/logs/err.log',
+    out_file: '/home/whatsflow/logs/out.log',
+    log_file: '/home/whatsflow/logs/combined.log',
+    max_restarts: 5,
+    min_uptime: '10s',
+    restart_delay: 3000
   }]
 };
 EOF
-    fi
-    
-    pm2 start ecosystem.config.cjs
-    sleep 10
-    
-    # Verificar se está rodando
-    if pm2 list | grep -q "whatsflow.*online"; then
-        echo "✅ PM2 iniciado com sucesso"
-        
-        # Testar porta 5000
-        sleep 5
-        if curl -s http://localhost:5000 > /dev/null; then
-            echo "✅ Aplicação respondendo na porta 5000"
-            pm2 save
-        else
-            echo "❌ Aplicação não responde na porta 5000"
-            pm2 logs whatsflow --lines 10 --nostream
-        fi
-    else
-        echo "❌ PM2 falhou ao iniciar"
-        pm2 logs whatsflow --lines 20 --nostream
-    fi
+
+echo "6. Criando diretório de logs..."
+mkdir -p /home/whatsflow/logs
+
+echo "7. Testando aplicação standalone por 15 segundos..."
+timeout 15s DATABASE_URL="$DATABASE_URL" SESSION_SECRET="$SESSION_SECRET" node dist/index.js &
+TEST_PID=$!
+
+sleep 8
+
+# Verificar se responde
+echo "Testando localhost:5000..."
+if curl -s http://localhost:5000/api/health > /dev/null; then
+    echo "✅ Aplicação responde em standalone"
+    kill $TEST_PID 2>/dev/null || true
+    wait $TEST_PID 2>/dev/null || true
 else
-    echo "❌ Aplicação falhou ao iniciar manualmente"
+    echo "❌ Aplicação NÃO responde em standalone"
+    kill $TEST_PID 2>/dev/null || true
+    wait $TEST_PID 2>/dev/null || true
     echo "Verificando logs de erro..."
-    wait $PID
+    echo "PROBLEMA: Aplicação não inicia corretamente"
+    exit 1
 fi
 
-echo "Status final:"
-pm2 list
-netstat -tlnp | grep :5000 || echo "Porta 5000 não está em uso"
+echo "8. Iniciando com PM2..."
+pm2 delete whatsflow 2>/dev/null || true
+pm2 start ecosystem.config.cjs
+
+echo "Aguardando 10 segundos..."
+sleep 10
+
+echo "9. Verificando status PM2..."
+pm2 status whatsflow
+
+echo "10. Testando conectividade após PM2..."
+if curl -s http://localhost:5000/api/health; then
+    echo "✅ Aplicação responde via PM2"
+else
+    echo "❌ Aplicação NÃO responde via PM2"
+    echo "Logs PM2:"
+    pm2 logs whatsflow --lines 10 --nostream
+    exit 1
+fi
+
+echo "11. Verificando bind da porta 5000..."
+netstat -tulnp | grep :5000
+
+echo "12. Testando conectividade nginx -> app..."
+if curl -s -H "Host: mylist.center" http://127.0.0.1:5000/api/health; then
+    echo "✅ Nginx pode conectar na aplicação"
+else
+    echo "❌ Nginx NÃO consegue conectar"
+fi
+
+echo "13. Recarregando nginx..."
+sudo systemctl reload nginx
+
+echo "14. Teste final do site..."
+if curl -s https://mylist.center/api/health; then
+    echo "✅ SITE FUNCIONANDO!"
+else
+    echo "⚠️ Site ainda com problemas, mas aplicação local OK"
+    echo "Nginx pode precisar de ajuste na configuração"
+fi
+
+echo
+echo "=== APLICAÇÃO CORRIGIDA ==="
+echo "Status: PM2 online e respondendo localmente"
+echo "Para monitorar: pm2 logs whatsflow --follow"
+echo "Para status: pm2 status"

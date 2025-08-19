@@ -1,0 +1,224 @@
+whatsflow@ubuntu-4gb-hel1-2:~/ZapStatus-para-Woocommerce$ cd /home/whatsflow/ZapStatus-para-Woocommerce
+whatsflow@ubuntu-4gb-hel1-2:~/ZapStatus-para-Woocommerce$ bash diagnose-502.sh
+=== DIAGNÓSTICO ERRO 502 BAD GATEWAY ===
+
+1. Status da aplicação PM2:
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ whatsflow          │ cluster  │ 0    │ online    │ 0%       │ 97.7mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+
+2. Status da porta 5000:
+tcp        0      0 0.0.0.0:5000            0.0.0.0:*               LISTEN      6133/PM2 v6.0.8: Go
+
+3. Status do Nginx:
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled; vendor preset: enabled)
+     Active: active (running) since Tue 2025-08-19 00:53:09 UTC; 16h ago
+       Docs: man:nginx(8)
+    Process: 26695 ExecReload=/usr/sbin/nginx -g daemon on; master_process on; -s reload (code=exited, status=0/SUCCESS)
+   Main PID: 4552 (nginx)
+      Tasks: 3 (limit: 4492)
+     Memory: 6.4M
+        CPU: 3.845s
+     CGroup: /system.slice/nginx.service
+             ├─ 4552 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"
+             ├─26696 "nginx: worker process" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+             └─26697 "nginx: worker process" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+
+Aug 19 00:53:09 ubuntu-4gb-hel1-2 systemd[1]: Starting A high performance web server and a reverse proxy server...
+Aug 19 00:53:09 ubuntu-4gb-hel1-2 systemd[1]: Started A high performance web server and a reverse proxy server.
+Aug 19 01:48:04 ubuntu-4gb-hel1-2 systemd[1]: Reloading A high performance web server and a reverse proxy server...
+Aug 19 01:48:04 ubuntu-4gb-hel1-2 systemd[1]: Reloaded A high performance web server and a reverse proxy server.
+Aug 19 17:05:40 ubuntu-4gb-hel1-2 systemd[1]: Reloading A high performance web server and a reverse proxy server...
+Aug 19 17:05:40 ubuntu-4gb-hel1-2 systemd[1]: Reloaded A high performance web server and a reverse proxy server.
+
+4. Teste de conectividade local:
+*   Trying 127.0.0.1:5000...
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Connected to localhost (127.0.0.1) port 5000 (#0)
+> GET / HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/7.81.0
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< X-Powered-By: Express
+< Accept-Ranges: bytes
+< Cache-Control: public, max-age=0
+< Last-Modified: Tue, 19 Aug 2025 01:46:56 GMT
+< ETag: W/"893-198c0020d3d"
+< Content-Type: text/html; charset=UTF-8
+< Content-Length: 2195
+< Date: Tue, 19 Aug 2025 17:07:28 GMT
+< Connection: keep-alive
+
+5. Logs do Nginx (últimas 20 linhas):
+2025/08/19 14:28:02 [error] 11626#11626: *4158 connect() failed (111: Unknown error) while connecting to upstream, client: 134.122.35.230, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "www.mylist.center"
+2025/08/19 14:28:04 [crit] 11626#11626: *4170 SSL_do_handshake() failed (SSL: error:0A00006C:SSL routines::bad key share) while SSL handshaking, client: 134.122.35.230, server: 0.0.0.0:443
+2025/08/19 14:28:05 [error] 11626#11626: *4171 no live upstreams while connecting to upstream, client: 134.122.35.230, server: mylist.center, request: "GET /favicon.ico HTTP/1.1", upstream: "http://localhost/favicon.ico", host: "www.mylist.center", referrer: "https://www.mylist.center/"
+2025/08/19 14:57:52 [error] 11626#11626: *4182 connect() failed (111: Unknown error) while connecting to upstream, client: 45.156.128.43, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:5000/", host: "46.62.132.81"
+2025/08/19 14:57:52 [error] 11626#11626: *4182 connect() failed (111: Unknown error) while connecting to upstream, client: 45.156.128.43, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "46.62.132.81"
+2025/08/19 15:26:29 [error] 11626#11626: *4201 connect() failed (111: Unknown error) while connecting to upstream, client: 133.242.174.119, server: mylist.center, request: "GET /robots.txt HTTP/1.1", upstream: "http://127.0.0.1:5000/robots.txt", host: "mylist.center"
+2025/08/19 15:26:29 [error] 11626#11626: *4201 connect() failed (111: Unknown error) while connecting to upstream, client: 133.242.174.119, server: mylist.center, request: "GET /robots.txt HTTP/1.1", upstream: "http://[::1]:5000/robots.txt", host: "mylist.center"
+2025/08/19 15:52:16 [error] 11626#11626: *4449 connect() failed (111: Unknown error) while connecting to upstream, client: 154.26.136.129, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:5000/", host: "mylist.center"
+2025/08/19 15:52:16 [error] 11626#11626: *4449 connect() failed (111: Unknown error) while connecting to upstream, client: 154.26.136.129, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "mylist.center"
+2025/08/19 16:24:14 [error] 11626#11626: *4460 connect() failed (111: Unknown error) while connecting to upstream, client: 43.130.74.193, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:5000/", host: "mylist.center", referrer: "http://mylist.center"
+2025/08/19 16:24:14 [error] 11626#11626: *4460 connect() failed (111: Unknown error) while connecting to upstream, client: 43.130.74.193, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "mylist.center", referrer: "http://mylist.center"
+2025/08/19 16:37:47 [error] 11626#11626: *4468 connect() failed (111: Unknown error) while connecting to upstream, client: 34.41.146.37, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:5000/", host: "www.mylist.center", referrer: "http://www.mylist.center"
+2025/08/19 16:37:47 [error] 11626#11626: *4468 connect() failed (111: Unknown error) while connecting to upstream, client: 34.41.146.37, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "www.mylist.center", referrer: "http://www.mylist.center"
+2025/08/19 16:37:47 [error] 11626#11626: *4469 no live upstreams while connecting to upstream, client: 34.41.146.37, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://localhost/", host: "mylist.center", referrer: "http://mylist.center"
+2025/08/19 16:49:56 [error] 11626#11626: *4472 connect() failed (111: Unknown error) while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "POST /api/auth/register HTTP/1.1", upstream: "http://127.0.0.1:5000/api/auth/register", host: "mylist.center", referrer: "https://mylist.center/register"
+2025/08/19 16:49:56 [error] 11626#11626: *4472 connect() failed (111: Unknown error) while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "POST /api/auth/register HTTP/1.1", upstream: "http://[::1]:5000/api/auth/register", host: "mylist.center", referrer: "https://mylist.center/register"
+2025/08/19 16:50:02 [error] 11626#11626: *4472 no live upstreams while connecting to upstream, client: 186.232.155.78, server: mylist.center, request: "POST /api/auth/register HTTP/1.1", upstream: "http://localhost/api/auth/register", host: "mylist.center", referrer: "https://mylist.center/register"
+2025/08/19 16:54:41 [error] 11626#11626: *4476 connect() failed (111: Unknown error) while connecting to upstream, client: 43.167.245.18, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:5000/", host: "www.mylist.center", referrer: "http://www.mylist.center"
+2025/08/19 16:54:41 [error] 11626#11626: *4476 connect() failed (111: Unknown error) while connecting to upstream, client: 43.167.245.18, server: mylist.center, request: "GET / HTTP/1.1", upstream: "http://[::1]:5000/", host: "www.mylist.center", referrer: "http://www.mylist.center"
+2025/08/19 17:05:40 [notice] 26695#26695: signal process started
+
+6. Logs da aplicação PM2 (últimas 20 linhas):
+[TAILING] Tailing last 20 lines for [whatsflow] process (change the value with --lines option)
+/home/whatsflow/.pm2/logs/whatsflow-out-0.log last 20 lines:
+0|whatsflo | Checking for pending messages at 2025-08-19T17:05:50.013Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-19T17:06:00.010Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-19T17:06:10.007Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-19T17:06:20.009Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-19T17:06:30.009Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-19T17:06:40.009Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-19T17:06:50.011Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-19T17:07:00.010Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-19T17:07:10.011Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-19T17:07:20.008Z
+0|whatsflo | Executing getAllQueuedMessages query...
+
+/home/whatsflow/.pm2/logs/whatsflow-error-0.log last 20 lines:
+0|whatsflo |       subjectaltname: 'DNS:mylist.center, DNS:www.mylist.center',
+0|whatsflo |       infoAccess: [Object: null prototype],
+0|whatsflo |       ca: false,
+0|whatsflo |       modulus: 'AE7D0461A92DC9B8AFFC5576482DAC0F02540C4361B7D3C22C091F07601F7FF6BA898A89052DCD21A68932C776A92A05EB8D907DF6A5488EF6154DCAA3EBAF251C582657E7D3C2EA482BE7EEF07DCA844912F81F5EB96BE55882F9CAD990F4A3775D7611F98851A909D6CC20A0A5E09B38467F50349254D6FDBBE4FA811C3C5D07F459C9245052608994B83A4B429F05DA9F8A27791418C1C864B610036A916CD8EE050B402FDC0BC4F42DCEDF1AAB7188912458E06EDF0338B8526B425032652777114D05F754A1A4815CE1033F09BBEF40D35EE5658F40C5470D73BF20BF1C7CF5138C26E422F5D945FC4101A725E675202685B47B1F982DEBEE9FC6BE354D',
+0|whatsflo |       bits: 2048,
+0|whatsflo |       exponent: '0x10001',
+0|whatsflo |       pubkey: <Buffer 30 82 01 22 30 0d 06 09 2a 86 48 86 f7 0d 01 01 01 05 00 03 82 01 0f 00 30 82 01 0a 02 82 01 01 00 ae 7d 04 61 a9 2d c9 b8 af fc 55 76 48 2d ac 0f 02 ... 244 more bytes>,
+0|whatsflo |       valid_from: 'Aug 19 00:49:46 2025 GMT',
+0|whatsflo |       valid_to: 'Nov 17 00:49:45 2025 GMT',
+0|whatsflo |       fingerprint: '89:E4:9F:5B:09:33:3E:FB:95:70:91:F8:BA:0A:5E:E0:D6:02:CC:59',
+0|whatsflo |       fingerprint256: '43:D2:4D:C0:54:CE:9E:12:AF:BF:90:44:C9:76:04:62:49:16:A6:DA:97:30:7F:AE:61:FE:F2:7A:EB:B7:03:A2',
+0|whatsflo |       fingerprint512: '96:21:FE:FB:57:2C:B8:86:0F:7E:01:E8:AB:31:A1:CC:ED:76:89:31:1A:D7:7C:98:43:2D:F3:A9:17:83:9C:84:33:9B:91:34:51:76:32:A7:B6:BB:25:54:C7:6D:7C:30:AE:0E:BC:E6:F6:75:E6:2A:CE:B7:8D:3E:2F:E1:15:BE',
+0|whatsflo |       ext_key_usage: [Array],
+0|whatsflo |       serialNumber: '05FC22E4446F4B6A323E4C19AA3143FD9BC3',
+0|whatsflo |       raw: <Buffer 30 82 05 0b 30 82 03 f3 a0 03 02 01 02 02 12 05 fc 22 e4 44 6f 4b 6a 32 3e 4c 19 aa 31 43 fd 9b c3 30 0d 06 09 2a 86 48 86 f7 0d 01 01 0b 05 00 30 33 ... 1245 more bytes>,
+0|whatsflo |       issuerCertificate: [Object]
+0|whatsflo |     }
+0|whatsflo |   },
+0|whatsflo |   [Symbol(kMessage)]: "Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:mylist.center, DNS:www.mylist.center"
+0|whatsflo | }
+
+
+7. Configuração Nginx ativa:
+=== /etc/nginx/sites-enabled/whatsflow ===
+server {
+    server_name mylist.center www.mylist.center;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/mylist.center/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/mylist.center/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+}
+server {
+    if ($host = www.mylist.center) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    if ($host = mylist.center) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name mylist.center www.mylist.center;
+    return 404; # managed by Certbot
+
+
+
+
+}
+8. Teste de sintaxe Nginx:
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+=== SOLUÇÕES POSSÍVEIS ===
+Se porta 5000 não estiver ativa:
+  cd /home/whatsflow/ZapStatus-para-Woocommerce
+  pm2 restart whatsflow
+
+Se Nginx tiver erro de configuração:
+  sudo nginx -t
+  sudo systemctl reload nginx
+
+whatsflow@ubuntu-4gb-hel1-2:~/ZapStatus-para-Woocommerce$ cd /home/whatsflow/ZapStatus-para-Woocommerce
+whatsflow@ubuntu-4gb-hel1-2:~/ZapStatus-para-Woocommerce$ bash quick-fix.sh
+=== CORREÇÃO RÁPIDA ===
+[PM2] Applying action deleteProcessId on app [all](ids: [ 0 ])
+[PM2] [whatsflow](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+Testando aplicação...
+file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:218
+      throw new Error(
+            ^
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at server/db.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:218:13)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at server/storage.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:239:5)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at server/routes.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:2992:5)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:3010:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:263:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:540:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v20.19.4
+❌ Aplicação falhou ao iniciar
+file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:218
+      throw new Error(
+            ^
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at server/db.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:218:13)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at server/storage.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:239:5)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at server/routes.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:2992:5)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:3010:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:263:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:540:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v20.19.4

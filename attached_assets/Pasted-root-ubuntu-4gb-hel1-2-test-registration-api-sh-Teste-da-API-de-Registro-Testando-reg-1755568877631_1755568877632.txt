@@ -1,0 +1,62 @@
+root@ubuntu-4gb-hel1-2:~# ./test-registration-api.sh
+=== Teste da API de Registro ===
+Testando registro com email: teste1755568814@example.com
+
+1. Tentando registro com dados completos:
+Note: Unnecessary use of -X or --request, POST is already inferred.
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000 (#0)
+> POST /api/auth/register HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/7.81.0
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 169
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 500 Internal Server Error
+< X-Powered-By: Express
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 38
+< ETag: W/"26-tBh2m1rRXkHFd8h5p9jJCFkHxdc"
+< Date: Tue, 19 Aug 2025 02:00:14 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+<
+* Connection #0 to host localhost left intact
+{"message":"Erro interno do servidor"}
+Status HTTP: 500
+
+----------------------------------------
+2. Tentando registro com dados mínimos:
+Note: Unnecessary use of -X or --request, POST is already inferred.
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000 (#0)
+> POST /api/auth/register HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/7.81.0
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 112
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 500 Internal Server Error
+< X-Powered-By: Express
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 38
+< ETag: W/"26-tBh2m1rRXkHFd8h5p9jJCFkHxdc"
+< Date: Tue, 19 Aug 2025 02:00:14 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+<
+* Connection #0 to host localhost left intact
+{"message":"Erro interno do servidor"}
+Status HTTP: 500
+
+----------------------------------------
+3. Verificando health check:
+{"status":"healthy","timestamp":"2025-08-19T02:00:14.567Z","uptime":775.329812369,"memory":{"rss":111267840,"heapTotal":33742848,"heapUsed":31254424,"external":4239014,"arrayBuffers":586687}}
+Status HTTP: 200
+
+=== Fim dos Testes ===
+Verifique os logs em tempo real com: sudo -u whatsflow pm2 logs whatsflow --follow

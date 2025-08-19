@@ -1,0 +1,38 @@
+ bash quick-fix.sh
+=== CORREÇÃO RÁPIDA ===
+Testando aplicação...
+file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:218
+      throw new Error(
+            ^
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at server/db.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:218:13)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at server/storage.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:239:5)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at server/routes.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:2980:5)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:2996:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7)
+
+Node.js v18.20.8
+❌ Aplicação falhou ao iniciar
+file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:218
+      throw new Error(
+            ^
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at server/db.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:218:13)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at server/storage.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:239:5)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at server/routes.ts (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:2980:5)
+    at __init (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:6:56)
+    at file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:2996:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7)
+
+Node.js v18.20.8

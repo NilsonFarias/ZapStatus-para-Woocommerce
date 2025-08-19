@@ -38,6 +38,18 @@ pm2 start ecosystem.config.cjs
 echo "Salvando configuração PM2..."
 pm2 save
 
+echo "Configurando PM2 startup automático..."
+STARTUP_CMD=$(pm2 startup systemd -u whatsflow --hp /home/whatsflow 2>&1 | grep "sudo env" || echo "")
+if [[ -n "$STARTUP_CMD" ]]; then
+    echo "Executando: $STARTUP_CMD"
+    eval "$STARTUP_CMD"
+    pm2 save
+    echo "PM2 startup configurado com sucesso!"
+else
+    echo "AVISO: PM2 startup não configurado automaticamente"
+    echo "Execute manualmente: sudo env PATH=\$PATH:/usr/bin pm2 startup systemd -u whatsflow --hp /home/whatsflow"
+fi
+
 echo "Status da aplicação:"
 pm2 list
 

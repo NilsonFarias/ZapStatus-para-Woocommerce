@@ -235,13 +235,27 @@ EOF
     
     # Auto-start PM2
     log_info "Configurando PM2 startup..."
+    
+    # Gerar comando de startup
     STARTUP_CMD=$(pm2 startup systemd -u whatsflow --hp /home/whatsflow 2>&1 | grep "sudo env" || echo "")
+    
     if [[ -n "$STARTUP_CMD" ]]; then
+        log_info "Executando configuração do PM2 startup..."
         eval "$STARTUP_CMD"
+        
+        # Salvar lista de processos PM2
         pm2 save
-        log_success "PM2 startup configurado"
+        
+        # Verificar se startup foi configurado
+        if systemctl is-enabled pm2-whatsflow >/dev/null 2>&1; then
+            log_success "PM2 startup configurado com sucesso"
+            log_info "Aplicação será reiniciada automaticamente após reboot"
+        else
+            log_warning "PM2 startup configurado, mas verificação falhou"
+        fi
     else
-        log_warning "PM2 startup não configurado automaticamente"
+        log_warning "Não foi possível configurar PM2 startup automaticamente"
+        log_info "Execute manualmente: sudo env PATH=\$PATH:/usr/bin pm2 startup systemd -u whatsflow --hp /home/whatsflow"
     fi
     
     log_success "Aplicação instalada"

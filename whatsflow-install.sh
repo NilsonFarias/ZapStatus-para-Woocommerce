@@ -194,12 +194,9 @@ install_application() {
     npm ci
     npm run build
     
-    # Executar migrações do banco
+    # Executar migrações do banco com variáveis explícitas
     log_info "Executando migrações..."
-    npm run db:push
-    
-    # Carregar variáveis do .env para ecosystem.config.cjs
-    source .env
+    env NODE_ENV=production DATABASE_URL="postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow" npm run db:push
     
     # Criar arquivo de configuração PM2 com variáveis explícitas
     cat > ecosystem.config.cjs << EOF
@@ -233,42 +230,90 @@ EOF
     # Parar PM2 anterior
     pm2 delete whatsflow 2>/dev/null || true
     
-    # Testar aplicação antes do PM2
+    # Testar aplicação antes do PM2 - carregando variáveis explicitamente
     log_info "Testando aplicação antes de iniciar PM2..."
     cd "$APP_DIR"
     
-    # Testar se aplicação funciona com variáveis carregadas
-    source .env
-    NODE_ENV=production node dist/index.js &
+    # Carregar variáveis do .env e testar com env explícito
+    export NODE_ENV=production
+    export DATABASE_URL="postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow"
+    export SESSION_SECRET=$(openssl rand -hex 32)
+    
+    # Testar aplicação com variáveis explícitas
+    env NODE_ENV="$NODE_ENV" DATABASE_URL="$DATABASE_URL" SESSION_SECRET="$SESSION_SECRET" node dist/index.js &
     TEST_PID=$!
     
     # Aguardar inicialização
-    sleep 10
+    sleep 15
     
     # Testar conectividade
     if curl -s http://localhost:5000 >/dev/null 2>&1; then
         log_success "Aplicação funcionando corretamente"
         kill $TEST_PID
         
+        # Atualizar .env com variáveis funcionais
+        cat > .env << EOF
+NODE_ENV=production
+DATABASE_URL=postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow
+SESSION_SECRET=$SESSION_SECRET
+STRIPE_SECRET_KEY=sk_test_
+VITE_STRIPE_PUBLIC_KEY=pk_test_
+STRIPE_BASIC_PRICE_ID=price_
+STRIPE_PRO_PRICE_ID=price_
+STRIPE_ENTERPRISE_PRICE_ID=price_
+EVOLUTION_API_KEY=your_evolution_api_key
+EVOLUTION_API_URL=your_evolution_api_url
+EOF
+        
+        # Recriar ecosystem.config.cjs com variáveis funcionais
+        cat > ecosystem.config.cjs << EOF
+module.exports = {
+  apps: [{
+    name: 'whatsflow',
+    script: 'dist/index.js',
+    cwd: '/home/whatsflow/ZapStatus-para-Woocommerce',
+    env: {
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgresql://whatsflow:$DB_PASSWORD@localhost:5432/whatsflow',
+      SESSION_SECRET: '$SESSION_SECRET',
+      STRIPE_SECRET_KEY: 'sk_test_',
+      VITE_STRIPE_PUBLIC_KEY: 'pk_test_',
+      STRIPE_BASIC_PRICE_ID: 'price_',
+      STRIPE_PRO_PRICE_ID: 'price_',
+      STRIPE_ENTERPRISE_PRICE_ID: 'price_',
+      EVOLUTION_API_KEY: 'your_evolution_api_key',
+      EVOLUTION_API_URL: 'your_evolution_api_url'
+    },
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    restart_delay: 5000,
+    max_restarts: 10
+  }]
+};
+EOF
+        
         # Iniciar com PM2
         log_info "Iniciando PM2..."
         pm2 start ecosystem.config.cjs
         
         # Verificar PM2
-        sleep 10
+        sleep 15
         if pm2 list | grep -q "whatsflow.*online" && curl -s http://localhost:5000 >/dev/null 2>&1; then
             log_success "PM2 iniciado e aplicação respondendo na porta 5000"
         else
             log_error "PM2 iniciado mas aplicação não responde na porta 5000"
             log_error "Logs do PM2:"
-            pm2 logs whatsflow --lines 10 --nostream
+            pm2 logs whatsflow --lines 20 --nostream
             return 1
         fi
     else
         log_error "Aplicação falhou no teste inicial"
         kill $TEST_PID 2>/dev/null
-        log_error "Erro na aplicação:"
-        NODE_ENV=production node dist/index.js || true
+        log_error "Erro na aplicação - variáveis não carregaram corretamente"
+        log_error "DATABASE_URL: $DATABASE_URL"
+        log_error "NODE_ENV: $NODE_ENV"
         return 1
     fi
     

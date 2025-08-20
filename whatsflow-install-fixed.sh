@@ -365,7 +365,14 @@ test_application() {
 configure_nginx() {
     print_status "Configuring Nginx..."
     
-    read -p "Enter your domain name (e.g., myapp.com): " DOMAIN
+    # Usar domínio padrão ou via parâmetro
+    if [ -z "$DOMAIN" ]; then
+        DOMAIN="localhost"
+        print_status "Using default domain: $DOMAIN"
+        print_status "You can change this later by editing /etc/nginx/sites-available/whatsflow"
+    else
+        print_status "Using domain: $DOMAIN"
+    fi
     
     # CORREÇÃO: Configuração Nginx otimizada
     sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
@@ -412,6 +419,12 @@ EOF
 setup_ssl() {
     print_status "Setting up SSL with Let's Encrypt..."
     
+    # Pular SSL se domínio for localhost ou IP
+    if [ "$DOMAIN" = "localhost" ] || [[ "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        print_warning "Skipping SSL configuration for localhost/IP: $DOMAIN"
+        return 0
+    fi
+    
     # Instalar Certbot
     case $OS in
         ubuntu|debian)
@@ -422,15 +435,14 @@ setup_ssl() {
             ;;
     esac
     
-    # Configurar SSL
-    read -p "Configure SSL certificate? (y/n): " SETUP_SSL
-    if [ "$SETUP_SSL" = "y" ]; then
-        sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN
-        
+    # Configurar SSL automaticamente (sem interação)
+    print_status "Attempting automatic SSL configuration..."
+    if sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN 2>/dev/null; then
         # Configurar renovação automática
         echo "0 12 * * * /usr/bin/certbot renew --quiet" | sudo crontab -
-        
-        print_success "SSL certificate configured"
+        print_success "SSL certificate configured automatically"
+    else
+        print_warning "SSL configuration failed or skipped. Site will use HTTP only."
     fi
 }
 

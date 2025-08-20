@@ -367,12 +367,22 @@ configure_nginx() {
     
     # Solicitar domínio sem timeout
     if [ -z "$DOMAIN" ]; then
-        echo -n "Enter your domain name (e.g., myapp.com) or press Enter for localhost: "
+        echo ""
+        echo "=========================================="
+        echo "DOMAIN CONFIGURATION"
+        echo "=========================================="
+        echo "Please enter your domain name (without http/https)"
+        echo "Examples: myapp.com, subdomain.example.com"
+        echo "Or press Enter to use 'localhost' for local testing"
+        echo ""
+        echo -n "Domain: "
         read DOMAIN
         
         if [ -z "$DOMAIN" ]; then
             DOMAIN="localhost"
             print_warning "No domain entered, using localhost"
+        else
+            print_status "Domain set to: $DOMAIN"
         fi
     fi
     
@@ -441,7 +451,15 @@ setup_ssl() {
     esac
     
     # Configurar SSL com confirmação
-    echo -n "Configure SSL certificate for $DOMAIN? (y/n) [y]: "
+    echo ""
+    echo "=========================================="
+    echo "SSL CERTIFICATE CONFIGURATION"
+    echo "=========================================="
+    echo "Domain: $DOMAIN"
+    echo "Do you want to configure SSL certificate?"
+    echo "This requires your domain to point to this server."
+    echo ""
+    echo -n "Configure SSL? (y/n) [default: y]: "
     read SETUP_SSL
     
     if [ -z "$SETUP_SSL" ]; then

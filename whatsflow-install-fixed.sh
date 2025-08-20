@@ -263,6 +263,37 @@ EOF
     print_status "Setting up database schema..."
     sudo -u whatsflow npm run db:push
     
+    # Criar usuário admin padrão
+    print_status "Creating default admin user..."
+    sudo -u whatsflow node -e "
+const { neon } = require('@neondatabase/serverless');
+const bcrypt = require('bcryptjs');
+async function createAdmin() {
+  try {
+    const sql = neon(process.env.DATABASE_URL || '${DB_URL}');
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    
+    // Verificar se admin já existe
+    const existing = await sql\`SELECT id FROM users WHERE email = 'admin@whatsflow.com'\`;
+    if (existing.length > 0) {
+      console.log('✅ Admin user already exists');
+      return;
+    }
+    
+    // Criar usuário admin
+    await sql\`
+      INSERT INTO users (email, password, name, role, plan, subscription_status)
+      VALUES ('admin@whatsflow.com', \${hashedPassword}, 'Administrator', 'admin', 'enterprise', 'active')
+    \`;
+    
+    console.log('✅ Admin user created: admin@whatsflow.com / admin123');
+  } catch(e) {
+    console.log('⚠️  Admin creation failed:', e.message);
+  }
+}
+createAdmin();
+"
+    
     # CORREÇÃO: Ecosystem.config.cjs com variáveis explícitas
     print_status "Creating PM2 configuration..."
     sudo -u whatsflow tee ecosystem.config.cjs > /dev/null << EOF
@@ -513,7 +544,7 @@ main() {
     echo "   • HTTPS: https://$DOMAIN (if SSL was configured)"
     echo
     echo "👤 Default admin credentials:"
-    echo "   • Username: admin"
+    echo "   • Email: admin@whatsflow.com"
     echo "   • Password: admin123"
     echo
     echo "⚙️  Next steps:"

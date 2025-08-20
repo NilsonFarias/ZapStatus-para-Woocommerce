@@ -365,10 +365,10 @@ test_application() {
 configure_nginx() {
     print_status "Configuring Nginx..."
     
-    # Solicitar domínio com timeout e fallback
+    # Solicitar domínio sem timeout
     if [ -z "$DOMAIN" ]; then
         echo -n "Enter your domain name (e.g., myapp.com) or press Enter for localhost: "
-        read -t 30 DOMAIN || DOMAIN=""
+        read DOMAIN
         
         if [ -z "$DOMAIN" ]; then
             DOMAIN="localhost"
@@ -442,7 +442,7 @@ setup_ssl() {
     
     # Configurar SSL com confirmação
     echo -n "Configure SSL certificate for $DOMAIN? (y/n) [y]: "
-    read -t 15 SETUP_SSL || SETUP_SSL="y"
+    read SETUP_SSL
     
     if [ -z "$SETUP_SSL" ]; then
         SETUP_SSL="y"

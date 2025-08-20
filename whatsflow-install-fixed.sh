@@ -365,14 +365,18 @@ test_application() {
 configure_nginx() {
     print_status "Configuring Nginx..."
     
-    # Usar domínio padrão ou via parâmetro
+    # Solicitar domínio com timeout e fallback
     if [ -z "$DOMAIN" ]; then
-        DOMAIN="localhost"
-        print_status "Using default domain: $DOMAIN"
-        print_status "You can change this later by editing /etc/nginx/sites-available/whatsflow"
-    else
-        print_status "Using domain: $DOMAIN"
+        echo -n "Enter your domain name (e.g., myapp.com) or press Enter for localhost: "
+        read -t 30 DOMAIN || DOMAIN=""
+        
+        if [ -z "$DOMAIN" ]; then
+            DOMAIN="localhost"
+            print_warning "No domain entered, using localhost"
+        fi
     fi
+    
+    print_status "Configuring for domain: $DOMAIN"
     
     # CORREÇÃO: Configuração Nginx otimizada
     sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
@@ -422,6 +426,7 @@ setup_ssl() {
     # Pular SSL se domínio for localhost ou IP
     if [ "$DOMAIN" = "localhost" ] || [[ "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         print_warning "Skipping SSL configuration for localhost/IP: $DOMAIN"
+        print_status "Site will be available at: http://$DOMAIN"
         return 0
     fi
     
@@ -435,14 +440,27 @@ setup_ssl() {
             ;;
     esac
     
-    # Configurar SSL automaticamente (sem interação)
-    print_status "Attempting automatic SSL configuration..."
-    if sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN 2>/dev/null; then
-        # Configurar renovação automática
-        echo "0 12 * * * /usr/bin/certbot renew --quiet" | sudo crontab -
-        print_success "SSL certificate configured automatically"
+    # Configurar SSL com confirmação
+    echo -n "Configure SSL certificate for $DOMAIN? (y/n) [y]: "
+    read -t 15 SETUP_SSL || SETUP_SSL="y"
+    
+    if [ -z "$SETUP_SSL" ]; then
+        SETUP_SSL="y"
+    fi
+    
+    if [ "$SETUP_SSL" = "y" ] || [ "$SETUP_SSL" = "Y" ]; then
+        print_status "Configuring SSL certificate..."
+        if sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN; then
+            # Configurar renovação automática
+            echo "0 12 * * * /usr/bin/certbot renew --quiet" | sudo crontab -
+            print_success "SSL certificate configured successfully"
+            print_status "Site will be available at: https://$DOMAIN"
+        else
+            print_warning "SSL configuration failed. Site will use HTTP only."
+            print_status "Site will be available at: http://$DOMAIN"
+        fi
     else
-        print_warning "SSL configuration failed or skipped. Site will use HTTP only."
+        print_status "SSL configuration skipped. Site will be available at: http://$DOMAIN"
     fi
 }
 

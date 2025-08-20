@@ -265,12 +265,17 @@ EOF
     
     # Criar usuário admin padrão
     print_status "Creating default admin user..."
-    sudo -u whatsflow node -e "
+    
+    # Carregar variáveis antes de criar admin
+    source .env
+    export DATABASE_URL
+    
+    sudo -u whatsflow -E node -e "
 const { neon } = require('@neondatabase/serverless');
 const bcrypt = require('bcryptjs');
 async function createAdmin() {
   try {
-    const sql = neon(process.env.DATABASE_URL || '${DB_URL}');
+    const sql = neon(process.env.DATABASE_URL);
     const hashedPassword = await bcrypt.hash('admin123', 10);
     
     // Verificar se admin já existe
@@ -330,9 +335,15 @@ test_application() {
     
     cd /home/whatsflow/ZapStatus-para-Woocommerce
     
-    # CORREÇÃO: Teste manual com timeout antes do PM2
+    # CORREÇÃO: Teste manual com variáveis carregadas
     print_status "Testing standalone application..."
-    sudo -u whatsflow timeout 15s npm start &
+    
+    # Carregar variáveis do .env
+    source .env
+    export DATABASE_URL SESSION_SECRET STRIPE_SECRET_KEY VITE_STRIPE_PUBLIC_KEY EVOLUTION_API_KEY EVOLUTION_API_URL
+    
+    # Teste com timeout
+    sudo -u whatsflow -E timeout 15s npm start &
     APP_PID=$!
     
     sleep 10

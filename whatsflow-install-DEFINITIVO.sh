@@ -29,8 +29,9 @@ print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-# Solicitar domínio interativamente
-if [ $# -eq 0 ]; then
+# Detectar se está sendo executado via pipe (curl | bash)
+if [ -t 0 ] && [ $# -eq 0 ]; then
+    # Terminal interativo - pedir domínio
     print_status "WhatsFlow Production Installation"
     print_warning "You need a domain pointing to this server for SSL certificate"
     echo
@@ -47,7 +48,13 @@ if [ $# -eq 0 ]; then
             print_error "Domain cannot be empty."
         fi
     done
+elif [ $# -eq 0 ]; then
+    # Executado via pipe - usar localhost
+    DOMAIN="localhost"
+    print_warning "Running via pipe - using localhost (no SSL)"
+    print_warning "For production with SSL, run: bash whatsflow-install-DEFINITIVO.sh YOUR_DOMAIN.COM"
 else
+    # Argumento fornecido
     DOMAIN=$1
 fi
 

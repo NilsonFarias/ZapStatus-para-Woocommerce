@@ -104,5 +104,5 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 **Status**: Script GitHub atualizado, pronto para zero-touch deployment
 **Comandos Disponíveis**:
 - **Desenvolvimento/Local**: `curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/whatsflow-install-FINAL.sh | bash`
-- **Produção com SSL**: `bash whatsflow-install-PRODUCAO.sh SEU_DOMINIO.COM`
-**Status**: Scripts prontos para VPS público com SSL automático, proxy reverso Nginx e configurações de produção
+- **Produção DEFINITIVA**: `bash whatsflow-install-DEFINITIVO.sh` (PostgreSQL nativo, sem WebSocket)
+**Status**: Script definitivo criado com PostgreSQL nativo eliminando 100% dos problemas WebSocket SSL

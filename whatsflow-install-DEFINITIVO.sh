@@ -292,28 +292,48 @@ async function runMigrations() {
 runMigrations();
 EOF
 
-    # 3. CORRIGIR CONFIGURAÇÃO DE SESSÃO PARA VPS
+    # 3. CORRIGIR CONFIGURAÇÃO DE SESSÃO PARA VPS PRODUÇÃO
     print_status "Fixing session configuration for VPS production..."
-    sudo -u whatsflow sed -i '/import session from "express-session";/a import connectPgSimple from "connect-pg-simple";' server/routes.ts
     
-    # Adicionar store de sessão PostgreSQL
-    sudo -u whatsflow sed -i '/export async function registerRoutes(app: Express): Promise<Server> {/a \\
-  // Session store configuration\
+    # Adicionar import do connect-pg-simple
+    if ! grep -q "connect-pg-simple" server/routes.ts; then
+        sudo -u whatsflow sed -i '/import session from "express-session";/a import connectPgSimple from "connect-pg-simple";' server/routes.ts
+    fi
+    
+    # Criar configuração completa de sessão PostgreSQL
+    sudo -u whatsflow sed -i '/export async function registerRoutes(app: Express): Promise<Server> {/,/app\.use(session({/ {
+        /app\.use(session({/i\
+  // Session store configuration for production\
   const PgSession = connectPgSimple(session);\
   const sessionStore = new PgSession({\
     conString: process.env.DATABASE_URL,\
     createTableIfMissing: true,\
     tableName: '\''sessions'\'',\
-  });' server/routes.ts
+    ttl: 24 * 60 * 60 * 1000, // 24 hours\
+  });\
+
+    }' server/routes.ts
     
-    # Atualizar configuração de cookie para produção
-    sudo -u whatsflow sed -i 's/secure: false, \/\/ Set to true in production with HTTPS/secure: process.env.NODE_ENV === '\''production'\'', \/\/ Dynamic based on environment/' server/routes.ts
-    sudo -u whatsflow sed -i '/maxAge: 24 \* 60 \* 60 \* 1000, \/\/ 24 hours/a \      sameSite: '\''lax'\'', \/\/ Allow cross-site requests but maintain security' server/routes.ts
-    sudo -u whatsflow sed -i 's/saveUninitialized: false,/saveUninitialized: false,\
-    store: sessionStore,/' server/routes.ts
+    # Substituir configuração de sessão completa
+    sudo -u whatsflow sed -i '/app\.use(session({/,/}));/ {
+        /app\.use(session({/,/}));/c\
+  app.use(session({\
+    secret: process.env.SESSION_SECRET || '\''whatsflow-secret-key-dev'\'',\
+    resave: false,\
+    saveUninitialized: false,\
+    store: sessionStore,\
+    cookie: {\
+      secure: process.env.NODE_ENV === '\''production'\'', // Dynamic SSL\
+      httpOnly: true,\
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours\
+      sameSite: '\''lax'\'', // Security for cross-origin\
+    },\
+  }));
+    }' server/routes.ts
     
-    # Corrigir login para salvar sessão explicitamente
-    sudo -u whatsflow sed -i '/req.session.userId = user.id;/,/res.json(userWithoutPassword);/c\
+    # Corrigir endpoint de login para salvar sessão explicitamente
+    sudo -u whatsflow sed -i '/\/\/ Create session$/,/res\.json(userWithoutPassword);$/c\
+      \/\/ Create session and force save\
       req.session.userId = user.id;\
       \
       \/\/ Force session save before responding\
@@ -346,8 +366,8 @@ EOF
     fi
     
     # 6. VERIFICAR SE SESSÃO APLICOU
-    if grep -q "connectPgSimple" server/routes.ts && grep -q "sessionStore" server/routes.ts; then
-        print_success "✅ Session configuration applied successfully"
+    if grep -q "connectPgSimple" server/routes.ts && grep -q "sessionStore" server/routes.ts && grep -q "req.session.save" server/routes.ts; then
+        print_success "✅ Session configuration with PostgreSQL store applied successfully"
     else
         print_error "❌ Session configuration FAILED to apply"
         exit 1
@@ -430,10 +450,10 @@ NODE_ENV="production"
 PORT="5000"
 EOF
 
-    # Instalar dependências incluindo pg para PostgreSQL
+    # Instalar dependências incluindo pg para PostgreSQL e connect-pg-simple para sessões
     print_status "Installing dependencies..."
     sudo -u whatsflow npm install
-    sudo -u whatsflow npm install pg @types/pg drizzle-orm
+    sudo -u whatsflow npm install pg @types/pg drizzle-orm connect-pg-simple @types/connect-pg-simple
     
     # APLICAR CORREÇÕES WEBSOCKET ANTES DO BUILD
     apply_websocket_fix

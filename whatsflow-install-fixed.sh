@@ -288,7 +288,7 @@ EOF
     # Instalar dependências
     sudo -u whatsflow npm install
     
-    # CORREÇÃO SSL: Aplicar fix WebSocket no server/db.ts para VPS
+    # CORREÇÃO SSL: Aplicar fix WebSocket no server/db.ts ANTES do build
     print_status "Applying complete SSL WebSocket fix for VPS..."
     sudo -u whatsflow tee server/db.ts > /dev/null << 'EOF'
 import { Pool, neonConfig } from '@neondatabase/serverless';
@@ -320,11 +320,7 @@ export const pool = new Pool({
 export const db = drizzle({ client: pool, schema });
 EOF
     
-    # CORREÇÃO: Build antes do banco para gerar dist/
-    print_status "Building application..."
-    sudo -u whatsflow npm run build
-    
-    # CORREÇÃO: Corrigir shared/schema.ts antes do build
+    # CORREÇÃO: Corrigir shared/schema.ts ANTES do build
     print_status "Fixing user schema for VPS deployment..."
     sudo -u whatsflow sed -i '/export const insertUserSchema = createInsertSchema(users).omit({/,/});/c\
 export const insertUserSchema = createInsertSchema(users).omit({\
@@ -335,6 +331,10 @@ export const insertUserSchema = createInsertSchema(users).omit({\
   stripeCustomerId: true,\
   stripeSubscriptionId: true,\
 });' shared/schema.ts
+    
+    # CORREÇÃO: Build APÓS corrigir schema e db
+    print_status "Building application with fixed schema..."
+    sudo -u whatsflow npm run build
     
     # CORREÇÃO: Usar db:push ao invés de db:migrate inexistente
     print_status "Setting up database schema..."

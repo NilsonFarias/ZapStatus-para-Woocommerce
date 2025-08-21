@@ -29,15 +29,29 @@ print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-# Verificar argumentos
+# Solicitar domínio interativamente
 if [ $# -eq 0 ]; then
-    print_error "Usage: bash whatsflow-install-DEFINITIVO.sh YOUR_DOMAIN.COM"
-    print_error "Example: bash whatsflow-install-DEFINITIVO.sh whatsflow.exemplo.com"
-    exit 1
+    print_status "WhatsFlow Production Installation"
+    print_warning "You need a domain pointing to this server for SSL certificate"
+    echo
+    while true; do
+        read -p "Enter your domain (e.g., whatsflow.exemplo.com): " DOMAIN
+        if [ -n "$DOMAIN" ]; then
+            # Validação básica do domínio
+            if [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9\.-]*[a-zA-Z0-9]\.[a-zA-Z]{2,}$ ]]; then
+                break
+            else
+                print_error "Invalid domain format. Please enter a valid domain."
+            fi
+        else
+            print_error "Domain cannot be empty."
+        fi
+    done
+else
+    DOMAIN=$1
 fi
 
-DOMAIN=$1
-print_status "Domain configured: $DOMAIN"
+print_success "Domain configured: $DOMAIN"
 
 # Verificar se está rodando como root
 check_root() {

@@ -95,7 +95,7 @@ const PLANS = [
   },
 ];
 
-const SubscribeForm = ({ selectedPlan }: { selectedPlan: string }) => {
+const SubscribeForm = ({ selectedPlan, subscriptionId }: { selectedPlan: string; subscriptionId: string }) => {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -131,6 +131,23 @@ const SubscribeForm = ({ selectedPlan }: { selectedPlan: string }) => {
         title: "Pagamento Realizado!",
         description: "Sua assinatura foi ativada com sucesso!",
       });
+      
+      // In development, simulate webhook since Stripe can't reach our local server
+      if (import.meta.env.DEV && subscriptionId) {
+        try {
+          console.log('🔄 Simulating payment webhook for subscription:', subscriptionId);
+          
+          // Call our test webhook endpoint to simulate payment success
+          await apiRequest('POST', '/api/test-payment-webhook', {
+            subscriptionId: subscriptionId
+          });
+          
+          console.log('✅ Payment webhook simulation completed');
+        } catch (error) {
+          console.error('Failed to simulate payment webhook:', error);
+        }
+      }
+      
       // Navigate to success page manually
       window.location.href = '/subscription-success?payment_intent=' + paymentIntent.id + '&redirect_status=succeeded';
     }
@@ -212,6 +229,7 @@ function PlanSelection({ onSelectPlan }: { onSelectPlan: (plan: string) => void 
 export default function Subscribe() {
   const [clientSecret, setClientSecret] = useState("");
   const [selectedPlan, setSelectedPlan] = useState("");
+  const [subscriptionId, setSubscriptionId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSelectPlan = async (planId: string) => {
@@ -227,6 +245,7 @@ export default function Subscribe() {
       
       const data = await response.json();
       setClientSecret(data.clientSecret);
+      setSubscriptionId(data.subscriptionId);
     } catch (error: any) {
       console.error('Error creating subscription:', error);
     } finally {
@@ -274,7 +293,7 @@ export default function Subscribe() {
                   loader: 'auto'
                 }}
               >
-                <SubscribeForm selectedPlan={plan?.name || ''} />
+                <SubscribeForm selectedPlan={plan?.name || ''} subscriptionId={subscriptionId} />
               </Elements>
             </CardContent>
           </Card>

@@ -35,8 +35,8 @@ read -p "Enter your Evolution API key: " API_KEY
 
 print_status "Configuring Evolution API for domain: $DOMAIN"
 
-# Navegar para o diretório da aplicação
-cd /home/whatsflow/ZapStatus-para-Woocommerce
+# Navegar para o diretório da aplicação como usuário whatsflow
+sudo -u whatsflow bash -c 'cd /home/whatsflow/ZapStatus-para-Woocommerce && pwd'
 
 # Atualizar arquivo .env com as configurações corretas
 print_status "Updating .env file..."
@@ -57,8 +57,8 @@ grep "EVOLUTION_API" .env
 # Atualizar configurações no banco de dados
 print_status "Updating database system settings..."
 
-# Script SQL para atualizar as configurações
-sudo -u whatsflow tee /tmp/update_evolution_settings.sql > /dev/null << EOF
+# Script SQL para atualizar as configurações (executar como root)
+tee /tmp/update_evolution_settings.sql > /dev/null << EOF
 -- Inserir ou atualizar configurações da Evolution API
 INSERT INTO system_settings (key, value, description) 
 VALUES ('evolution_api_url', 'https://${DOMAIN}/v2', 'Evolution API Base URL')
@@ -76,8 +76,17 @@ ON CONFLICT (key) DO UPDATE SET
 SELECT key, value FROM system_settings WHERE key LIKE 'evolution_api%';
 EOF
 
+# Descobrir o nome do banco de dados
+DB_NAME=$(sudo -u postgres psql -l | grep -E "(zapstatus|whatsflow|whats)" | head -1 | awk '{print $1}' | grep -v "Name")
+if [ -z "$DB_NAME" ]; then
+    # Fallback: tentar encontrar o banco baseado no .env
+    DB_NAME=$(grep "DATABASE_URL" .env | grep -o "/[^?]*" | cut -d'/' -f2 | cut -d'?' -f1)
+fi
+
+print_status "Using database: $DB_NAME"
+
 # Executar o script SQL
-sudo -u postgres psql -d whatsflow -f /tmp/update_evolution_settings.sql
+sudo -u postgres psql -d "$DB_NAME" -f /tmp/update_evolution_settings.sql
 
 # Limpar arquivo temporário
 rm -f /tmp/update_evolution_settings.sql

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# CORREÇÃO MANUAL PARA VPS - APLICAR DEPOIS DO SCRIPT DE INSTALAÇÃO
-# Execução: curl -fsSL https://raw.githubusercontent.com/SeuUsuario/SeuRepo/main/fix-vps-manual.sh | bash
+# CORREÇÃO MANUAL FINAL PARA VPS - WebSocket SSL Fix
+# Execute na VPS após instalação para resolver erro WebSocket definitivamente
 
-echo "🔧 APLICANDO CORREÇÕES MANUAIS VPS"
+echo "🔧 APLICANDO CORREÇÃO FINAL VPS - WebSocket SSL"
 echo "=================================="
 
 cd /home/whatsflow/ZapStatus-para-Woocommerce

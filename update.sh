@@ -44,11 +44,22 @@ create_backups() {
     # Backup do banco de dados
     print_status "Fazendo backup do banco de dados..."
     if command -v pg_dump >/dev/null 2>&1; then
-        DB_NAME=$(grep "DATABASE_URL" .env | cut -d'/' -f4 | cut -d'?' -f1)
-        if [ -n "$DB_NAME" ]; then
-            sudo -u postgres pg_dump "$DB_NAME" > "$backup_dir/database_backup_$timestamp.sql" 2>/dev/null || {
-                print_warning "Backup do banco não foi possível - dados continuam seguros no PostgreSQL"
-            }
+        # Extrair informações do DATABASE_URL
+        if [ -f ".env" ] && grep -q "DATABASE_URL" .env; then
+            DATABASE_URL=$(grep "DATABASE_URL" .env | cut -d'=' -f2-)
+            DB_NAME=$(echo "$DATABASE_URL" | sed 's/.*\/\([^?]*\).*/\1/')
+            DB_HOST=$(echo "$DATABASE_URL" | sed 's/.*@\([^:]*\):.*/\1/')
+            DB_PORT=$(echo "$DATABASE_URL" | sed 's/.*:\([0-9]*\)\/.*/\1/')
+            DB_USER=$(echo "$DATABASE_URL" | sed 's/.*\/\/\([^:]*\):.*/\1/')
+            DB_PASS=$(echo "$DATABASE_URL" | sed 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/')
+            
+            if [ -n "$DB_NAME" ]; then
+                PGPASSWORD="$DB_PASS" pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" > "$backup_dir/database_backup_$timestamp.sql" 2>/dev/null && {
+                    print_success "Backup do banco criado: $backup_dir/database_backup_$timestamp.sql"
+                } || {
+                    print_warning "Backup do banco não foi possível - dados continuam seguros no PostgreSQL"
+                }
+            fi
         fi
     fi
     

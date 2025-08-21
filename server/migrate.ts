@@ -1,6 +1,6 @@
-import { drizzle } from "drizzle-orm/neon-http";
-import { migrate } from "drizzle-orm/neon-http/migrator";
-import { neon } from "@neondatabase/serverless";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -9,8 +9,8 @@ if (!connectionString) {
   process.exit(1);
 }
 
-const sql = neon(connectionString);
-const db = drizzle(sql);
+const pool = new Pool({ connectionString });
+const db = drizzle(pool);
 
 async function runMigrations() {
   try {

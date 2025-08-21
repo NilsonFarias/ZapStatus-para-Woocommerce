@@ -1,16 +1,6 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
-
-// CRITICAL VPS FIX: Completely disable WebSocket to prevent SSL errors
-neonConfig.useSecureWebSocket = false;
-neonConfig.webSocketConstructor = undefined;
-
-// Additional SSL bypass configurations for VPS
-neonConfig.webSocketTimeoutMs = 0;
-if (typeof neonConfig.webSocketConstructor !== 'undefined') {
-  delete neonConfig.webSocketConstructor;
-}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -18,10 +8,21 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ 
+// Use standard PostgreSQL connection for VPS
+const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 30000,
+  max: 20,
   idleTimeoutMillis: 30000,
-  max: parseInt(process.env.DATABASE_POOL_MAX || '10')
+  connectionTimeoutMillis: 2000,
 });
-export const db = drizzle({ client: pool, schema });
+
+export const db = drizzle(pool, { schema });
+
+// Test connection
+pool.on('connect', () => {
+  console.log('Connected to PostgreSQL database');
+});
+
+pool.on('error', (err) => {
+  console.error('PostgreSQL pool error:', err);
+});

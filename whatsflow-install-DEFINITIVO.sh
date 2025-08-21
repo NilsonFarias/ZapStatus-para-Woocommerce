@@ -259,15 +259,56 @@ pool.on('error', (err) => {
 });
 EOF
 
-    # 2. VERIFICAR SE APLICOU
+    # 2. SUBSTITUIR COMPLETAMENTE O server/migrate.ts - USAR PG PARA VPS
+    print_status "Creating new server/migrate.ts with PostgreSQL (no Neon)..."
+    sudo -u whatsflow tee server/migrate.ts > /dev/null << 'EOF'
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error("DATABASE_URL environment variable is not set");
+  process.exit(1);
+}
+
+const pool = new Pool({ connectionString });
+const db = drizzle(pool);
+
+async function runMigrations() {
+  try {
+    console.log("Running migrations...");
+    await migrate(db, { migrationsFolder: "./migrations" });
+    console.log("Migrations completed successfully!");
+    await pool.end();
+  } catch (error) {
+    console.error("Migration failed:", error);
+    await pool.end();
+    process.exit(1);
+  }
+}
+
+runMigrations();
+EOF
+
+    # 3. VERIFICAR SE DB APLICOU
     if grep -q "drizzle-orm/node-postgres" server/db.ts; then
-        print_success "✅ PostgreSQL connection applied successfully"
+        print_success "✅ PostgreSQL db.ts applied successfully"
     else
-        print_error "❌ PostgreSQL connection FAILED to apply"
+        print_error "❌ PostgreSQL db.ts FAILED to apply"
         exit 1
     fi
     
-    # 3. CORRIGIR SCHEMA
+    # 4. VERIFICAR SE MIGRATE APLICOU
+    if grep -q "drizzle-orm/node-postgres" server/migrate.ts; then
+        print_success "✅ PostgreSQL migrate.ts applied successfully"
+    else
+        print_error "❌ PostgreSQL migrate.ts FAILED to apply"
+        exit 1
+    fi
+    
+    # 5. CORRIGIR SCHEMA
     print_status "Fixing user schema..."
     sudo -u whatsflow sed -i '/export const insertUserSchema = createInsertSchema(users).omit({/,/});/c\
 export const insertUserSchema = createInsertSchema(users).omit({\
@@ -279,7 +320,7 @@ export const insertUserSchema = createInsertSchema(users).omit({\
   stripeSubscriptionId: true,\
 });' shared/schema.ts
 
-    # 4. VERIFICAR SCHEMA
+    # 6. VERIFICAR SCHEMA
     if grep -q "stripeCustomerId: true" shared/schema.ts; then
         print_success "✅ Schema fix applied successfully"
     else

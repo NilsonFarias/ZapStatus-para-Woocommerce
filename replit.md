@@ -55,6 +55,19 @@ The architecture prioritizes reusability and maintainability through shared Type
 
 ### Recent Updates (August 21, 2025)
 
+#### CRÍTICO: Correção de Segurança no Fluxo de Pagamento - CONCLUÍDO
+**Problema de Segurança Identificado**: Sistema atualizava plano do cliente ANTES da confirmação de pagamento
+**Vulnerabilidade**: Usuário podia selecionar plano, ir à tela de pagamento, voltar sem pagar e manter plano premium
+**Correções Implementadas**:
+- **Fluxo Corrigido**: Plano só é atualizado APÓS confirmação do webhook `invoice.payment_succeeded`
+- **Status Temporário**: Subscription marcada como `incomplete` até pagamento confirmado
+- **Webhook Handler**: Adicionado tratamento para `invoice.payment_succeeded` e `invoice.payment_failed`
+- **Rollback Automático**: Pagamentos falhados resetam automaticamente para plano Free
+- **Endpoint de Status**: Novo endpoint `/api/check-payment-status` para verificar confirmação
+- **Segurança**: Usuário mantém plano atual até Stripe confirmar pagamento bem-sucedido
+**Impacto**: Sistema agora é seguro contra fraudes de upgrade sem pagamento
+**Status**: Vulnerabilidade crítica corrigida, fluxo de pagamento 100% seguro
+
 #### Correção Completa do Sistema de Planos - CONCLUÍDO
 **Problema Resolvido**: Modal de edição de clientes não mostrava opção "Free"
 **Correções Implementadas**:

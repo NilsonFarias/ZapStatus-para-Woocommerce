@@ -1819,44 +1819,22 @@ Sua instancia esta funcionando perfeitamente!`;
         expand: ['latest_invoice.payment_intent'],
       });
 
-      // Update user plan immediately after successful subscription creation
+      // Store subscription details temporarily - DO NOT UPDATE PLAN YET
       const user = req.user as any;
       console.log(`DEBUG: User from request:`, user);
       if (user?.id) {
-        console.log(`DEBUG: User ID found: ${user.id}, proceeding with plan update`);
+        console.log(`DEBUG: User ID found: ${user.id}, storing subscription details for later confirmation`);
         try {
-          // Map plan to subscription plan
-          const planMapping = {
-            'basic': 'basic',
-            'pro': 'pro', 
-            'enterprise': 'enterprise'
-          };
-          
-          const userPlan = planMapping[plan as keyof typeof planMapping];
-          if (userPlan) {
-            console.log(`Updating user ${user.id} with plan: ${userPlan}, customerId: ${customer.id}, subscriptionId: ${subscription.id}`);
-            
-            // Update user with all subscription details
-            const updateResult = await storage.updateUser(user.id, {
-              plan: userPlan,
-              subscriptionStatus: 'active',
-              stripeCustomerId: customer.id,
-              stripeSubscriptionId: subscription.id
-            });
-            console.log(`User update result:`, updateResult);
-            
-            // Also update the client's plan to keep them in sync
-            const clients = await storage.getClients();
-            const userClient = clients.find(c => c.userId === user.id);
-            if (userClient) {
-              const clientUpdateResult = await storage.updateClient(userClient.id, { plan: userPlan });
-              console.log(`Client ${userClient.id} plan updated to ${userPlan}:`, clientUpdateResult);
-            }
-            
-            console.log(`User ${user.id} plan updated to ${userPlan} successfully`);
-          }
+          // Only store Stripe customer ID and subscription ID - plan stays unchanged until payment is confirmed
+          const updateResult = await storage.updateUser(user.id, {
+            stripeCustomerId: customer.id,
+            stripeSubscriptionId: subscription.id,
+            subscriptionStatus: 'incomplete'  // Mark as incomplete until payment is confirmed
+          });
+          console.log(`User subscription details stored (plan unchanged until payment):`, updateResult);
+          console.log(`User ${user.id} subscription created but plan will only update after payment confirmation`);
         } catch (updateError: any) {
-          console.error('Error updating user plan:', updateError.message);
+          console.error('Error storing subscription details:', updateError.message);
           console.error('Full error:', updateError);
         }
       } else {
@@ -1869,6 +1847,34 @@ Sua instancia esta funcionando perfeitamente!`;
       });
     } catch (error: any) {
       console.error('Stripe subscription error:', error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Check payment status endpoint
+  app.get('/api/check-payment-status/:subscriptionId', requireAuth, async (req: any, res) => {
+    try {
+      const { subscriptionId } = req.params;
+      const user = req.user;
+      
+      // Verify this subscription belongs to the current user
+      if (user.stripeSubscriptionId !== subscriptionId) {
+        return res.status(403).json({ message: 'Subscription not found' });
+      }
+      
+      // Get current user data to check if plan was updated
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      res.json({
+        paymentStatus: currentUser.subscriptionStatus,
+        currentPlan: currentUser.plan,
+        paymentConfirmed: currentUser.subscriptionStatus === 'active'
+      });
+    } catch (error: any) {
+      console.error('Error checking payment status:', error.message);
       res.status(500).json({ message: error.message });
     }
   });
@@ -2090,6 +2096,76 @@ Sua instancia esta funcionando perfeitamente!`;
     try {
       // Handle the event
       switch (event.type) {
+        case 'invoice.payment_succeeded': {
+          const invoice = event.data.object;
+          console.log(`Payment succeeded for invoice: ${invoice.id}, subscription: ${invoice.subscription}`);
+          
+          // Find user by subscription ID and update their plan only after successful payment
+          const user = await storage.getUserByStripeSubscriptionId(invoice.subscription);
+          if (user && user.subscriptionStatus === 'incomplete') {
+            // Get the subscription to determine the plan
+            if (stripe) {
+              const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+              const priceId = subscription.items.data[0]?.price?.id;
+              
+              // Map price ID to plan
+              const basicPriceId = (await storage.getSystemSetting('stripe_basic_price_id'))?.value || process.env.STRIPE_BASIC_PRICE_ID;
+              const proPriceId = (await storage.getSystemSetting('stripe_pro_price_id'))?.value || process.env.STRIPE_PRO_PRICE_ID;
+              const enterprisePriceId = (await storage.getSystemSetting('stripe_enterprise_price_id'))?.value || process.env.STRIPE_ENTERPRISE_PRICE_ID;
+              
+              let userPlan = 'free';
+              if (priceId === basicPriceId) userPlan = 'basic';
+              else if (priceId === proPriceId) userPlan = 'pro';
+              else if (priceId === enterprisePriceId) userPlan = 'enterprise';
+              
+              // NOW update the plan after confirmed payment
+              await storage.updateUser(user.id, {
+                plan: userPlan,
+                subscriptionStatus: 'active'
+              });
+              
+              // Also update the client's plan
+              const clients = await storage.getClients();
+              const userClient = clients.find(c => c.userId === user.id);
+              if (userClient) {
+                await storage.updateClient(userClient.id, { plan: userPlan });
+                console.log(`Client ${userClient.id} plan updated to ${userPlan} after payment confirmation`);
+              }
+              
+              console.log(`✅ PAYMENT CONFIRMED: User ${user.id} plan updated to ${userPlan} after successful payment`);
+            }
+          }
+          break;
+        }
+        
+        case 'invoice.payment_failed': {
+          const invoice = event.data.object;
+          console.log(`Payment failed for invoice: ${invoice.id}, subscription: ${invoice.subscription}`);
+          
+          // Find user by subscription ID and reset their plan on payment failure
+          const user = await storage.getUserByStripeSubscriptionId(invoice.subscription);
+          if (user && user.subscriptionStatus === 'incomplete') {
+            // Reset to free plan and clear subscription info on payment failure
+            await storage.updateUser(user.id, {
+              plan: 'free',
+              subscriptionStatus: 'canceled',
+              stripeCustomerId: null,
+              stripeSubscriptionId: null
+            });
+            
+            // Also reset client plan
+            const clients = await storage.getClients();
+            const userClient = clients.find(c => c.userId === user.id);
+            if (userClient) {
+              await storage.updateClient(userClient.id, { plan: 'free' });
+              console.log(`Client ${userClient.id} plan reset to free after payment failure`);
+            }
+            
+            console.log(`❌ PAYMENT FAILED: User ${user.id} plan reset to free after payment failure`);
+          }
+          break;
+        }
+        
         case 'customer.subscription.updated': {
           const subscription = event.data.object;
           console.log(`Subscription updated: ${subscription.id}`);
@@ -2102,6 +2178,8 @@ Sua instancia esta funcionando perfeitamente!`;
               newStatus = 'cancel_at_period_end';
             } else if (subscription.status === 'canceled') {
               newStatus = 'canceled';
+            } else if (subscription.status === 'incomplete') {
+              newStatus = 'incomplete';
             }
             
             await storage.updateUser(user.id, {

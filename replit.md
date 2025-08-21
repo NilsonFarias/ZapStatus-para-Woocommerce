@@ -102,5 +102,7 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - **Timeout Domain**: Configuração de domínio com timeout de 30s (padrão localhost)
 - **Validação Completa**: Verifica existência de `dist/index.js` e aplicação das correções
 **Status**: Script GitHub atualizado, pronto para zero-touch deployment
-**Comando**: `curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/whatsflow-install-FINAL.sh | bash`
-**Status**: Testado em VPS com cache limpo - instalação zero-touch sem interação do usuário
+**Comandos Disponíveis**:
+- **Desenvolvimento/Local**: `curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/whatsflow-install-FINAL.sh | bash`
+- **Produção com SSL**: `bash whatsflow-install-PRODUCAO.sh SEU_DOMINIO.COM`
+**Status**: Scripts prontos para VPS público com SSL automático, proxy reverso Nginx e configurações de produção

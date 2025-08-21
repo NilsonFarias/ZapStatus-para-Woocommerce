@@ -86,9 +86,39 @@ sleep 5
 print_status "Checking application status..."
 sudo -u whatsflow pm2 status
 
+# Atualizar configurações no banco de dados também
+print_status "Updating database settings..."
+
+# Encontrar o nome do banco
+DB_URL=$(grep "DATABASE_URL" .env | cut -d'=' -f2-)
+DB_NAME=$(echo "$DB_URL" | grep -o '/[^?]*' | cut -d'/' -f2 | cut -d'?' -f1)
+
+if [ -z "$DB_NAME" ]; then
+    DB_NAME="neondb"  # fallback comum
+fi
+
+print_status "Using database: $DB_NAME"
+
+# Script SQL simples
+cat > /tmp/update_evolution.sql << EOF
+UPDATE system_settings SET value = '$EVOLUTION_URL' WHERE key = 'evolution_api_url';
+UPDATE system_settings SET value = '$API_KEY' WHERE key = 'evolution_api_key';
+INSERT INTO system_settings (key, value, description) VALUES ('evolution_api_url', '$EVOLUTION_URL', 'Evolution API URL') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO system_settings (key, value, description) VALUES ('evolution_api_key', '$API_KEY', 'Evolution API Key') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+EOF
+
+# Tentar atualizar o banco
+sudo -u postgres psql -d "$DB_NAME" -f /tmp/update_evolution.sql 2>/dev/null || {
+    print_warning "Could not update database directly"
+    print_warning "You'll need to configure in the admin panel manually"
+}
+
+# Limpar arquivo temporário
+rm -f /tmp/update_evolution.sql
+
 print_success "Evolution API configuration updated!"
 print_status "URL: $EVOLUTION_URL"
 print_status "Key: ${API_KEY:0:10}..."
-print_warning "Test the configuration in the WhatsFlow admin panel"
+print_warning "Check the admin panel - fields should be pre-filled now"
 
 print_status "Done!"

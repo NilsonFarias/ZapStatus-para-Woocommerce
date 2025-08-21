@@ -17,7 +17,7 @@ const updateClientSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido"),
   phone: z.string().optional(),
-  plan: z.enum(["basic", "pro", "enterprise"]),
+  plan: z.enum(["free", "basic", "pro", "enterprise"]),
   status: z.enum(["active", "inactive", "suspended"]),
 });
 
@@ -50,7 +50,7 @@ export default function EditClientModal({ client, open, onOpenChange }: EditClie
         name: client.name,
         email: client.email,
         phone: client.phone || "+55 (11) 99999-9999",
-        plan: client.plan as "basic" | "pro" | "enterprise",
+        plan: client.plan as "free" | "basic" | "pro" | "enterprise",
         status: client.status as "active" | "inactive" | "suspended",
       });
     }
@@ -83,6 +83,8 @@ export default function EditClientModal({ client, open, onOpenChange }: EditClie
 
   const getPlanLabel = (plan: string) => {
     switch (plan) {
+      case 'free':
+        return 'Gratuito';
       case 'basic':
         return 'Básico';
       case 'pro':
@@ -177,6 +179,7 @@ export default function EditClientModal({ client, open, onOpenChange }: EditClie
                   <SelectValue placeholder="Selecionar plano" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="free">Gratuito - R$ 0/mês (30 mensagens)</SelectItem>
                   <SelectItem value="basic">Básico - R$ 29/mês (1.000 mensagens)</SelectItem>
                   <SelectItem value="pro">Pro - R$ 89/mês (10.000 mensagens)</SelectItem>
                   <SelectItem value="enterprise">Enterprise - R$ 199/mês (Ilimitado)</SelectItem>

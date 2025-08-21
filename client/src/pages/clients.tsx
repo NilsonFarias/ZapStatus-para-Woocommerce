@@ -57,6 +57,8 @@ export default function Clients() {
 
   const getPlanBadgeColor = (plan: string) => {
     switch (plan) {
+      case 'free':
+        return 'bg-slate/10 text-slate';
       case 'basic':
         return 'bg-warning/10 text-warning';
       case 'pro':
@@ -83,6 +85,8 @@ export default function Clients() {
 
   const getPlanLabel = (plan: string) => {
     switch (plan) {
+      case 'free':
+        return 'Gratuito (30 msgs)';
       case 'basic':
         return 'Básico (1k msgs)';
       case 'pro':
@@ -148,6 +152,7 @@ export default function Clients() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os planos</SelectItem>
+                    <SelectItem value="free">Plano Gratuito</SelectItem>
                     <SelectItem value="basic">Plano Básico</SelectItem>
                     <SelectItem value="pro">Plano Pro</SelectItem>
                     <SelectItem value="enterprise">Plano Enterprise</SelectItem>

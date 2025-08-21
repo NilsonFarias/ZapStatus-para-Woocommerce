@@ -1,7 +1,0 @@
-Para baixar o script corrigido no seu servidor, use:
-
-wget https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/install-fixed.sh
-chmod +x install-fixed.sh
-./install-fixed.sh --full
-
-Ou se preferir, copie o conteúdo do arquivo install-fixed.sh diretamente.

@@ -1,1 +1,0 @@
-// Arquivo removido - usar ecosystem.config.cjs

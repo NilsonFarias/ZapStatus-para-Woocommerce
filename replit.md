@@ -66,3 +66,12 @@ The architecture prioritizes reusability and maintainability through shared Type
 - **Rollback Safety**: Backups permitem restauração em caso de problemas
 - **Verificação Completa**: Testa aplicação após atualização
 **Status**: Sistema de atualização automática funcional para manter VPS sincronizada
+
+#### Limpeza de Scripts Antigos - CONCLUÍDO
+**Ação**: Removidos todos os scripts de debugging e correção antigos
+**Scripts Mantidos**:
+- **whatsflow-install-DEFINITIVO.sh**: Instalação completa zero-touch
+- **update.sh**: Atualização automática com backup
+**Scripts Removidos**: 25+ scripts antigos de debugging, correção e instalação
+**Documentação**: Criado README.md limpo com instruções claras
+**Status**: Repositório limpo e organizado, apenas scripts essenciais mantidos

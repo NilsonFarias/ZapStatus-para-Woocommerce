@@ -74,3 +74,12 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - **Aplicação Automática**: Modificação aplicada durante `configure_application()` antes do build
 - **Compatibilidade**: Mantém segurança SSL para conexões remotas, apenas ignora para localhost
 **Resultado**: Script de instalação principal agora resolve 100% dos problemas SSL WebSocket automaticamente
+
+### Correção Schema Usuário para VPS - CONCLUÍDO (August 21, 2025)
+**Problema Identificado**: Erro 500 no registro de usuário devido a campos Stripe opcionais no schema de inserção
+**Solução VPS**: Modificação automática do `shared/schema.ts` durante instalação para remover campos Stripe desnecessários
+**Correção no Script**:
+- **Schema Fix**: `insertUserSchema` modificado para omitir `stripeCustomerId` e `stripeSubscriptionId`
+- **Sed Command**: Uso de sed para substituir schema durante instalação automaticamente
+- **Ordem Correta**: Aplicado antes do build para evitar erros de compilação
+**Resultado**: Elimina erro 500 no endpoint de registro, permite criação de usuários sem problemas

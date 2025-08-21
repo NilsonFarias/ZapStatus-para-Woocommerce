@@ -321,6 +321,18 @@ EOF
     print_status "Building application..."
     sudo -u whatsflow npm run build
     
+    # CORREÇÃO: Corrigir shared/schema.ts antes do build
+    print_status "Fixing user schema for VPS deployment..."
+    sudo -u whatsflow sed -i '/insertUserSchema = createInsertSchema(users).omit({/,/});/c\
+export const insertUserSchema = createInsertSchema(users).omit({\
+  id: true,\
+  createdAt: true,\
+  updatedAt: true,\
+  username: true, // Omit username since we use email as identifier\
+  stripeCustomerId: true,\
+  stripeSubscriptionId: true,\
+});' shared/schema.ts
+    
     # CORREÇÃO: Usar db:push ao invés de db:migrate inexistente
     print_status "Setting up database schema..."
     sudo -u whatsflow npm run db:push

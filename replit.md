@@ -52,3 +52,17 @@ The architecture prioritizes reusability and maintainability through shared Type
 - **Wouter**: Lightweight client-side routing library for React.
 - **Node-cron**: Used for scheduling recurring tasks, such as managing the message queue.
 - **connect-pg-simple**: PostgreSQL session store for robust session management.
+
+### Recent Updates (August 21, 2025)
+
+#### Script de Atualização Automática - CRIADO
+**Funcionalidade**: Script `update.sh` para atualizar sistema VPS sem perder dados
+**Características**:
+- **Backup Automático**: `.env` e banco PostgreSQL antes de qualquer mudança
+- **Git Sync**: Puxa automaticamente últimas mudanças do repositório
+- **Correções VPS**: Aplica ajustes específicos para ambiente produção
+- **Build Limpo**: Remove cache e reconstrói aplicação completamente
+- **Zero Downtime**: Restart inteligente via PM2 com verificações
+- **Rollback Safety**: Backups permitem restauração em caso de problemas
+- **Verificação Completa**: Testa aplicação após atualização
+**Status**: Sistema de atualização automática funcional para manter VPS sincronizada

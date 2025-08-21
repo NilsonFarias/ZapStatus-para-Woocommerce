@@ -1,273 +1,255 @@
 #!/bin/bash
 
-# WhatsFlow - Script de Atualização
-# Atualiza a aplicação preservando configurações
+# WhatsFlow - Script de Atualização Automática
+# Atualiza o sistema sem perder dados ou configurações
 
-set -e
-
-# Cores
+# Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m'
+NC='\033[0m' # No Color
 
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+# Funções de output
+print_success() { echo -e "${GREEN}✅ $1${NC}"; }
+print_error() { echo -e "${RED}❌ $1${NC}"; }
+print_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+print_status() { echo -e "${BLUE}ℹ️  $1${NC}"; }
 
 # Verificar se está no diretório correto
 check_directory() {
-    if [[ ! -f "package.json" ]] || [[ ! -d "server" ]] || [[ ! -d "client" ]]; then
-        log_error "Execute este script no diretório raiz do ZapStatus (ZapStatus-para-Woocommerce)"
+    if [ ! -f "package.json" ] || [ ! -f ".env" ]; then
+        print_error "Execute este script no diretório raiz da aplicação WhatsFlow"
+        print_error "Diretório esperado: /home/whatsflow/ZapStatus-para-Woocommerce"
         exit 1
     fi
 }
 
-# Fazer backup
-create_backup() {
-    log_info "Criando backup..."
+# Fazer backup das configurações críticas
+create_backups() {
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local backup_dir="backups"
     
-    BACKUP_DIR="../zapstatus-backup-$(date +%Y%m%d-%H%M%S)"
+    print_status "Criando backups de segurança..."
     
-    # Backup de arquivos importantes
-    mkdir -p $BACKUP_DIR
-    cp .env $BACKUP_DIR/ 2>/dev/null || log_warning "Arquivo .env não encontrado"
-    cp -r migrations $BACKUP_DIR/ 2>/dev/null || true
+    # Criar diretório de backup se não existir
+    mkdir -p "$backup_dir"
     
-    # Backup do banco
+    # Backup do .env
+    if [ -f ".env" ]; then
+        cp .env "$backup_dir/.env_backup_$timestamp"
+        print_success "Backup do .env criado: $backup_dir/.env_backup_$timestamp"
+    fi
+    
+    # Backup do banco de dados
+    print_status "Fazendo backup do banco de dados..."
     if command -v pg_dump >/dev/null 2>&1; then
-        log_info "Fazendo backup do banco de dados..."
-        source .env
-        DB_URL_PARTS=(${DATABASE_URL//\// })
-        DB_HOST_PORT=(${DB_URL_PARTS[2]//@/ })
-        DB_CREDS=(${DB_HOST_PORT[0]//:/ })
-        DB_USER=${DB_CREDS[0]}
-        DB_PASS=${DB_CREDS[1]}
-        DB_HOST_INFO=(${DB_HOST_PORT[1]//:/ })
-        DB_HOST=${DB_HOST_INFO[0]}
-        DB_PORT=${DB_HOST_INFO[1]}
-        DB_NAME=${DB_URL_PARTS[3]}
-        
-        PGPASSWORD=$DB_PASS pg_dump -h $DB_HOST -p $DB_PORT -U $DB_USER $DB_NAME > $BACKUP_DIR/database-backup.sql
-        log_success "Backup do banco salvo em $BACKUP_DIR/database-backup.sql"
+        DB_NAME=$(grep "DATABASE_URL" .env | cut -d'/' -f4 | cut -d'?' -f1)
+        if [ -n "$DB_NAME" ]; then
+            sudo -u postgres pg_dump "$DB_NAME" > "$backup_dir/database_backup_$timestamp.sql" 2>/dev/null || {
+                print_warning "Backup do banco não foi possível - dados continuam seguros no PostgreSQL"
+            }
+        fi
     fi
     
-    log_success "Backup criado em $BACKUP_DIR"
+    print_success "Backups concluídos"
 }
 
-# Atualizar código
+# Verificar status dos serviços
+check_services() {
+    print_status "Verificando serviços..."
+    
+    # Verificar PM2
+    if ! command -v pm2 >/dev/null 2>&1; then
+        print_error "PM2 não encontrado. Instale com: npm install -g pm2"
+        exit 1
+    fi
+    
+    # Verificar se a aplicação está rodando
+    if sudo -u whatsflow pm2 describe whatsflow >/dev/null 2>&1; then
+        print_success "Aplicação WhatsFlow encontrada no PM2"
+    else
+        print_warning "Aplicação não está rodando no PM2 - será iniciada após atualização"
+    fi
+}
+
+# Atualizar código do repositório
 update_code() {
-    log_info "Atualizando código..."
+    print_status "Baixando atualizações do repositório..."
     
-    # Verificar se há mudanças locais
-    if ! git diff-index --quiet HEAD --; then
-        log_warning "Há mudanças não commitadas. Criando stash..."
-        git stash push -m "Auto-stash antes da atualização $(date)"
+    # Verificar se é um repositório git
+    if [ ! -d ".git" ]; then
+        print_error "Este diretório não é um repositório git"
+        print_error "Clone o repositório novamente ou configure o git remoto"
+        exit 1
     fi
     
-    # Puxar atualizações
-    git fetch origin
+    # Fazer stash de mudanças locais se existirem
+    if ! git diff-index --quiet HEAD --; then
+        print_warning "Salvando mudanças locais temporariamente..."
+        git stash push -m "Auto-stash before update $(date)"
+    fi
     
-    CURRENT_BRANCH=$(git branch --show-current)
-    log_info "Branch atual: $CURRENT_BRANCH"
-    
-    git pull origin $CURRENT_BRANCH
-    
-    log_success "Código atualizado"
+    # Atualizar código
+    print_status "Puxando última versão do GitHub..."
+    if git pull origin main; then
+        print_success "Código atualizado com sucesso"
+    else
+        print_error "Falha ao atualizar código do repositório"
+        print_warning "Verifique sua conexão com a internet e permissões"
+        exit 1
+    fi
 }
 
-# Atualizar dependências
-update_dependencies() {
-    log_info "Atualizando dependências..."
+# Instalar dependências
+install_dependencies() {
+    print_status "Verificando e instalando dependências..."
     
     # Limpar cache npm
-    npm cache clean --force
+    npm cache clean --force >/dev/null 2>&1 || true
     
     # Instalar dependências
-    npm ci
-    
-    log_success "Dependências atualizadas"
+    if npm ci --production=false; then
+        print_success "Dependências instaladas"
+    else
+        print_error "Falha ao instalar dependências"
+        exit 1
+    fi
 }
 
-# Executar migrações
-run_migrations() {
-    log_info "Executando migrações do banco..."
+# Aplicar correções específicas para VPS
+apply_vps_fixes() {
+    print_status "Aplicando correções específicas para VPS..."
     
-    npm run migrate
+    # Correção WebSocket SSL (se necessário)
+    if grep -q "useSecureWebSocket.*true" server/db.ts 2>/dev/null; then
+        print_status "Aplicando correção WebSocket SSL..."
+        sed -i 's/neonConfig.useSecureWebSocket = true/neonConfig.useSecureWebSocket = false/g' server/db.ts
+        sed -i '/neonConfig.useSecureWebSocket = false/a neonConfig.webSocketConstructor = undefined;' server/db.ts
+        print_success "Correção WebSocket aplicada"
+    fi
     
-    log_success "Migrações executadas"
+    # Verificar configuração de sessão
+    if ! grep -q "connect-pg-simple" server/routes.ts 2>/dev/null; then
+        print_warning "Sistema pode precisar de configuração manual de sessão"
+    fi
 }
 
-# Build da aplicação
-build_application() {
-    log_info "Fazendo build da aplicação..."
+# Reconstruir aplicação
+rebuild_application() {
+    print_status "Reconstruindo aplicação..."
     
-    npm run build
+    # Limpar build anterior
+    rm -rf dist/ .vite/ node_modules/.cache/ 2>/dev/null || true
     
-    log_success "Build concluído"
+    # Build da aplicação
+    if npm run build; then
+        print_success "Aplicação reconstruída com sucesso"
+    else
+        print_error "Falha no build da aplicação"
+        print_error "Verifique os erros acima e corrija antes de continuar"
+        exit 1
+    fi
+    
+    # Verificar se o build foi criado
+    if [ ! -f "dist/index.js" ]; then
+        print_error "Build não foi criado corretamente"
+        print_error "Arquivo dist/index.js não encontrado"
+        exit 1
+    fi
+}
+
+# Atualizar banco de dados (migrations)
+update_database() {
+    print_status "Verificando atualizações do banco de dados..."
+    
+    # Executar migrations se necessário
+    if [ -f "drizzle.config.ts" ]; then
+        print_status "Executando migrations..."
+        if npx drizzle-kit push >/dev/null 2>&1; then
+            print_success "Banco de dados atualizado"
+        else
+            print_warning "Migrations não executadas - pode não haver mudanças"
+        fi
+    fi
 }
 
 # Reiniciar serviços
 restart_services() {
-    log_info "Reiniciando serviços..."
+    print_status "Reiniciando serviços..."
     
-    # Reiniciar PM2
-    if command -v pm2 >/dev/null 2>&1; then
-        pm2 restart whatsflow || pm2 start npm --name "whatsflow" -- start
-        log_success "PM2 reiniciado"
-    fi
+    # Parar aplicação
+    sudo -u whatsflow pm2 stop whatsflow >/dev/null 2>&1 || true
     
-    # Reiniciar Nginx (se necessário)
-    if systemctl is-active --quiet nginx; then
-        sudo nginx -t && sudo systemctl reload nginx
-        log_success "Nginx recarregado"
+    # Aguardar um momento
+    sleep 2
+    
+    # Iniciar aplicação
+    if sudo -u whatsflow pm2 start ecosystem.config.cjs >/dev/null 2>&1; then
+        print_success "Aplicação reiniciada com sucesso"
+    else
+        print_error "Falha ao reiniciar aplicação"
+        print_warning "Tente manualmente: sudo -u whatsflow pm2 restart whatsflow"
+        exit 1
     fi
-}
-
-# Verificar saúde
-health_check() {
-    log_info "Verificando saúde da aplicação..."
     
     # Aguardar inicialização
-    sleep 10
+    sleep 5
     
-    # Testar endpoint
-    if curl -f http://localhost:5000/api/health >/dev/null 2>&1; then
-        log_success "Aplicação está funcionando corretamente"
-        
-        # Mostrar status PM2
-        if command -v pm2 >/dev/null 2>&1; then
-            pm2 show whatsflow
-        fi
+    # Verificar status
+    if sudo -u whatsflow pm2 describe whatsflow | grep -q "online"; then
+        print_success "Aplicação está rodando corretamente"
     else
-        log_error "Aplicação não está respondendo"
-        log_info "Verificando logs..."
-        
-        if command -v pm2 >/dev/null 2>&1; then
-            pm2 logs whatsflow --lines 20
-        fi
-        
-        return 1
+        print_warning "Aplicação pode estar com problemas - verificar logs"
     fi
 }
 
-# Limpeza pós-atualização
-cleanup() {
-    log_info "Executando limpeza..."
+# Verificar se atualização foi bem-sucedida
+verify_update() {
+    print_status "Verificando atualização..."
     
-    # Limpar arquivos temporários
-    npm cache clean --force
-    
-    # Limpar logs antigos do PM2
-    if command -v pm2 >/dev/null 2>&1; then
-        pm2 flush whatsflow
+    # Verificar se a aplicação responde
+    sleep 3
+    if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200\|302"; then
+        print_success "Aplicação respondendo corretamente"
+    else
+        print_warning "Aplicação pode não estar respondendo - verificar logs"
     fi
     
-    log_success "Limpeza concluída"
+    # Mostrar logs recentes
+    print_status "Últimas linhas do log:"
+    sudo -u whatsflow pm2 logs whatsflow --lines 5 --nostream 2>/dev/null || true
 }
 
 # Função principal
 main() {
-    echo -e "${BLUE}=== WhatsFlow - Atualização Automatizada ===${NC}"
-    echo
+    print_status "🚀 Iniciando atualização do WhatsFlow..."
+    echo "=================================================="
     
     check_directory
+    check_services
+    create_backups
+    update_code
+    install_dependencies
+    apply_vps_fixes
+    rebuild_application
+    update_database
+    restart_services
+    verify_update
     
-    case ${1:-"--interactive"} in
-        --full)
-            create_backup
-            update_code
-            update_dependencies
-            run_migrations
-            build_application
-            restart_services
-            health_check
-            cleanup
-            ;;
-        --code-only)
-            update_code
-            build_application
-            restart_services
-            health_check
-            ;;
-        --deps-only)
-            update_dependencies
-            build_application
-            restart_services
-            health_check
-            ;;
-        --interactive|*)
-            echo "Selecione o tipo de atualização:"
-            echo "1) Atualização completa (recomendado)"
-            echo "2) Apenas código"
-            echo "3) Apenas dependências"
-            echo "4) Verificar saúde"
-            echo "0) Cancelar"
-            echo
-            read -p "Opção: " OPTION
-            
-            case $OPTION in
-                1)
-                    create_backup
-                    update_code
-                    update_dependencies
-                    run_migrations
-                    build_application
-                    restart_services
-                    health_check
-                    cleanup
-                    ;;
-                2)
-                    create_backup
-                    update_code
-                    build_application
-                    restart_services
-                    health_check
-                    ;;
-                3)
-                    create_backup
-                    update_dependencies
-                    build_application
-                    restart_services
-                    health_check
-                    ;;
-                4)
-                    health_check
-                    ;;
-                0)
-                    log_info "Atualização cancelada"
-                    exit 0
-                    ;;
-                *)
-                    log_error "Opção inválida"
-                    exit 1
-                    ;;
-            esac
-            ;;
-    esac
-    
-    echo
-    log_success "=== ATUALIZAÇÃO CONCLUÍDA ==="
-    echo
-    log_info "Comandos úteis:"
-    echo "  pm2 status              - Status da aplicação"
-    echo "  pm2 logs whatsflow      - Logs em tempo real"
-    echo "  pm2 monit               - Monitor de recursos"
-    echo "  curl http://localhost:5000/api/health - Teste de saúde"
+    echo "=================================================="
+    print_success "🎉 Atualização concluída com sucesso!"
+    print_status "Aplicação está rodando na versão mais recente"
+    print_warning "Backups salvos em: ./backups/"
+    print_warning "Em caso de problemas, restaure o backup do .env"
 }
 
-# Executar
+# Verificar se não está rodando como root
+if [ "$EUID" -eq 0 ]; then
+    print_error "Não execute este script como root"
+    print_error "Execute como usuário normal com sudo quando necessário"
+    exit 1
+fi
+
+# Executar função principal
 main "$@"

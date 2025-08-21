@@ -1,0 +1,32 @@
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/home/whatsflow/ZapStatus-para-Woocommerce/drizzle.config.ts'
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
+[i] No changes detected
+[INFO] Creating default admin user...
+⚠️  Admin creation failed: Error connecting to database: fetch failed
+[INFO] Creating PM2 configuration...
+[SUCCESS] Application configured
+[INFO] Testing application startup...
+[INFO] Testing standalone application...
+
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+
+Warning: connect.session() MemoryStore is not
+designed for a production environment, as it will leak
+memory, and will not scale past a single process.
+Message queue service started
+3:48:21 AM [express] serving on port 5000
+Checking for pending messages at 2025-08-21T03:48:30.012Z
+Executing getAllQueuedMessages query...
+Error processing message queue: Error: All attempts to open a WebSocket to connect to the database failed. Please refer to https://github.com/neondatabase/serverless/blob/main/CONFIG.md#websocketconstructor-typeof-websocket--undefined. Details: fetch failed
+    at file:///home/whatsflow/ZapStatus-para-Woocommerce/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (file:///home/whatsflow/ZapStatus-para-Woocommerce/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+    at async DatabaseStorage.getAllQueuedMessages (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:385:24)
+    at async MessageQueueService.processQueuedMessages (file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:1057:31)
+    at async file:///home/whatsflow/ZapStatus-para-Woocommerce/dist/index.js:1046:11
+    at async Timeout._onTimeout (/home/whatsflow/ZapStatus-para-Woocommerce/node_modules/node-cron/dist/esm/scheduler/runner.js:70:44)
+[SUCCESS] Application starts successfully
+                                         [SUCCESS] Application test passed

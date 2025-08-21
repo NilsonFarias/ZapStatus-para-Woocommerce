@@ -93,3 +93,10 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - **PM2 Reset**: `pm2 kill`, `pm2 flush`, sleep, restart limpo com logs zerados
 - **Environment Vars**: `NEON_DISABLE_WEBSOCKET=1` e `DATABASE_POOL_MAX=10`
 **Status**: Script de instalação VPS 100% operacional para deployment zero-touch
+
+### Status Atual Script VPS - REQUER ATUALIZAÇÃO GITHUB (August 21, 2025)
+**Situação Atual**: Script local no Replit corrigido, mas versão GitHub ainda tem problemas de ordem
+**Logs VPS Confirmam**: Mesmo executando script "corrigido", ainda recebemos erros WebSocket e Admin creation
+**Causa Raiz**: Ordem das correções no script - WebSocket fix deve ser aplicado ANTES do build, não depois
+**Ação Necessária**: Atualizar whatsflow-install-fixed.sh no repositório GitHub com ordem correta das correções
+**Solução Temporária**: Aplicar correções manualmente na VPS até script GitHub ser atualizado

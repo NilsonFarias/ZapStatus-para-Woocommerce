@@ -6,6 +6,7 @@ import axios from "axios";
 import Stripe from "stripe";
 import bcrypt from "bcryptjs";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import { storage } from "./storage";
 import { evolutionApi } from "./services/evolutionApi";
 import { messageQueue, MessageQueueService } from "./services/messageQueue";
@@ -52,15 +53,25 @@ const isAuthenticated = async (req: any, res: any, next: any) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Session store configuration
+  const PgSession = connectPgSimple(session);
+  const sessionStore = new PgSession({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: true,
+    tableName: 'sessions',
+  });
+
   // Session middleware
   app.use(session({
     secret: process.env.SESSION_SECRET || 'whatsflow-secret-key-dev',
     resave: false,
     saveUninitialized: false,
+    store: sessionStore,
     cookie: {
-      secure: false, // Set to true in production with HTTPS
+      secure: process.env.NODE_ENV === 'production', // Dynamic based on environment
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax', // Allow cross-site requests but maintain security
     },
   }));
 
@@ -246,12 +257,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Email ou senha incorretos" });
       }
 
-      // Create session
+      // Create session and save it
       req.session.userId = user.id;
       
-      // Return user without password
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // Force session save before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Erro ao criar sessão" });
+        }
+        
+        console.log(`Login successful: Session created for user ${user.id}`);
+        // Return user without password
+        const { password: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
     } catch (error: any) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Erro interno do servidor" });

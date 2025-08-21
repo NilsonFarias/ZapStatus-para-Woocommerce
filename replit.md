@@ -106,3 +106,13 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - **Desenvolvimento/Local**: `curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/whatsflow-install-FINAL.sh | bash`
 - **Produção DEFINITIVA**: `bash whatsflow-install-DEFINITIVO.sh` (PostgreSQL nativo, sem WebSocket)
 **Status**: Script definitivo criado com PostgreSQL nativo eliminando 100% dos problemas WebSocket SSL
+
+### Correção Crítica de Sessão - IDENTIFICADO (August 21, 2025)
+**Problema VPS**: Login retorna 200 mas sessão não é mantida - usuários não conseguem acessar dashboard após login
+**Causa Raiz**: Configuração de sessão inadequada para produção VPS - cookie secure e falta de store persistente PostgreSQL
+**Solução Aplicada**: 
+- **Session Store**: Implementação de `connect-pg-simple` para armazenar sessões no PostgreSQL
+- **Cookie Config**: `secure: process.env.NODE_ENV === 'production'` para SSL automático
+- **Session Save**: `req.session.save()` forçado no login para garantir persistência
+- **Script Fix**: Criado `whatsflow-session-fix.sh` para correção rápida em VPS ativo
+**Status**: Correções integradas no script principal de instalação

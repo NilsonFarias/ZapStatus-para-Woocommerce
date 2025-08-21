@@ -292,7 +292,44 @@ async function runMigrations() {
 runMigrations();
 EOF
 
-    # 3. VERIFICAR SE DB APLICOU
+    # 3. CORRIGIR CONFIGURAÇÃO DE SESSÃO PARA VPS
+    print_status "Fixing session configuration for VPS production..."
+    sudo -u whatsflow sed -i '/import session from "express-session";/a import connectPgSimple from "connect-pg-simple";' server/routes.ts
+    
+    # Adicionar store de sessão PostgreSQL
+    sudo -u whatsflow sed -i '/export async function registerRoutes(app: Express): Promise<Server> {/a \\
+  // Session store configuration\
+  const PgSession = connectPgSimple(session);\
+  const sessionStore = new PgSession({\
+    conString: process.env.DATABASE_URL,\
+    createTableIfMissing: true,\
+    tableName: '\''sessions'\'',\
+  });' server/routes.ts
+    
+    # Atualizar configuração de cookie para produção
+    sudo -u whatsflow sed -i 's/secure: false, \/\/ Set to true in production with HTTPS/secure: process.env.NODE_ENV === '\''production'\'', \/\/ Dynamic based on environment/' server/routes.ts
+    sudo -u whatsflow sed -i '/maxAge: 24 \* 60 \* 60 \* 1000, \/\/ 24 hours/a \      sameSite: '\''lax'\'', \/\/ Allow cross-site requests but maintain security' server/routes.ts
+    sudo -u whatsflow sed -i 's/saveUninitialized: false,/saveUninitialized: false,\
+    store: sessionStore,/' server/routes.ts
+    
+    # Corrigir login para salvar sessão explicitamente
+    sudo -u whatsflow sed -i '/req.session.userId = user.id;/,/res.json(userWithoutPassword);/c\
+      req.session.userId = user.id;\
+      \
+      \/\/ Force session save before responding\
+      req.session.save((err) => {\
+        if (err) {\
+          console.error("Session save error:", err);\
+          return res.status(500).json({ message: "Erro ao criar sessão" });\
+        }\
+        \
+        console.log(`Login successful: Session created for user ${user.id}`);\
+        \/\/ Return user without password\
+        const { password: _, ...userWithoutPassword } = user;\
+        res.json(userWithoutPassword);\
+      });' server/routes.ts
+
+    # 4. VERIFICAR SE DB APLICOU
     if grep -q "drizzle-orm/node-postgres" server/db.ts; then
         print_success "✅ PostgreSQL db.ts applied successfully"
     else
@@ -300,7 +337,7 @@ EOF
         exit 1
     fi
     
-    # 4. VERIFICAR SE MIGRATE APLICOU
+    # 5. VERIFICAR SE MIGRATE APLICOU
     if grep -q "drizzle-orm/node-postgres" server/migrate.ts; then
         print_success "✅ PostgreSQL migrate.ts applied successfully"
     else
@@ -308,7 +345,15 @@ EOF
         exit 1
     fi
     
-    # 5. CORRIGIR SCHEMA
+    # 6. VERIFICAR SE SESSÃO APLICOU
+    if grep -q "connectPgSimple" server/routes.ts && grep -q "sessionStore" server/routes.ts; then
+        print_success "✅ Session configuration applied successfully"
+    else
+        print_error "❌ Session configuration FAILED to apply"
+        exit 1
+    fi
+    
+    # 7. CORRIGIR SCHEMA
     print_status "Fixing user schema..."
     sudo -u whatsflow sed -i '/export const insertUserSchema = createInsertSchema(users).omit({/,/});/c\
 export const insertUserSchema = createInsertSchema(users).omit({\
@@ -320,7 +365,7 @@ export const insertUserSchema = createInsertSchema(users).omit({\
   stripeSubscriptionId: true,\
 });' shared/schema.ts
 
-    # 6. VERIFICAR SCHEMA
+    # 8. VERIFICAR SCHEMA
     if grep -q "stripeCustomerId: true" shared/schema.ts; then
         print_success "✅ Schema fix applied successfully"
     else

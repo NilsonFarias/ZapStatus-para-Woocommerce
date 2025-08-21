@@ -174,7 +174,7 @@ configure_nginx() {
     sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
 server {
     listen 80;
-    server_name $DOMAIN www.$DOMAIN;
+    server_name $DOMAIN;
 
     # Security headers
     add_header X-Frame-Options DENY;
@@ -236,10 +236,10 @@ setup_ssl() {
     print_status "Waiting 10 seconds before SSL setup..."
     sleep 10
     
-    # Obter certificado SSL com email fornecido
-    sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email $SSL_EMAIL || {
+    # Obter certificado SSL com email fornecido (apenas domínio principal)
+    sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email $SSL_EMAIL || {
         print_warning "SSL certificate setup failed. You can run it manually later:"
-        print_warning "sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --email $SSL_EMAIL"
+        print_warning "sudo certbot --nginx -d $DOMAIN --email $SSL_EMAIL"
     }
     
     # Configurar renovação automática

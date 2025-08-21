@@ -2071,6 +2071,82 @@ Sua instancia esta funcionando perfeitamente!`;
     }
   });
 
+  // Test endpoint to simulate webhook payment success (development only)
+  app.post('/api/test-payment-webhook', requireAuth, async (req: any, res) => {
+    try {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ message: 'Test endpoint not available in production' });
+      }
+      
+      const { subscriptionId } = req.body;
+      const user = req.user;
+      
+      console.log(`🧪 TEST WEBHOOK: Simulating payment success for subscription: ${subscriptionId}`);
+      
+      // Simulate the invoice.payment_succeeded event
+      const mockEvent = {
+        type: 'invoice.payment_succeeded',
+        data: {
+          object: {
+            id: 'in_test_' + Date.now(),
+            subscription: subscriptionId
+          }
+        }
+      };
+      
+      // Process the webhook logic directly
+      const userFound = await storage.getUserByStripeSubscriptionId(subscriptionId);
+      console.log(`🔍 TEST: Found user:`, userFound ? `${userFound.id} (status: ${userFound.subscriptionStatus})` : 'null');
+      
+      if (userFound && stripe) {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const priceId = subscription.items.data[0]?.price?.id;
+        console.log(`🏷️ TEST: Price ID from subscription: ${priceId}`);
+        
+        // Map price ID to plan
+        const basicPriceId = (await storage.getSystemSetting('stripe_basic_price_id'))?.value || process.env.STRIPE_BASIC_PRICE_ID;
+        const proPriceId = (await storage.getSystemSetting('stripe_pro_price_id'))?.value || process.env.STRIPE_PRO_PRICE_ID;
+        const enterprisePriceId = (await storage.getSystemSetting('stripe_enterprise_price_id'))?.value || process.env.STRIPE_ENTERPRISE_PRICE_ID;
+        
+        let userPlan = 'free';
+        if (priceId === basicPriceId) userPlan = 'basic';
+        else if (priceId === proPriceId) userPlan = 'pro';
+        else if (priceId === enterprisePriceId) userPlan = 'enterprise';
+        
+        // Update the plan
+        const updateResult = await storage.updateUser(userFound.id, {
+          plan: userPlan,
+          subscriptionStatus: 'active'
+        });
+        
+        // Also update the client's plan
+        const clients = await storage.getClients();
+        const userClient = clients.find(c => c.userId === userFound.id);
+        if (userClient) {
+          await storage.updateClient(userClient.id, { plan: userPlan });
+        }
+        
+        res.json({ 
+          success: true, 
+          message: `Test webhook processed - user plan updated to ${userPlan}`,
+          userPlan,
+          priceId,
+          updateResult
+        });
+      } else {
+        res.json({ 
+          success: false, 
+          message: 'User not found or Stripe not configured',
+          userFound: !!userFound,
+          stripeConfigured: !!stripe
+        });
+      }
+    } catch (error: any) {
+      console.error('Test webhook error:', error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Stripe webhook endpoint for subscription changes
   app.post('/api/stripe/webhook', express.raw({type: 'application/json'}), async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
@@ -2080,60 +2156,82 @@ Sua instancia esta funcionando perfeitamente!`;
     try {
       // Verify webhook signature
       const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      console.log(`🔐 WEBHOOK: Endpoint secret configured: ${!!endpointSecret}, Stripe instance: ${!!stripe}`);
+      
       if (endpointSecret && stripe) {
         event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+        console.log(`🔐 WEBHOOK: Signature verified successfully`);
       } else {
         // For development, skip signature verification
         event = JSON.parse(req.body.toString());
+        console.log(`⚠️ WEBHOOK: Signature verification skipped (development mode)`);
       }
     } catch (err: any) {
-      console.log(`Webhook signature verification failed.`, err.message);
+      console.log(`🚨 WEBHOOK: Signature verification failed.`, err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    console.log(`Received Stripe webhook: ${event.type}`);
+    console.log(`📨 WEBHOOK RECEIVED: ${event.type}`);
 
     try {
       // Handle the event
       switch (event.type) {
         case 'invoice.payment_succeeded': {
           const invoice = event.data.object;
-          console.log(`Payment succeeded for invoice: ${invoice.id}, subscription: ${invoice.subscription}`);
+          console.log(`🔄 WEBHOOK: Payment succeeded for invoice: ${invoice.id}, subscription: ${invoice.subscription}`);
           
           // Find user by subscription ID and update their plan only after successful payment
           const user = await storage.getUserByStripeSubscriptionId(invoice.subscription);
-          if (user && user.subscriptionStatus === 'incomplete') {
+          console.log(`🔍 USER LOOKUP: Found user:`, user ? `${user.id} (status: ${user.subscriptionStatus})` : 'null');
+          
+          if (user) {
             // Get the subscription to determine the plan
             if (stripe) {
               const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
               const priceId = subscription.items.data[0]?.price?.id;
+              console.log(`🏷️  PRICE ID from subscription: ${priceId}`);
               
               // Map price ID to plan
               const basicPriceId = (await storage.getSystemSetting('stripe_basic_price_id'))?.value || process.env.STRIPE_BASIC_PRICE_ID;
               const proPriceId = (await storage.getSystemSetting('stripe_pro_price_id'))?.value || process.env.STRIPE_PRO_PRICE_ID;
               const enterprisePriceId = (await storage.getSystemSetting('stripe_enterprise_price_id'))?.value || process.env.STRIPE_ENTERPRISE_PRICE_ID;
               
+              console.log(`💳 CONFIGURED PRICE IDs:`, {
+                basic: basicPriceId,
+                pro: proPriceId,
+                enterprise: enterprisePriceId
+              });
+              
               let userPlan = 'free';
               if (priceId === basicPriceId) userPlan = 'basic';
               else if (priceId === proPriceId) userPlan = 'pro';
               else if (priceId === enterprisePriceId) userPlan = 'enterprise';
               
+              console.log(`📋 PLAN MAPPING: ${priceId} → ${userPlan}`);
+              
               // NOW update the plan after confirmed payment
-              await storage.updateUser(user.id, {
+              const updateResult = await storage.updateUser(user.id, {
                 plan: userPlan,
                 subscriptionStatus: 'active'
               });
+              console.log(`👤 USER UPDATE RESULT:`, updateResult);
               
               // Also update the client's plan
               const clients = await storage.getClients();
               const userClient = clients.find(c => c.userId === user.id);
               if (userClient) {
-                await storage.updateClient(userClient.id, { plan: userPlan });
-                console.log(`Client ${userClient.id} plan updated to ${userPlan} after payment confirmation`);
+                const clientUpdateResult = await storage.updateClient(userClient.id, { plan: userPlan });
+                console.log(`🏢 CLIENT UPDATE: ${userClient.id} plan updated to ${userPlan}`, clientUpdateResult);
+              } else {
+                console.log(`🚨 NO CLIENT FOUND for user ${user.id}`);
               }
               
-              console.log(`✅ PAYMENT CONFIRMED: User ${user.id} plan updated to ${userPlan} after successful payment`);
+              console.log(`✅ PAYMENT CONFIRMED: User ${user.id} plan updated from ${user.plan} to ${userPlan} after successful payment`);
+            } else {
+              console.log(`🚨 STRIPE INSTANCE NOT AVAILABLE`);
             }
+          } else {
+            console.log(`🚨 USER NOT FOUND for subscription ${invoice.subscription}`);
           }
           break;
         }

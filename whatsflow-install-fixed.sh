@@ -332,9 +332,24 @@ export const insertUserSchema = createInsertSchema(users).omit({\
   stripeSubscriptionId: true,\
 });' shared/schema.ts
     
-    # CORREÇÃO: Build APÓS corrigir schema e db
-    print_status "Building application with fixed schema..."
+    # CORREÇÃO CRÍTICA: Remover dist/ existente e rebuild completo
+    print_status "Cleaning and rebuilding application with fixed schema..."
+    sudo -u whatsflow rm -rf dist/
     sudo -u whatsflow npm run build
+
+    # VERIFICAR se build foi bem-sucedido
+    if [ ! -f "dist/index.js" ]; then
+        print_error "Build failed - dist/index.js not found"
+        exit 1
+    fi
+    
+    # VALIDAR se correções foram aplicadas no build
+    if grep -q "useSecureWebSocket.*false" server/db.ts; then
+        print_success "WebSocket fix confirmed in source"
+    else
+        print_error "WebSocket fix not applied correctly"
+        exit 1
+    fi
     
     # CORREÇÃO: Usar db:push ao invés de db:migrate inexistente
     print_status "Setting up database schema..."

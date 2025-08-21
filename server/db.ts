@@ -1,22 +1,16 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
 import * as schema from "@shared/schema";
 
-// Configure WebSocket to ignore SSL certificate errors globally
-const WebSocketWithIgnoreSSL = class extends ws {
-  constructor(address: string | URL, protocols?: string | string[], options?: ws.ClientOptions) {
-    // Force SSL to be ignored for all connections in development/production with SSL issues
-    const wsOptions = { 
-      ...options, 
-      rejectUnauthorized: false,
-      checkServerIdentity: () => undefined 
-    };
-    super(address, protocols, wsOptions);
-  }
-};
+// CRITICAL VPS FIX: Completely disable WebSocket to prevent SSL errors
+neonConfig.useSecureWebSocket = false;
+neonConfig.webSocketConstructor = undefined;
 
-neonConfig.webSocketConstructor = WebSocketWithIgnoreSSL;
+// Additional SSL bypass configurations for VPS
+neonConfig.webSocketTimeoutMs = 0;
+if (typeof neonConfig.webSocketConstructor !== 'undefined') {
+  delete neonConfig.webSocketConstructor;
+}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -24,5 +18,10 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 30000,
+  idleTimeoutMillis: 30000,
+  max: parseInt(process.env.DATABASE_POOL_MAX || '10')
+});
 export const db = drizzle({ client: pool, schema });

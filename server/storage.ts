@@ -480,8 +480,27 @@ export class DatabaseStorage implements IStorage {
       
     const activeClients = allClients.filter(c => c.status === 'active').length;
     
-    // Calculate total messages sent this month
-    const messagesSent = allClients.reduce((total, client) => total + (client.monthlyMessages || 0), 0);
+    // Calculate total messages sent from messageQueue table
+    let messagesSent = 0;
+    if (userId) {
+      // For specific user, count messages from their clients only
+      const clientIds = allClients.map(c => c.id);
+      if (clientIds.length > 0) {
+        const result = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(messageQueue)
+          .innerJoin(whatsappInstances, eq(messageQueue.instanceId, whatsappInstances.id))
+          .innerJoin(clients, eq(whatsappInstances.clientId, clients.id))
+          .where(eq(clients.userId, userId));
+        messagesSent = result[0]?.count || 0;
+      }
+    } else {
+      // For admin dashboard, count ALL messages
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(messageQueue);
+      messagesSent = result[0]?.count || 0;
+    }
     
     // Calculate monthly revenue (simplified calculation)
     const monthlyRevenue = allClients.reduce((total, client) => {
@@ -489,8 +508,24 @@ export class DatabaseStorage implements IStorage {
       return total + (client.status === 'active' ? planRevenue : 0);
     }, 0);
     
-    // Calculate delivery rate (simplified - assume 98.5% for now)
-    const deliveryRate = 98.5;
+    // Calculate delivery rate based on sent vs total messages
+    let deliveryRate = 98.5;
+    if (messagesSent > 0) {
+      const sentMessages = userId 
+        ? await db
+            .select({ count: sql<number>`count(*)` })
+            .from(messageQueue)
+            .innerJoin(whatsappInstances, eq(messageQueue.instanceId, whatsappInstances.id))
+            .innerJoin(clients, eq(whatsappInstances.clientId, clients.id))
+            .where(and(eq(clients.userId, userId), eq(messageQueue.status, 'sent')))
+        : await db
+            .select({ count: sql<number>`count(*)` })
+            .from(messageQueue)
+            .where(eq(messageQueue.status, 'sent'));
+      
+      const sentCount = sentMessages[0]?.count || 0;
+      deliveryRate = messagesSent > 0 ? Math.round((sentCount / messagesSent) * 100 * 100) / 100 : 98.5;
+    }
     
     return {
       activeClients,

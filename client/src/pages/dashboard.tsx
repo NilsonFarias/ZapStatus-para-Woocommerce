@@ -120,7 +120,7 @@ export default function Dashboard() {
             />
             <MetricsCard
               title="Mensagens Enviadas"
-              value={(metrics?.messagesSent || 18542).toLocaleString()}
+              value={metrics?.messagesSent?.toLocaleString() || "0"}
               icon={Send}
               trend={{ value: "+8%", isPositive: true, label: "vs mês anterior" }}
               iconBgColor="bg-success/10 text-success"

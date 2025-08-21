@@ -29,33 +29,21 @@ print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-# Detectar se está sendo executado via pipe (curl | bash)
-if [ -t 0 ] && [ $# -eq 0 ]; then
-    # Terminal interativo - pedir domínio
+# Solicitar domínio obrigatoriamente
+if [ $# -eq 0 ]; then
     print_status "WhatsFlow Production Installation"
     print_warning "You need a domain pointing to this server for SSL certificate"
-    echo
-    while true; do
-        read -p "Enter your domain (e.g., whatsflow.exemplo.com): " DOMAIN
-        if [ -n "$DOMAIN" ]; then
-            # Validação básica do domínio
-            if [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9\.-]*[a-zA-Z0-9]\.[a-zA-Z]{2,}$ ]]; then
-                break
-            else
-                print_error "Invalid domain format. Please enter a valid domain."
-            fi
-        else
-            print_error "Domain cannot be empty."
-        fi
-    done
-elif [ $# -eq 0 ]; then
-    # Executado via pipe - usar localhost
-    DOMAIN="localhost"
-    print_warning "Running via pipe - using localhost (no SSL)"
-    print_warning "For production with SSL, run: bash whatsflow-install-DEFINITIVO.sh YOUR_DOMAIN.COM"
+    print_error "Usage: bash whatsflow-install-DEFINITIVO.sh YOUR_DOMAIN.COM"
+    print_error "Example: bash whatsflow-install-DEFINITIVO.sh whatsflow.exemplo.com"
+    exit 1
 else
-    # Argumento fornecido
     DOMAIN=$1
+    # Validação básica do domínio
+    if [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9\.-]*[a-zA-Z0-9]\.[a-zA-Z]{2,}$ ]]; then
+        print_error "Invalid domain format: $DOMAIN"
+        print_error "Please provide a valid domain like: whatsflow.exemplo.com"
+        exit 1
+    fi
 fi
 
 print_success "Domain configured: $DOMAIN"

@@ -322,13 +322,31 @@ EOF
 main() {
     print_status "Starting WhatsFlow VPS installation..."
     
-    # Solicitar domínio
+    # Solicitar domínio com timeout
     if [ -z "$DOMAIN" ]; then
-        echo "Enter your domain (or press Enter for localhost):"
-        read DOMAIN
-        if [ -z "$DOMAIN" ]; then
+        echo ""
+        echo "=========================================="
+        echo "DOMAIN CONFIGURATION"
+        echo "=========================================="
+        echo "Enter your domain (or press Enter for localhost)"
+        echo "Examples: myapp.com, subdomain.example.com"
+        echo "Timeout: 30 seconds (will use localhost)"
+        echo ""
+        echo -n "Domain: "
+        
+        # Usar timeout com read
+        if read -t 30 DOMAIN; then
+            if [ -z "$DOMAIN" ]; then
+                DOMAIN="localhost"
+                print_warning "No domain entered, using localhost"
+            else
+                print_status "Domain set to: $DOMAIN"
+            fi
+        else
             DOMAIN="localhost"
+            print_warning "Timeout reached, using localhost"
         fi
+        echo ""
     fi
     
     check_root

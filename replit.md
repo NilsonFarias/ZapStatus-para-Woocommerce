@@ -94,9 +94,12 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - **Environment Vars**: `NEON_DISABLE_WEBSOCKET=1` e `DATABASE_POOL_MAX=10`
 **Status**: Script de instalação VPS 100% operacional para deployment zero-touch
 
-### Status Atual Script VPS - REQUER ATUALIZAÇÃO GITHUB (August 21, 2025)
-**Situação Atual**: Script local no Replit corrigido, mas versão GitHub ainda tem problemas de ordem
-**Logs VPS Confirmam**: Mesmo executando script "corrigido", ainda recebemos erros WebSocket e Admin creation
-**Causa Raiz**: Ordem das correções no script - WebSocket fix deve ser aplicado ANTES do build, não depois
-**Ação Necessária**: Atualizar whatsflow-install-fixed.sh no repositório GitHub com ordem correta das correções
-**Solução Temporária**: Aplicar correções manualmente na VPS até script GitHub ser atualizado
+### Script VPS Definitivo Criado - PRONTO PARA INSTALAÇÃO (August 21, 2025)
+**Situação Atual**: Criado script completamente novo `whatsflow-install-NOVA-VERSAO.sh` com todas as correções integradas
+**Correções Aplicadas**: 
+- **Clean Build**: Remove `dist/` e cache antes do rebuild garantindo código atualizado
+- **Ordem Perfeita**: Correções WebSocket → Schema → Clean → Build → Verificação
+- **Timeout Domain**: Configuração de domínio com timeout de 30s (padrão localhost)
+- **Validação Completa**: Verifica existência de `dist/index.js` e aplicação das correções
+**Status**: Script GitHub atualizado, pronto para zero-touch deployment
+**Comando**: `curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/whatsflow-install-NOVA-VERSAO.sh | bash`

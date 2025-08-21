@@ -3,7 +3,18 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
+// Configure WebSocket to ignore SSL certificate errors for localhost connections
+const WebSocketWithIgnoreSSL = class extends ws {
+  constructor(address: string | URL, protocols?: string | string[], options?: ws.ClientOptions) {
+    // For localhost connections, ignore SSL certificate errors
+    const wsOptions = typeof address === 'string' && address.includes('localhost') 
+      ? { ...options, rejectUnauthorized: false }
+      : options;
+    super(address, protocols, wsOptions);
+  }
+};
+
+neonConfig.webSocketConstructor = WebSocketWithIgnoreSSL;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(

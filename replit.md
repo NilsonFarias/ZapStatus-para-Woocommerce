@@ -55,6 +55,28 @@ The architecture prioritizes reusability and maintainability through shared Type
 
 ### Recent Updates (August 21, 2025)
 
+#### Correção Completa do Sistema de Planos - CONCLUÍDO
+**Problema Resolvido**: Modal de edição de clientes não mostrava opção "Free"
+**Correções Implementadas**:
+- **Schema Atualizado**: Validação Zod aceita plano "free" em editClientModal
+- **Opções de Plano**: Adicionada "Gratuito - R$ 0/mês (30 mensagens)" no modal
+- **Filtros**: Incluído "Plano Gratuito" nos filtros da página de clientes  
+- **Labels e Cores**: Padronização completa de todos os planos incluindo Free
+- **Consistência**: Sistema completo agora suporta todos os 4 planos (Free, Básico, Pro, Enterprise)
+**Impacto**: Administradores podem agora alterar clientes para qualquer plano disponível
+**Status**: Sistema de planos 100% funcional e consistente
+
+#### Correção Dashboard e Contadores - CONCLUÍDO  
+**Problemas Resolvidos**: 
+- Dashboard administrativo mostrava valores hardcoded
+- Página de clientes exibia campos incorretos do banco
+**Correções Implementadas**:
+- **Dashboard**: Agregação real de mensagens de todos os usuários via JOIN
+- **Clientes**: Contagem real de mensagens por cliente da tabela messageQueue
+- **Queries SQL**: Substituídas consultas incorretas por cálculos dinâmicos
+**Resultado**: Métricas 100% precisas baseadas em dados reais
+**Status**: Todos os contadores funcionando corretamente
+
 #### Script de Atualização Automática - CRIADO
 **Funcionalidade**: Script `update.sh` para atualizar sistema VPS sem perder dados
 **Características**:

@@ -151,7 +151,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllClients(): Promise<Client[]> {
-    return await db
+    const baseClients = await db
       .select({
         id: clients.id,
         userId: clients.userId,
@@ -172,6 +172,29 @@ export class DatabaseStorage implements IStorage {
       .from(clients)
       .leftJoin(users, eq(clients.userId, users.id))
       .orderBy(desc(clients.createdAt));
+
+    // Calculate real message count for each client
+    const clientsWithRealMessageCount = await Promise.all(
+      baseClients.map(async (client) => {
+        const messageCount = await this.getClientMessageCount(client.id);
+        return {
+          ...client,
+          monthlyMessages: messageCount,
+        };
+      })
+    );
+
+    return clientsWithRealMessageCount;
+  }
+
+  async getClientMessageCount(clientId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(messageQueue)
+      .innerJoin(whatsappInstances, eq(messageQueue.instanceId, whatsappInstances.id))
+      .where(eq(whatsappInstances.clientId, clientId));
+    
+    return result[0]?.count || 0;
   }
 
   async getClient(id: string): Promise<Client | undefined> {

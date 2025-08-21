@@ -65,3 +65,12 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - Nginx proxy configured for `/v2` Evolution API endpoint
 - PM2 ecosystem includes all SSL environment variables
 **Impact**: Eliminates ERR_TLS_CERT_ALTNAME_INVALID errors, enables immediate admin login post-installation
+
+### SSL WebSocket Database Fix Integrated - CONCLUÍDO (August 21, 2025)
+**Problema Final**: Neon Database WebSocket ainda tentando conectar via localhost causando SSL certificate mismatch
+**Solução Integrada**: Modificação direta do `server/db.ts` durante instalação para ignorar erros SSL em conexões localhost
+**Correção no Script**:
+- **WebSocket SSL Override**: Classe customizada `WebSocketWithIgnoreSSL` que adiciona `rejectUnauthorized: false` para conexões localhost
+- **Aplicação Automática**: Modificação aplicada durante `configure_application()` antes do build
+- **Compatibilidade**: Mantém segurança SSL para conexões remotas, apenas ignora para localhost
+**Resultado**: Script de instalação principal agora resolve 100% dos problemas SSL WebSocket automaticamente

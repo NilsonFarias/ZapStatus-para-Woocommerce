@@ -284,6 +284,37 @@ EOF
     # Instalar dependências
     sudo -u whatsflow npm install
     
+    # CORREÇÃO SSL: Aplicar fix WebSocket no server/db.ts
+    print_status "Applying SSL WebSocket fix..."
+    sudo -u whatsflow tee server/db.ts > /dev/null << 'EOF'
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from "ws";
+import * as schema from "@shared/schema";
+
+// Configure WebSocket to ignore SSL certificate errors for localhost connections
+const WebSocketWithIgnoreSSL = class extends ws {
+  constructor(address: string | URL, protocols?: string | string[], options?: ws.ClientOptions) {
+    // For localhost connections, ignore SSL certificate errors
+    const wsOptions = typeof address === 'string' && address.includes('localhost') 
+      ? { ...options, rejectUnauthorized: false }
+      : options;
+    super(address, protocols, wsOptions);
+  }
+};
+
+neonConfig.webSocketConstructor = WebSocketWithIgnoreSSL;
+
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL must be set. Did you forget to provision a database?",
+  );
+}
+
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const db = drizzle({ client: pool, schema });
+EOF
+    
     # CORREÇÃO: Build antes do banco para gerar dist/
     print_status "Building application..."
     sudo -u whatsflow npm run build

@@ -72,43 +72,10 @@ while true; do
     break
 done
 
-# Solicitar Evolution API externa
-print_status ""
-print_warning "Evolution API Configuration:"
-print_warning "Do you have an external Evolution API server?"
-while true; do
-    read -p "Enter your Evolution API URL (or press Enter to use local): " EVOLUTION_API_URL
-    if [[ -z "$EVOLUTION_API_URL" ]]; then
-        EVOLUTION_API_URL="https://${DOMAIN}/v2"
-        print_status "Using local Evolution API: $EVOLUTION_API_URL"
-        break
-    fi
-    
-    # Remove trailing slash
-    EVOLUTION_API_URL=$(echo "$EVOLUTION_API_URL" | sed 's/\/$//')
-    
-    # Validação básica da URL
-    if [[ ! "$EVOLUTION_API_URL" =~ ^https?:// ]]; then
-        print_error "URL must start with http:// or https://"
-        continue
-    fi
-    break
-done
 
-# Solicitar API Key da Evolution
-while true; do
-    read -p "Enter your Evolution API Key: " EVOLUTION_API_KEY
-    if [[ -z "$EVOLUTION_API_KEY" ]]; then
-        print_error "API Key cannot be empty. Please try again."
-        continue
-    fi
-    break
-done
 
 print_success "Domain configured: $DOMAIN"
 print_success "SSL Email configured: $SSL_EMAIL"
-print_success "Evolution API URL: $EVOLUTION_API_URL"
-print_success "Evolution API Key: ${EVOLUTION_API_KEY:0:10}..."
 print_status ""
 
 # Verificar se está rodando como root
@@ -527,8 +494,8 @@ STRIPE_PRO_PRICE_ID="price_CONFIGURE_REAL_PRO_ID"
 STRIPE_ENTERPRISE_PRICE_ID="price_CONFIGURE_REAL_ENTERPRISE_ID"
 
 # Evolution API
-EVOLUTION_API_KEY="${EVOLUTION_API_KEY}"
-EVOLUTION_API_URL="${EVOLUTION_API_URL}"
+EVOLUTION_API_KEY="CONFIGURE_WITH_REAL_API_KEY"
+EVOLUTION_API_URL="https://${DOMAIN}/v2"
 
 # SSL Production
 NODE_TLS_REJECT_UNAUTHORIZED=1

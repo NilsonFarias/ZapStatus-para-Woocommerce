@@ -125,3 +125,11 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - **Session Save Explícito**: `req.session.save()` aplicado no endpoint de login automaticamente
 - **Validação Completa**: Script verifica se todas as correções foram aplicadas antes do build
 **Status**: VPS nova terá login funcionando 100% após instalação automática
+
+### Correção de Erro de Duplicação no Script - RESOLVIDO (August 21, 2025)
+**Problema**: Script estava aplicando correções múltiplas vezes causando declarações duplicadas de `PgSession` e `sessionStore`
+**Solução**: Criado script JavaScript inline que:
+- Remove duplicações existentes antes de aplicar correções
+- Aplica todas as correções de sessão de uma só vez
+- Evita conflitos de `sed` commands
+**Status**: Script de instalação corrigido para evitar duplicações

@@ -295,59 +295,84 @@ EOF
     # 3. CORRIGIR CONFIGURAÇÃO DE SESSÃO PARA VPS PRODUÇÃO
     print_status "Fixing session configuration for VPS production..."
     
-    # Adicionar import do connect-pg-simple
-    if ! grep -q "connect-pg-simple" server/routes.ts; then
-        sudo -u whatsflow sed -i '/import session from "express-session";/a import connectPgSimple from "connect-pg-simple";' server/routes.ts
-    fi
+    # Backup do arquivo original antes das modificações
+    sudo -u whatsflow cp server/routes.ts server/routes.ts.backup
     
-    # Criar configuração completa de sessão PostgreSQL
-    sudo -u whatsflow sed -i '/export async function registerRoutes(app: Express): Promise<Server> {/,/app\.use(session({/ {
-        /app\.use(session({/i\
-  // Session store configuration for production\
-  const PgSession = connectPgSimple(session);\
-  const sessionStore = new PgSession({\
-    conString: process.env.DATABASE_URL,\
-    createTableIfMissing: true,\
-    tableName: '\''sessions'\'',\
-    ttl: 24 * 60 * 60 * 1000, // 24 hours\
-  });\
+    # Aplicar correção JavaScript inline para evitar duplicações
+    sudo -u whatsflow cat > session-fix.js << 'JSEOF'
+const fs = require('fs');
 
-    }' server/routes.ts
-    
-    # Substituir configuração de sessão completa
-    sudo -u whatsflow sed -i '/app\.use(session({/,/}));/ {
-        /app\.use(session({/,/}));/c\
-  app.use(session({\
-    secret: process.env.SESSION_SECRET || '\''whatsflow-secret-key-dev'\'',\
-    resave: false,\
-    saveUninitialized: false,\
-    store: sessionStore,\
-    cookie: {\
-      secure: process.env.NODE_ENV === '\''production'\'', // Dynamic SSL\
-      httpOnly: true,\
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours\
-      sameSite: '\''lax'\'', // Security for cross-origin\
-    },\
-  }));
-    }' server/routes.ts
-    
-    # Corrigir endpoint de login para salvar sessão explicitamente
-    sudo -u whatsflow sed -i '/\/\/ Create session$/,/res\.json(userWithoutPassword);$/c\
-      \/\/ Create session and force save\
-      req.session.userId = user.id;\
-      \
-      \/\/ Force session save before responding\
-      req.session.save((err) => {\
-        if (err) {\
-          console.error("Session save error:", err);\
-          return res.status(500).json({ message: "Erro ao criar sessão" });\
-        }\
-        \
-        console.log(`Login successful: Session created for user ${user.id}`);\
-        \/\/ Return user without password\
-        const { password: _, ...userWithoutPassword } = user;\
-        res.json(userWithoutPassword);\
-      });' server/routes.ts
+let content = fs.readFileSync('server/routes.ts', 'utf8');
+
+// 1. Adicionar import se não existir
+if (!content.includes('connect-pg-simple')) {
+    content = content.replace(
+        'import session from "express-session";',
+        'import session from "express-session";\nimport connectPgSimple from "connect-pg-simple";'
+    );
+}
+
+// 2. Remover duplicações existentes
+content = content.replace(/const PgSession = connectPgSimple\(session\);[\s\S]*?}\);/g, '');
+
+// 3. Adicionar store config antes de Session middleware
+const storeConfig = `  // Session store configuration for production
+  const PgSession = connectPgSimple(session);
+  const sessionStore = new PgSession({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: true,
+    tableName: 'sessions',
+    ttl: 24 * 60 * 60 * 1000,
+  });
+
+`;
+
+if (!content.includes('sessionStore')) {
+    content = content.replace(
+        /(\s+)\/\/ Session middleware/,
+        '\n' + storeConfig + '$1// Session middleware'
+    );
+}
+
+// 4. Substituir configuração de sessão
+const sessionRegex = /app\.use\(session\(\{[\s\S]*?\}\)\);/;
+const newSession = \`app.use(session({
+    secret: process.env.SESSION_SECRET || 'whatsflow-secret-key-dev',
+    resave: false,
+    saveUninitialized: false,
+    store: sessionStore,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000,
+      sameSite: 'lax',
+    },
+  }));\`;
+
+content = content.replace(sessionRegex, newSession);
+
+// 5. Corrigir login save
+const loginRegex = /req\.session\.userId = user\.id;[\s\S]*?res\.json\(userWithoutPassword\);/;
+const newLogin = \`req.session.userId = user.id;
+      
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Erro ao criar sessão" });
+        }
+        
+        console.log(\\\`Login successful: Session created for user \\\${user.id}\\\`);
+        const { password: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });\`;
+
+content = content.replace(loginRegex, newLogin);
+
+fs.writeFileSync('server/routes.ts', content);
+console.log('✅ Session fixes applied!');
+JSEOF
+
+    sudo -u whatsflow node session-fix.js && sudo -u whatsflow rm session-fix.js
 
     # 4. VERIFICAR SE DB APLICOU
     if grep -q "drizzle-orm/node-postgres" server/db.ts; then

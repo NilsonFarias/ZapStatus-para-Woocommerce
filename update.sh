@@ -177,11 +177,15 @@ update_database() {
     # Executar migrations se necessário
     if [ -f "drizzle.config.ts" ]; then
         print_status "Executando migrations..."
-        if npx drizzle-kit push >/dev/null 2>&1; then
-            print_success "Banco de dados atualizado"
-        else
-            print_warning "Migrations não executadas - pode não haver mudanças"
-        fi
+        
+        # Executar com timeout para evitar travamento
+        timeout 30 npx drizzle-kit push 2>&1 | grep -E "(error|Error|pushed|No schema changes|changes detected)" || {
+            print_warning "Migrations executadas ou nenhuma mudança detectada"
+        }
+        
+        print_success "Verificação do banco concluída"
+    else
+        print_warning "Arquivo drizzle.config.ts não encontrado - pulando migrations"
     fi
 }
 

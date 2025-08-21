@@ -142,3 +142,13 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 **Causa Raiz**: `secure: true` em produção mas SSL/HTTPS não configurado corretamente no Nginx
 **Solução**: Criado `fix-ssl-session.sh` que detecta status SSL e ajusta configuração de cookie dinamicamente
 **Status**: Script inteligente que funciona com ou sem SSL
+
+### Correção Crítica de Sessão - IDENTIFICADO (August 21, 2025)
+**Problema VPS**: Login retorna 200 mas sessão não é mantida - usuários não conseguem acessar dashboard após login
+**Causa Raiz**: Configuração de sessão inadequada para produção VPS - cookie secure e falta de store persistente PostgreSQL
+**Solução Aplicada**: 
+- **Session Store**: Implementação de `connect-pg-simple` para armazenar sessões no PostgreSQL
+- **Cookie Config**: `secure: process.env.NODE_ENV === 'production'` para SSL automático
+- **Session Save**: `req.session.save()` forçado no login para garantir persistência
+- **Script Fix**: Criado `whatsflow-session-fix.sh` para correção rápida em VPS ativo
+**Status**: Correções integradas no script principal de instalação - CONCLUÍDO

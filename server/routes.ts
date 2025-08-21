@@ -68,7 +68,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // Dynamic based on environment
+      secure: false, // Disabled for now - SSL not working properly
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: 'lax', // Allow cross-site requests but maintain security

@@ -276,6 +276,10 @@ EVOLUTION_API_URL="https://${DOMAIN}/v2"
 # SSL Configuration (CORREÇÃO: permitir SSL em development)
 NODE_TLS_REJECT_UNAUTHORIZED=0
 
+# WebSocket Configuration (CORREÇÃO: desabilitar WebSocket problemático)
+NEON_DISABLE_WEBSOCKET=1
+DATABASE_POOL_MAX=10
+
 # Production
 NODE_ENV="production"
 PORT="5000"
@@ -284,28 +288,22 @@ EOF
     # Instalar dependências
     sudo -u whatsflow npm install
     
-    # CORREÇÃO SSL: Aplicar fix WebSocket no server/db.ts
-    print_status "Applying SSL WebSocket fix..."
+    # CORREÇÃO SSL: Aplicar fix WebSocket no server/db.ts para VPS
+    print_status "Applying complete SSL WebSocket fix for VPS..."
     sudo -u whatsflow tee server/db.ts > /dev/null << 'EOF'
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
 import * as schema from "@shared/schema";
 
-// Configure WebSocket to ignore SSL certificate errors globally
-const WebSocketWithIgnoreSSL = class extends ws {
-  constructor(address: string | URL, protocols?: string | string[], options?: ws.ClientOptions) {
-    // Force SSL to be ignored for all connections in development/production with SSL issues
-    const wsOptions = { 
-      ...options, 
-      rejectUnauthorized: false,
-      checkServerIdentity: () => undefined 
-    };
-    super(address, protocols, wsOptions);
-  }
-};
+// CRITICAL VPS FIX: Completely disable WebSocket to prevent SSL errors
+neonConfig.useSecureWebSocket = false;
+neonConfig.webSocketConstructor = undefined;
 
-neonConfig.webSocketConstructor = WebSocketWithIgnoreSSL;
+// Additional SSL bypass configurations for VPS
+neonConfig.webSocketTimeoutMs = 0;
+if (typeof neonConfig.webSocketConstructor !== 'undefined') {
+  delete neonConfig.webSocketConstructor;
+}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -313,7 +311,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 30000,
+  idleTimeoutMillis: 30000,
+  max: parseInt(process.env.DATABASE_POOL_MAX || '10')
+});
 export const db = drizzle({ client: pool, schema });
 EOF
     
@@ -323,12 +326,12 @@ EOF
     
     # CORREÇÃO: Corrigir shared/schema.ts antes do build
     print_status "Fixing user schema for VPS deployment..."
-    sudo -u whatsflow sed -i '/insertUserSchema = createInsertSchema(users).omit({/,/});/c\
+    sudo -u whatsflow sed -i '/export const insertUserSchema = createInsertSchema(users).omit({/,/});/c\
 export const insertUserSchema = createInsertSchema(users).omit({\
   id: true,\
   createdAt: true,\
   updatedAt: true,\
-  username: true, // Omit username since we use email as identifier\
+  username: true,\
   stripeCustomerId: true,\
   stripeSubscriptionId: true,\
 });' shared/schema.ts
@@ -594,26 +597,44 @@ setup_ssl() {
 
 # Iniciar aplicação com PM2
 start_application() {
-    print_status "Starting application with PM2..."
+    print_status "Starting application with PM2 (with full reset)..."
     
     cd /home/whatsflow/ZapStatus-para-Woocommerce
     
-    # Parar processos existentes
-    sudo -u whatsflow pm2 delete whatsflow 2>/dev/null || true
+    # CORREÇÃO VPS: Restart completo do PM2 para limpar logs antigos
+    print_status "Performing complete PM2 reset..."
+    sudo -u whatsflow pm2 kill 2>/dev/null || true
+    sudo -u whatsflow pm2 flush 2>/dev/null || true
+    sleep 3
     
-    # Iniciar aplicação
-    sudo -u whatsflow pm2 start ecosystem.config.cjs
+    # Reinicializar daemon PM2 
+    sudo -u whatsflow pm2 resurrect 2>/dev/null || true
+    sleep 2
+    
+    # Iniciar aplicação com logs limpos
+    print_status "Starting WhatsFlow application..."
+    sudo -u whatsflow pm2 start ecosystem.config.cjs || {
+        print_error "PM2 start failed. Checking logs..."
+        sudo -u whatsflow pm2 logs --lines 20
+        exit 1
+    }
     
     # Salvar configuração PM2
     sudo -u whatsflow pm2 save
     
-    # Aguardar inicialização
-    sleep 10
+    # Aguardar inicialização completa
+    print_status "Waiting for application to initialize..."
+    sleep 15
     
-    # Verificar status
+    # Verificar status detalhado
+    print_status "Application status:"
     sudo -u whatsflow pm2 status
     
-    print_success "Application started with PM2"
+    # Mostrar logs recentes para verificar se não há erros
+    print_status "Recent application logs:"
+    sudo -u whatsflow pm2 logs whatsflow --lines 5 --nostream
+    
+    print_success "Application started with PM2 (fresh instance)"
 }
 
 # Verificações finais

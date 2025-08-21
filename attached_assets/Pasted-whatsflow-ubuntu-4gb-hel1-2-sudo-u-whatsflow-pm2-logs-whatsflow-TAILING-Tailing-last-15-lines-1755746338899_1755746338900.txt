@@ -1,0 +1,150 @@
+whatsflow@ubuntu-4gb-hel1-2:~$ sudo -u whatsflow pm2 logs whatsflow
+[TAILING] Tailing last 15 lines for [whatsflow] process (change the value with --lines option)
+/home/whatsflow/.pm2/logs/whatsflow-out-0.log last 15 lines:
+0|whatsflo |   "company": "CC",
+0|whatsflo |   "phone": "4733281371",
+0|whatsflo |   "plan": "free"
+0|whatsflo | }
+0|whatsflo | Parsed user data: {
+0|whatsflo |   "email": "nilson.rtw@gmail.com",
+0|whatsflo |   "password": "123456",
+0|whatsflo |   "name": "Maiara Ribeiro",
+0|whatsflo |   "company": "CC",
+0|whatsflo |   "phone": "4733281371",
+0|whatsflo |   "plan": "free"
+0|whatsflo | }
+0|whatsflo | 3:14:21 AM [express] POST /api/auth/register 500 in 23ms :: {"message":"Erro interno do servidor"}
+0|whatsflo | Checking for pending messages at 2025-08-21T03:14:30.009Z
+0|whatsflo | Executing getAllQueuedMessages query...
+
+/home/whatsflow/.pm2/logs/whatsflow-error-0.log last 15 lines:
+0|whatsflo |   },
+0|whatsflo |   [Symbol(kType)]: 'error',
+0|whatsflo |   [Symbol(kError)]: Error: Unexpected server response: 502
+0|whatsflo |       at ClientRequest.<anonymous> (/home/whatsflow/ZapStatus-para-Woocommerce/node_modules/ws/lib/websocket.js:913:7)
+0|whatsflo |       at ClientRequest.emit (node:events:524:28)
+0|whatsflo |       at HTTPParser.parserOnIncomingClient (node:_http_client:702:27)
+0|whatsflo |       at HTTPParser.parserOnHeadersComplete (node:_http_common:118:17)
+0|whatsflo |       at TLSSocket.socketOnData (node:_http_client:544:22)
+0|whatsflo |       at TLSSocket.emit (node:events:524:28)
+0|whatsflo |       at addChunk (node:internal/streams/readable:561:12)
+0|whatsflo |       at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+0|whatsflo |       at Readable.push (node:internal/streams/readable:392:5)
+0|whatsflo |       at TLSWrap.onStreamRead (node:internal/stream_base_commons:191:23),
+0|whatsflo |   [Symbol(kMessage)]: 'Unexpected server response: 502'
+0|whatsflo | }
+
+0|whatsflow  | Checking for pending messages at 2025-08-21T03:14:40.013Z
+0|whatsflow  | Executing getAllQueuedMessages query...
+0|whatsflow  | Error processing message queue: ErrorEvent {
+0|whatsflow  |   [Symbol(kTarget)]: WebSocketWithIgnoreSSL {
+0|whatsflow  |     _events: [Object: null prototype] {
+0|whatsflow  |       error: [Function],
+0|whatsflow  |       message: [Function],
+0|whatsflow  |       close: [Function],
+0|whatsflow  |       open: [Function]
+0|whatsflow  |     },
+0|whatsflow  |     _eventsCount: 4,
+0|whatsflow  |     _maxListeners: undefined,
+0|whatsflow  |     _binaryType: 'arraybuffer',
+0|whatsflow  |     _closeCode: 1006,
+0|whatsflow  |     _closeFrameReceived: false,
+0|whatsflow  |     _closeFrameSent: false,
+0|whatsflow  |     _closeMessage: <Buffer >,
+0|whatsflow  |     _closeTimer: null,
+0|whatsflow  |     _errorEmitted: true,
+0|whatsflow  |     _extensions: {},
+0|whatsflow  |     _paused: false,
+0|whatsflow  |     _protocol: '',
+0|whatsflow  |     _readyState: 3,
+0|whatsflow  |     _receiver: null,
+0|whatsflow  |     _sender: null,
+0|whatsflow  |     _socket: null,
+0|whatsflow  |     _bufferedAmount: 0,
+0|whatsflow  |     _isServer: false,
+0|whatsflow  |     _redirects: 0,
+0|whatsflow  |     _autoPong: true,
+0|whatsflow  |     _url: 'wss://localhost/v2',
+0|whatsflow  |     _req: ClientRequest {
+0|whatsflow  |       _events: [Object: null prototype],
+0|whatsflow  |       _eventsCount: 4,
+0|whatsflow  |       _maxListeners: undefined,
+0|whatsflow  |       outputData: [],
+0|whatsflow  |       outputSize: 0,
+0|whatsflow  |       writable: true,
+0|whatsflow  |       destroyed: true,
+0|whatsflow  |       _last: true,
+0|whatsflow  |       chunkedEncoding: false,
+0|whatsflow  |       shouldKeepAlive: true,
+0|whatsflow  |       maxRequestsOnConnectionReached: false,
+0|whatsflow  |       _defaultKeepAlive: true,
+0|whatsflow  |       useChunkedEncodingByDefault: false,
+0|whatsflow  |       sendDate: false,
+0|whatsflow  |       _removedConnection: false,
+0|whatsflow  |       _removedContLen: false,
+0|whatsflow  |       _removedTE: false,
+0|whatsflow  |       strictContentLength: false,
+0|whatsflow  |       _contentLength: 0,
+0|whatsflow  |       _hasBody: true,
+0|whatsflow  |       _trailer: '',
+0|whatsflow  |       finished: true,
+0|whatsflow  |       _headerSent: true,
+0|whatsflow  |       _closed: true,
+0|whatsflow  |       socket: [TLSSocket],
+0|whatsflow  |       _header: 'GET /v2 HTTP/1.1\r\n' +
+0|whatsflow  |         'Sec-WebSocket-Version: 13\r\n' +
+0|whatsflow  |         'Sec-WebSocket-Key: uHPqdzwS8sVrisVKh53ZLQ==\r\n' +
+0|whatsflow  |         'Connection: Upgrade\r\n' +
+0|whatsflow  |         'Upgrade: websocket\r\n' +
+0|whatsflow  |         'Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n' +
+0|whatsflow  |         'Host: localhost\r\n' +
+0|whatsflow  |         '\r\n',
+0|whatsflow  |       _keepAliveTimeout: 0,
+0|whatsflow  |       _onPendingData: [Function: nop],
+0|whatsflow  |       agent: undefined,
+0|whatsflow  |       socketPath: undefined,
+0|whatsflow  |       method: 'GET',
+0|whatsflow  |       maxHeaderSize: undefined,
+0|whatsflow  |       insecureHTTPParser: undefined,
+0|whatsflow  |       joinDuplicateHeaders: undefined,
+0|whatsflow  |       path: '/v2',
+0|whatsflow  |       _ended: true,
+0|whatsflow  |       res: [IncomingMessage],
+0|whatsflow  |       aborted: true,
+0|whatsflow  |       timeoutCb: null,
+0|whatsflow  |       upgradeOrConnect: false,
+0|whatsflow  |       parser: null,
+0|whatsflow  |       maxHeadersCount: null,
+0|whatsflow  |       reusedSocket: false,
+0|whatsflow  |       host: 'localhost',
+0|whatsflow  |       protocol: 'https:',
+0|whatsflow  |       [Symbol(shapeMode)]: false,
+0|whatsflow  |       [Symbol(kCapture)]: false,
+0|whatsflow  |       [Symbol(kBytesWritten)]: 0,
+0|whatsflow  |       [Symbol(kNeedDrain)]: false,
+0|whatsflow  |       [Symbol(corked)]: 0,
+0|whatsflow  |       [Symbol(kOutHeaders)]: [Object: null prototype],
+0|whatsflow  |       [Symbol(errored)]: null,
+0|whatsflow  |       [Symbol(kHighWaterMark)]: 16384,
+0|whatsflow  |       [Symbol(kRejectNonStandardBodyWrites)]: false,
+0|whatsflow  |       [Symbol(kUniqueHeaders)]: null,
+0|whatsflow  |       [Symbol(kAborted)]: true,
+0|whatsflow  |       [Symbol(kError)]: undefined
+0|whatsflow  |     },
+0|whatsflow  |     [Symbol(shapeMode)]: false,
+0|whatsflow  |     [Symbol(kCapture)]: false
+0|whatsflow  |   },
+0|whatsflow  |   [Symbol(kType)]: 'error',
+0|whatsflow  |   [Symbol(kError)]: Error: Unexpected server response: 502
+0|whatsflow  |       at ClientRequest.<anonymous> (/home/whatsflow/ZapStatus-para-Woocommerce/node_modules/ws/lib/websocket.js:913:7)
+0|whatsflow  |       at ClientRequest.emit (node:events:524:28)
+0|whatsflow  |       at HTTPParser.parserOnIncomingClient (node:_http_client:702:27)
+0|whatsflow  |       at HTTPParser.parserOnHeadersComplete (node:_http_common:118:17)
+0|whatsflow  |       at TLSSocket.socketOnData (node:_http_client:544:22)
+0|whatsflow  |       at TLSSocket.emit (node:events:524:28)
+0|whatsflow  |       at addChunk (node:internal/streams/readable:561:12)
+0|whatsflow  |       at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+0|whatsflow  |       at Readable.push (node:internal/streams/readable:392:5)
+0|whatsflow  |       at TLSWrap.onStreamRead (node:internal/stream_base_commons:191:23),
+0|whatsflow  |   [Symbol(kMessage)]: 'Unexpected server response: 502'
+0|whatsflow  | }

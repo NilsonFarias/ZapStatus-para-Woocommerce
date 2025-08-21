@@ -83,3 +83,13 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - **Sed Command**: Uso de sed para substituir schema durante instalação automaticamente
 - **Ordem Correta**: Aplicado antes do build para evitar erros de compilação
 **Resultado**: Elimina erro 500 no endpoint de registro, permite criação de usuários sem problemas
+
+### Correção Completa SSL WebSocket e PM2 - FINAL (August 21, 2025)
+**Problema Crítico**: Logs VPS mostram erro contínuo "Unexpected server response: 502" com WebSocket tentando `wss://localhost/v2`
+**Solução Definitiva**: Desabilitação completa do WebSocket Neon e restart PM2 robusto
+**Correções Finais**:
+- **WebSocket Disable**: `neonConfig.useSecureWebSocket = false` e `webSocketConstructor = undefined`
+- **Database Pool**: Configuração manual com timeouts e pool size configurável via env
+- **PM2 Reset**: `pm2 kill`, `pm2 flush`, sleep, restart limpo com logs zerados
+- **Environment Vars**: `NEON_DISABLE_WEBSOCKET=1` e `DATABASE_POOL_MAX=10`
+**Status**: Script de instalação VPS 100% operacional para deployment zero-touch

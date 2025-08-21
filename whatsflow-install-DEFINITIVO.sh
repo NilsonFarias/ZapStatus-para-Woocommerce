@@ -29,24 +29,52 @@ print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-# Solicitar domínio obrigatoriamente
-if [ $# -eq 0 ]; then
-    print_status "WhatsFlow Production Installation"
-    print_warning "You need a domain pointing to this server for SSL certificate"
-    print_error "Usage: bash whatsflow-install-DEFINITIVO.sh YOUR_DOMAIN.COM"
-    print_error "Example: bash whatsflow-install-DEFINITIVO.sh whatsflow.exemplo.com"
-    exit 1
-else
-    DOMAIN=$1
+# Solicitar informações interativamente
+print_status "========================================"
+print_status "    WhatsFlow Production Installation"
+print_status "========================================"
+print_warning "Before starting, make sure:"
+print_warning "1. Your domain DNS points to this server IP"
+print_warning "2. Ports 80 and 443 are open in firewall"
+print_warning "3. You have a valid email for SSL certificate"
+print_status ""
+
+# Solicitar domínio
+while true; do
+    read -p "Enter your domain (example: whatsapp.meusite.com.br): " DOMAIN
+    if [[ -z "$DOMAIN" ]]; then
+        print_error "Domain cannot be empty. Please try again."
+        continue
+    fi
+    
     # Validação básica do domínio
     if [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9\.-]*[a-zA-Z0-9]\.[a-zA-Z]{2,}$ ]]; then
         print_error "Invalid domain format: $DOMAIN"
-        print_error "Please provide a valid domain like: whatsflow.exemplo.com"
-        exit 1
+        print_error "Please provide a valid domain like: whatsapp.meusite.com.br"
+        continue
     fi
-fi
+    break
+done
+
+# Solicitar email para SSL
+while true; do
+    read -p "Enter your email for SSL certificate (required by Let's Encrypt): " SSL_EMAIL
+    if [[ -z "$SSL_EMAIL" ]]; then
+        print_error "Email cannot be empty. Please try again."
+        continue
+    fi
+    
+    # Validação básica do email
+    if [[ ! "$SSL_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+        print_error "Invalid email format: $SSL_EMAIL"
+        continue
+    fi
+    break
+done
 
 print_success "Domain configured: $DOMAIN"
+print_success "SSL Email configured: $SSL_EMAIL"
+print_status ""
 
 # Verificar se está rodando como root
 check_root() {
@@ -208,10 +236,10 @@ setup_ssl() {
     print_status "Waiting 10 seconds before SSL setup..."
     sleep 10
     
-    # Obter certificado SSL
-    sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN || {
+    # Obter certificado SSL com email fornecido
+    sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email $SSL_EMAIL || {
         print_warning "SSL certificate setup failed. You can run it manually later:"
-        print_warning "sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN"
+        print_warning "sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --email $SSL_EMAIL"
     }
     
     # Configurar renovação automática
@@ -584,7 +612,9 @@ EOF
 
 # Função principal
 main() {
-    print_status "Starting WhatsFlow DEFINITIVE Installation for: $DOMAIN"
+    print_status "Starting WhatsFlow DEFINITIVE Installation"
+    print_status "Domain: $DOMAIN"
+    print_status "SSL Email: $SSL_EMAIL"
     print_warning "This version GUARANTEES WebSocket fixes are applied to the built code"
     
     check_root

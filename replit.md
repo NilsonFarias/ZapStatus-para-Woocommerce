@@ -143,6 +143,16 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 **Solução**: Criado `fix-ssl-session.sh` que detecta status SSL e ajusta configuração de cookie dinamicamente
 **Status**: Script inteligente que funciona com ou sem SSL
 
+### Script Interativo Criado - MELHORADO (August 21, 2025)
+**Atualização**: Script `whatsflow-install-DEFINITIVO.sh` modificado para solicitar informações interativamente
+**Funcionalidades Adicionadas**:
+- **Input Interativo**: Solicita domínio e email durante execução (não mais na linha de comando)
+- **Validação de Domínio**: Verifica formato correto do domínio
+- **Validação de Email**: Verifica formato de email para SSL
+- **Configuração SSL**: Usa email fornecido pelo usuário no Certbot
+- **User-Friendly**: Execução simples com `bash whatsflow-install-DEFINITIVO.sh`
+**Status**: Script totalmente interativo e user-friendly
+
 ### Correção Crítica de Sessão - IDENTIFICADO (August 21, 2025)
 **Problema VPS**: Login retorna 200 mas sessão não é mantida - usuários não conseguem acessar dashboard após login
 **Causa Raiz**: Configuração de sessão inadequada para produção VPS - cookie secure e falta de store persistente PostgreSQL

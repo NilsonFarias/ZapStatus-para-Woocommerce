@@ -153,9 +153,31 @@ install_pm2() {
     print_success "PM2 installed"
 }
 
+# Função para aguardar liberação do apt lock
+wait_for_apt_lock() {
+    local timeout=300  # 5 minutos
+    local elapsed=0
+    
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+        if [ $elapsed -ge $timeout ]; then
+            print_error "Timeout waiting for apt lock to be released"
+            return 1
+        fi
+        
+        print_status "Waiting for other apt processes to finish... ($elapsed/$timeout seconds)"
+        sleep 10
+        elapsed=$((elapsed + 10))
+    done
+    
+    return 0
+}
+
 # Instalar Nginx
 install_nginx() {
     print_status "Installing Nginx..."
+    
+    # Aguardar liberação do lock
+    wait_for_apt_lock || exit 1
     
     case $OS in
         ubuntu|debian)

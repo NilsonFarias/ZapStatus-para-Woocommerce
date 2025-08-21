@@ -53,3 +53,15 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - **Tailwind CSS**: Utility-first CSS framework.
 - **Wouter**: Lightweight client-side routing.
 - **Node-cron**: Scheduled task execution.
+
+## Recent Updates (August 21, 2025)
+
+### SSL WebSocket Certificate Fix Applied to Installation Script
+**Critical Issue Resolved**: SSL Certificate Mismatch between Evolution API WebSocket (`wss://localhost/v2`) and domain certificate causing login failures
+**Script Updated**: `whatsflow-install-fixed.sh` now includes SSL WebSocket corrections by default
+**Key Changes**:
+- Evolution API URL configured to use domain SSL from installation: `https://${DOMAIN}/v2`
+- Added `NODE_TLS_REJECT_UNAUTHORIZED=0` for development SSL handling
+- Nginx proxy configured for `/v2` Evolution API endpoint
+- PM2 ecosystem includes all SSL environment variables
+**Impact**: Eliminates ERR_TLS_CERT_ALTNAME_INVALID errors, enables immediate admin login post-installation

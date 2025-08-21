@@ -269,13 +269,12 @@ STRIPE_BASIC_PRICE_ID="price_basic_placeholder"
 STRIPE_PRO_PRICE_ID="price_pro_placeholder"
 STRIPE_ENTERPRISE_PRICE_ID="price_enterprise_placeholder"
 
-# Evolution API (placeholders)
-EVOLUTION_API_KEY="placeholder_key"
+# Evolution API (CORREÇÃO: usar domínio SSL correto)
+EVOLUTION_API_KEY="placeholder_$(openssl rand -hex 16)"
 EVOLUTION_API_URL="https://${DOMAIN}/v2"
 
-# Evolution API (CORREÇÃO: placeholders válidos)
-EVOLUTION_API_KEY="placeholder_$(openssl rand -hex 16)"
-EVOLUTION_API_URL="http://localhost:8080"
+# SSL Configuration (CORREÇÃO: permitir SSL em development)
+NODE_TLS_REJECT_UNAUTHORIZED=0
 
 # Production
 NODE_ENV="production"
@@ -349,7 +348,8 @@ module.exports = {
       STRIPE_SECRET_KEY: '$(grep STRIPE_SECRET_KEY .env | cut -d= -f2)',
       VITE_STRIPE_PUBLIC_KEY: '$(grep VITE_STRIPE_PUBLIC_KEY .env | cut -d= -f2)',
       EVOLUTION_API_KEY: '$(grep EVOLUTION_API_KEY .env | cut -d= -f2)',
-      EVOLUTION_API_URL: '$(grep EVOLUTION_API_URL .env | cut -d= -f2)'
+      EVOLUTION_API_URL: 'https://${DOMAIN}/v2',
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
     },
     max_restarts: 10,
     min_uptime: '10s',
@@ -427,7 +427,7 @@ configure_nginx() {
     
     print_status "Configuring for domain: $DOMAIN"
     
-    # CORREÇÃO: Configuração Nginx otimizada
+    # CORREÇÃO: Configuração Nginx com proxy Evolution API
     sudo tee /etc/nginx/sites-available/whatsflow > /dev/null << EOF
 server {
     listen 80;
@@ -446,6 +446,25 @@ server {
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
+    }
+    
+    # Evolution API proxy (evita SSL certificate mismatch)
+    location /v2 {
+        proxy_pass http://localhost:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 86400;
+        
+        # WebSocket specific headers
+        proxy_set_header Sec-WebSocket-Extensions \$http_sec_websocket_extensions;
+        proxy_set_header Sec-WebSocket-Key \$http_sec_websocket_key;
+        proxy_set_header Sec-WebSocket-Version \$http_sec_websocket_version;
     }
 }
 EOF

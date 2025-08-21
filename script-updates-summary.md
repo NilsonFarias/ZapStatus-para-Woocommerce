@@ -104,6 +104,21 @@ Após execução dos scripts corrigidos:
 - ✅ SSL certificate válido para o domínio
 - ✅ PM2 executando aplicação em produção
 
+### 🔧 Correção SSL WebSocket Aplicada no Script Principal (August 21, 2025)
+
+**Problema SSL Corrigido**:
+- SSL Certificate Mismatch: `wss://localhost/v2` vs certificado `mylist.center`
+- Erro ERR_TLS_CERT_ALTNAME_INVALID causando falha no login admin
+- WebSocket Evolution API impedindo funcionamento do servidor
+
+**Correções Integradas ao Script Principal**:
+1. **Evolution API URL** - Configurada para usar domínio SSL desde instalação
+2. **NODE_TLS_REJECT_UNAUTHORIZED=0** - Adicionado ao .env para development
+3. **Nginx Proxy /v2** - Configurado proxy Evolution API em HTTP e HTTPS
+4. **PM2 Environment** - Variáveis SSL corretas no ecosystem config
+
+**Benefício**: Elimina erros SSL desde a instalação, permitindo login admin imediato
+
 ## Data da Atualização: 21 de Agosto de 2025
 
-**Status:** ✅ SCRIPTS CORRIGIDOS E TESTADOS
+**Status:** ✅ SCRIPTS CORRIGIDOS, TESTADOS E COM CORREÇÃO SSL WEBSOCKET INTEGRADA

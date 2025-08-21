@@ -133,3 +133,12 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - Aplica todas as correções de sessão de uma só vez
 - Evita conflitos de `sed` commands
 **Status**: Script de instalação corrigido para evitar duplicações
+
+### Identificação do Problema Real: SSL vs Sessão - DIAGNÓSTICO (August 21, 2025)
+**Problema Real Identificado**: Sessão é criada no login mas cookie não retorna devido ao `secure: true` sem SSL funcional
+**Evidência nos Logs**:
+- ✅ "Login successful: Session created" - Sessão PostgreSQL funcionando
+- ❌ "GET /api/auth/me 401 Not authenticated" - Cookie não sendo enviado
+**Causa Raiz**: `secure: true` em produção mas SSL/HTTPS não configurado corretamente no Nginx
+**Solução**: Criado `fix-ssl-session.sh` que detecta status SSL e ajusta configuração de cookie dinamicamente
+**Status**: Script inteligente que funciona com ou sem SSL

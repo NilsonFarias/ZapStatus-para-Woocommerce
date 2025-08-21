@@ -1,0 +1,35 @@
+whatsflow@ubuntu-4gb-hel1-2:~$ sudo -u whatsflow pm2 logs whatsflow
+[TAILING] Tailing last 15 lines for [whatsflow] process (change the value with --lines option)
+/home/whatsflow/.pm2/logs/whatsflow-out-0.log last 15 lines:
+0|whatsflo | Parsed user data: {
+0|whatsflo |   "email": "nilson.rtw@gmail.com",
+0|whatsflo |   "password": "JPN@22zk76",
+0|whatsflo |   "name": "Maiara Ribeiro",
+0|whatsflo |   "company": "CC",
+0|whatsflo |   "phone": "4733281371",
+0|whatsflo |   "plan": "free"
+0|whatsflo | }
+0|whatsflo | 2:36:52 AM [express] POST /api/auth/register 500 in 17ms :: {"message":"Erro interno do servidor"}
+0|whatsflo | Checking for pending messages at 2025-08-21T02:37:00.010Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-21T02:37:10.011Z
+0|whatsflo | Executing getAllQueuedMessages query...
+0|whatsflo | Checking for pending messages at 2025-08-21T02:37:20.011Z
+0|whatsflo | Executing getAllQueuedMessages query...
+
+/home/whatsflow/.pm2/logs/whatsflow-error-0.log last 15 lines:
+0|whatsflo |       exponent: '0x10001',
+0|whatsflo |       pubkey: <Buffer 30 82 01 22 30 0d 06 09 2a 86 48 86 f7 0d 01 01 01 05 00 03 82 01 0f 00 30 82 01 0a 02 82 01 01 00 ab cd 55 11 3b 41 19 ec e8 36 25 32 24 30 88 61 b0 ... 244 more bytes>,
+0|whatsflo |       valid_from: 'Aug 21 01:37:11 2025 GMT',
+0|whatsflo |       valid_to: 'Nov 19 01:37:10 2025 GMT',
+0|whatsflo |       fingerprint: '76:E8:5C:B5:06:97:AE:DB:BC:BE:37:7D:B6:03:43:9C:9C:02:63:74',
+0|whatsflo |       fingerprint256: 'A2:45:67:53:06:B4:48:DC:B7:A2:FE:CC:55:6F:C9:AD:4F:CA:F8:03:55:36:6D:20:F4:5D:12:C0:82:8A:16:6E',
+0|whatsflo |       fingerprint512: '11:A0:5D:4A:E8:C3:E0:57:27:C5:69:66:A3:97:B8:1B:8C:B0:17:24:0C:4B:9A:36:FE:AD:18:75:C8:37:1F:1F:00:65:5F:0C:A9:84:E7:BC:45:13:B4:CB:25:37:8D:A3:60:9D:A5:95:22:AC:53:3D:0C:4F:C2:77:DB:4D:0E:BF',
+0|whatsflo |       ext_key_usage: [Array],
+0|whatsflo |       serialNumber: '06C8CFF7F7B66EBF90836AEB02601CED0F52',
+0|whatsflo |       raw: <Buffer 30 82 05 09 30 82 03 f1 a0 03 02 01 02 02 12 06 c8 cf f7 f7 b6 6e bf 90 83 6a eb 02 60 1c ed 0f 52 30 0d 06 09 2a 86 48 86 f7 0d 01 01 0b 05 00 30 33 ... 1243 more bytes>,
+0|whatsflo |       issuerCertificate: [Object]
+0|whatsflo |     }
+0|whatsflo |   },
+0|whatsflo |   [Symbol(kMessage)]: "Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:mylist.center, DNS:www.mylist.center"
+0|whatsflo | }

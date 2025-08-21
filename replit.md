@@ -153,6 +153,18 @@ The architecture emphasizes reusability and maintainability through shared TypeS
 - **User-Friendly**: Execução simples com `bash whatsflow-install-DEFINITIVO.sh`
 **Status**: Script totalmente interativo e user-friendly
 
+### Correção Evolution API URL Externa - SCRIPT CRIADO (August 21, 2025)
+**Problema**: WhatsFlow tentando usar URL padrão incorreta em vez do servidor Evolution externo do usuário
+**Solução**: Criado `fix-evolution-simple.sh` para configurar servidor Evolution externo
+**Funcionalidades**:
+- **Input Interativo**: Solicita URL completa do servidor Evolution externo e API key
+- **Dupla Atualização**: Atualiza tanto arquivo `.env` quanto configurações do banco de dados
+- **Backup Automático**: Cria backup do `.env` antes das alterações
+- **Múltiplos Métodos**: Tenta diferentes formas de acessar o banco (postgres, whatsflow, direto)
+- **Fallback Manual**: Se banco não for acessível, orienta configuração manual no admin
+- **Restart Automático**: Reinicia aplicação para aplicar mudanças
+**Status**: Script pronto para uso com servidores Evolution externos
+
 ### Correção Crítica de Sessão - IDENTIFICADO (August 21, 2025)
 **Problema VPS**: Login retorna 200 mas sessão não é mantida - usuários não conseguem acessar dashboard após login
 **Causa Raiz**: Configuração de sessão inadequada para produção VPS - cookie secure e falta de store persistente PostgreSQL

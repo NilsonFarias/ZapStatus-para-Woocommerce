@@ -107,11 +107,24 @@ INSERT INTO system_settings (key, value, description) VALUES ('evolution_api_url
 INSERT INTO system_settings (key, value, description) VALUES ('evolution_api_key', '$API_KEY', 'Evolution API Key') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 EOF
 
-# Tentar atualizar o banco
-sudo -u postgres psql -d "$DB_NAME" -f /tmp/update_evolution.sql 2>/dev/null || {
-    print_warning "Could not update database directly"
-    print_warning "You'll need to configure in the admin panel manually"
-}
+# Tentar diferentes métodos para atualizar o banco
+print_status "Attempting to update database..."
+
+# Método 1: Tentar como postgres user
+if sudo -u postgres psql -d "$DB_NAME" -f /tmp/update_evolution.sql 2>/dev/null; then
+    print_success "Database updated successfully!"
+elif sudo -u whatsflow psql "$DB_URL" -f /tmp/update_evolution.sql 2>/dev/null; then
+    print_success "Database updated successfully!"
+elif psql "$DB_URL" -f /tmp/update_evolution.sql 2>/dev/null; then
+    print_success "Database updated successfully!"
+else
+    print_warning "Could not update database automatically"
+    print_warning "The .env file was updated, but you'll need to:"
+    print_warning "1. Go to Admin Panel > API Configuration"
+    print_warning "2. Enter URL: $EVOLUTION_URL"
+    print_warning "3. Enter API Key: ${API_KEY:0:10}..."
+    print_warning "4. Click Save"
+fi
 
 # Limpar arquivo temporário
 rm -f /tmp/update_evolution.sql

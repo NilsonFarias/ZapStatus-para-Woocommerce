@@ -1,0 +1,85 @@
+/home/whatsflow/.pm2/logs/whatsflow-error-0.log last 15 lines:
+0|whatsflo |       exponent: '0x10001',
+0|whatsflo |       pubkey: <Buffer 30 82 01 22 30 0d 06 09 2a 86 48 86 f7 0d 01 01 01 05 00 03 82 01 0f 00 30 82 01 0a 02 82 01 01 00 ab cd 55 11 3b 41 19 ec e8 36 25 32 24 30 88 61 b0 ... 244 more bytes>,
+0|whatsflo |       valid_from: 'Aug 21 01:37:11 2025 GMT',
+0|whatsflo |       valid_to: 'Nov 19 01:37:10 2025 GMT',
+0|whatsflo |       fingerprint: '76:E8:5C:B5:06:97:AE:DB:BC:BE:37:7D:B6:03:43:9C:9C:02:63:74',
+0|whatsflo |       fingerprint256: 'A2:45:67:53:06:B4:48:DC:B7:A2:FE:CC:55:6F:C9:AD:4F:CA:F8:03:55:36:6D:20:F4:5D:12:C0:82:8A:16:6E',
+0|whatsflo |       fingerprint512: '11:A0:5D:4A:E8:C3:E0:57:27:C5:69:66:A3:97:B8:1B:8C:B0:17:24:0C:4B:9A:36:FE:AD:18:75:C8:37:1F:1F:00:65:5F:0C:A9:84:E7:BC:45:13:B4:CB:25:37:8D:A3:60:9D:A5:95:22:AC:53:3D:0C:4F:C2:77:DB:4D:0E:BF',
+0|whatsflo |       ext_key_usage: [Array],
+0|whatsflo |       serialNumber: '06C8CFF7F7B66EBF90836AEB02601CED0F52',
+0|whatsflo |       raw: <Buffer 30 82 05 09 30 82 03 f1 a0 03 02 01 02 02 12 06 c8 cf f7 f7 b6 6e bf 90 83 6a eb 02 60 1c ed 0f 52 30 0d 06 09 2a 86 48 86 f7 0d 01 01 0b 05 00 30 33 ... 1243 more bytes>,
+0|whatsflo |       issuerCertificate: [Object]
+0|whatsflo |     }
+0|whatsflo |   },
+0|whatsflo |   [Symbol(kMessage)]: "Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:mylist.center, DNS:www.mylist.center"
+0|whatsflo | }
+
+0|whatsflow  | 2025-08-21T02:48:10: Checking for pending messages at 2025-08-21T02:48:10.010Z
+0|whatsflow  | 2025-08-21T02:48:10: Executing getAllQueuedMessages query...
+0|whatsflow  | 2025-08-21T02:48:10: Error processing message queue: ErrorEvent {
+0|whatsflow  |   [Symbol(kTarget)]: WebSocket {
+0|whatsflow  |     _events: [Object: null prototype] {
+0|whatsflow  |       error: [Function],
+0|whatsflow  |       message: [Function],
+0|whatsflow  |       close: [Function],
+0|whatsflow  |       open: [Function]
+0|whatsflow  |     },
+0|whatsflow  |     _eventsCount: 4,
+0|whatsflow  |     _maxListeners: undefined,
+0|whatsflow  |     _binaryType: 'arraybuffer',
+0|whatsflow  |     _closeCode: 1006,
+0|whatsflow  |     _closeFrameReceived: false,
+0|whatsflow  |     _closeFrameSent: false,
+0|whatsflow  |     _closeMessage: <Buffer >,
+0|whatsflow  |     _closeTimer: null,
+0|whatsflow  |     _errorEmitted: true,
+0|whatsflow  |     _extensions: {},
+0|whatsflow  |     _paused: false,
+0|whatsflow  |     _protocol: '',
+0|whatsflow  |     _readyState: 3,
+0|whatsflow  |     _receiver: null,
+0|whatsflow  |     _sender: null,
+0|whatsflow  |     _socket: null,
+0|whatsflow  |     _bufferedAmount: 0,
+0|whatsflow  |     _isServer: false,
+0|whatsflow  |     _redirects: 0,
+0|whatsflow  |     _autoPong: true,
+0|whatsflow  |     _url: 'wss://localhost/v2',
+0|whatsflow  |     _req: null,
+0|whatsflow  |     [Symbol(shapeMode)]: false,
+0|whatsflow  |     [Symbol(kCapture)]: false
+0|whatsflow  |   },
+0|whatsflow  |   [Symbol(kType)]: 'error',
+0|whatsflow  |   [Symbol(kError)]: Error [ERR_TLS_CERT_ALTNAME_INVALID]: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:mylist.center, DNS:www.mylist.center
+0|whatsflow  |       at Object.checkServerIdentity (node:tls:316:12)
+0|whatsflow  |       at TLSSocket.onConnectSecure (node:_tls_wrap:1687:27)
+0|whatsflow  |       at TLSSocket.emit (node:events:524:28)
+0|whatsflow  |       at TLSSocket._finishInit (node:_tls_wrap:1076:8)
+0|whatsflow  |       at ssl.onhandshakedone (node:_tls_wrap:862:12) {
+0|whatsflow  |     code: 'ERR_TLS_CERT_ALTNAME_INVALID',
+0|whatsflow  |     reason: "Host: localhost. is not in the cert's altnames: DNS:mylist.center, DNS:www.mylist.center",
+0|whatsflow  |     host: 'localhost',
+0|whatsflow  |     cert: {
+0|whatsflow  |       subject: [Object: null prototype],
+0|whatsflow  |       issuer: [Object: null prototype],
+0|whatsflow  |       subjectaltname: 'DNS:mylist.center, DNS:www.mylist.center',
+0|whatsflow  |       infoAccess: [Object: null prototype],
+0|whatsflow  |       ca: false,
+0|whatsflow  |       modulus: 'ABCD55113B4119ECE836253224308861B02143001956EB26B7791F37BE215F10559B52FF67D3558A07BB9F2D2E1B0A3AAB2A35CE5DF038E1852D9F4CE51072ADCD0BB526CF2E9DD9B9258E60542B90F22191975D0BFE4690FA159D43CEC74283E6502721D902701E38B203B75EF1E76B4EDE196D8EDA579AA2E516E7E59D98B06D499886F503ED7FD5959D375D910D20A0585D7ECCD0694B37E5BC6D14C455B6ACEF103070D26EE66F56DB66CDA85442463386903624437AE26076DBBC3D3102343A9E3703E4096DC9E9404F58F9F463482930AC2BC030AD3699F55D053620A02F4D594E908F6A9E49368153E92E51EF36D7098CFB0E36ACBE3A47E655128413',
+0|whatsflow  |       bits: 2048,
+0|whatsflow  |       exponent: '0x10001',
+0|whatsflow  |       pubkey: <Buffer 30 82 01 22 30 0d 06 09 2a 86 48 86 f7 0d 01 01 01 05 00 03 82 01 0f 00 30 82 01 0a 02 82 01 01 00 ab cd 55 11 3b 41 19 ec e8 36 25 32 24 30 88 61 b0 ... 244 more bytes>,
+0|whatsflow  |       valid_from: 'Aug 21 01:37:11 2025 GMT',
+0|whatsflow  |       valid_to: 'Nov 19 01:37:10 2025 GMT',
+0|whatsflow  |       fingerprint: '76:E8:5C:B5:06:97:AE:DB:BC:BE:37:7D:B6:03:43:9C:9C:02:63:74',
+0|whatsflow  |       fingerprint256: 'A2:45:67:53:06:B4:48:DC:B7:A2:FE:CC:55:6F:C9:AD:4F:CA:F8:03:55:36:6D:20:F4:5D:12:C0:82:8A:16:6E',
+0|whatsflow  |       fingerprint512: '11:A0:5D:4A:E8:C3:E0:57:27:C5:69:66:A3:97:B8:1B:8C:B0:17:24:0C:4B:9A:36:FE:AD:18:75:C8:37:1F:1F:00:65:5F:0C:A9:84:E7:BC:45:13:B4:CB:25:37:8D:A3:60:9D:A5:95:22:AC:53:3D:0C:4F:C2:77:DB:4D:0E:BF',
+0|whatsflow  |       ext_key_usage: [Array],
+0|whatsflow  |       serialNumber: '06C8CFF7F7B66EBF90836AEB02601CED0F52',
+0|whatsflow  |       raw: <Buffer 30 82 05 09 30 82 03 f1 a0 03 02 01 02 02 12 06 c8 cf f7 f7 b6 6e bf 90 83 6a eb 02 60 1c ed 0f 52 30 0d 06 09 2a 86 48 86 f7 0d 01 01 0b 05 00 30 33 ... 1243 more bytes>,
+0|whatsflow  |       issuerCertificate: [Object]
+0|whatsflow  |     }
+0|whatsflow  |   },
+0|whatsflow  |   [Symbol(kMessage)]: "Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:mylist.center, DNS:www.mylist.center"
+0|whatsflow  | }

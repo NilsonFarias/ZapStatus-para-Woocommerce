@@ -389,25 +389,30 @@ EOF
     export DATABASE_URL
     
     sudo -u whatsflow -E node -e "
-const { neon } = require('@neondatabase/serverless');
+const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 async function createAdmin() {
   try {
-    const sql = neon(process.env.DATABASE_URL);
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const client = await pool.connect();
     const hashedPassword = await bcrypt.hash('admin123', 10);
     
-    const existing = await sql\`SELECT id FROM users WHERE email = 'admin@whatsflow.com'\`;
-    if (existing.length > 0) {
+    const existing = await client.query('SELECT id FROM users WHERE email = \$1', ['admin@whatsflow.com']);
+    if (existing.rows.length > 0) {
       console.log('✅ Admin user already exists');
+      client.release();
+      pool.end();
       return;
     }
     
-    await sql\`
+    await client.query(\`
       INSERT INTO users (email, password, name, role, plan, subscription_status)
-      VALUES ('admin@whatsflow.com', \${hashedPassword}, 'Administrator', 'admin', 'enterprise', 'active')
-    \`;
+      VALUES (\$1, \$2, \$3, \$4, \$5, \$6)
+    \`, ['admin@whatsflow.com', hashedPassword, 'Administrator', 'admin', 'enterprise', 'active']);
     
     console.log('✅ Admin user created: admin@whatsflow.com / admin123');
+    client.release();
+    pool.end();
   } catch(e) {
     console.log('⚠️ Admin creation failed:', e.message);
   }

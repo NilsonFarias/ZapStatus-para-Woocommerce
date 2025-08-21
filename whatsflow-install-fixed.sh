@@ -398,7 +398,14 @@ configure_nginx() {
         echo "Or press Enter to use 'localhost' for local testing"
         echo ""
         echo -n "Domain: "
-        read DOMAIN
+        
+        # Forçar leitura do stdin mesmo via pipe
+        if [ -t 0 ]; then
+            read DOMAIN
+        else
+            # Se não há terminal, ler do /dev/tty
+            read DOMAIN < /dev/tty
+        fi
         
         if [ -z "$DOMAIN" ]; then
             DOMAIN="localhost"
@@ -482,7 +489,14 @@ setup_ssl() {
     echo "This requires your domain to point to this server."
     echo ""
     echo -n "Configure SSL? (y/n) [default: y]: "
-    read SETUP_SSL
+    
+    # Forçar leitura do stdin mesmo via pipe
+    if [ -t 0 ]; then
+        read SETUP_SSL
+    else
+        # Se não há terminal, ler do /dev/tty
+        read SETUP_SSL < /dev/tty
+    fi
     
     if [ -z "$SETUP_SSL" ]; then
         SETUP_SSL="y"

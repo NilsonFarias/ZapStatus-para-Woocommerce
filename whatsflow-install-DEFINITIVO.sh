@@ -342,7 +342,7 @@ const newSession = \`app.use(session({
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // Disabled until SSL is working properly
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
       sameSite: 'lax',

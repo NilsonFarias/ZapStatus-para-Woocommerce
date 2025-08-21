@@ -142,6 +142,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
   username: true, // Omit username since we use email as identifier
+  stripeCustomerId: true,
+  stripeSubscriptionId: true,
 });
 
 export const insertClientSchema = createInsertSchema(clients).omit({

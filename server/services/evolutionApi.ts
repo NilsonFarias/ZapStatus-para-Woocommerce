@@ -23,9 +23,9 @@ export interface InstanceInfo {
 }
 
 export class EvolutionApiService {
-  private client: AxiosInstance;
-  private baseUrl: string;
-  private apiKey: string;
+  private client!: AxiosInstance;
+  private baseUrl!: string;
+  private apiKey!: string;
 
   constructor() {
     this.initializeClient();
@@ -97,6 +97,7 @@ export class EvolutionApiService {
         console.log(`Warning: Could not set webhook for ${instanceName}:`, webhookError.message);
         // Try alternative webhook configuration
         try {
+          const webhookUrl = `${systemDomain}/webhook/evolution`;
           await this.client.post(`/webhook/${instanceName}`, {
             url: webhookUrl,
             enabled: true,

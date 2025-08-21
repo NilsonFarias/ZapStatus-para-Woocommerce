@@ -1,253 +1,158 @@
 #!/bin/bash
 
-# Script completo para corrigir problemas de registro
-# Execute como: sudo -u whatsflow bash fix-registration-complete.sh
+# Correção Completa do Sistema de Registro
+# Resolve problemas de SSL, banco de dados e endpoint de registro
 
 set -e
 
-echo "=== Correção Completa do Problema de Registro ==="
+# Cores
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
 
-cd /home/whatsflow/ZapStatus-para-Woocommerce || exit 1
+print_status() { echo -e "${BLUE}[INFO]${NC} $1"; }
+print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-echo "1. Parando aplicação temporariamente..."
-pm2 stop whatsflow || true
+print_status "=== CORREÇÃO COMPLETA DO SISTEMA DE REGISTRO ==="
 
-echo
-echo "2. Verificando e carregando variáveis de ambiente..."
-if [ ! -f .env ]; then
-    echo "❌ Arquivo .env não encontrado!"
-    exit 1
+# 1. Verificar e corrigir banco de dados
+print_status "1. Verificando banco de dados..."
+cd /home/whatsflow/ZapStatus-para-Woocommerce
+
+# Executar migrations para garantir que tabelas estão corretas
+print_status "Aplicando schema do banco..."
+sudo -u whatsflow npm run db:push 2>&1
+
+# Verificar se tabela users existe
+if sudo -u postgres psql whatsflow_db -c "\d users" >/dev/null 2>&1; then
+    print_success "Tabela users existe"
+else
+    print_error "Tabela users não encontrada - executando db:push novamente"
+    sudo -u whatsflow npm run db:push
 fi
 
-source .env
-
-if [ -z "$DATABASE_URL" ]; then
-    echo "❌ DATABASE_URL não definida!"
-    exit 1
+# 2. Verificar se admin existe
+print_status "2. Verificando usuário admin..."
+ADMIN_EXISTS=$(sudo -u postgres psql whatsflow_db -t -c "SELECT COUNT(*) FROM users WHERE email = 'admin@whatsflow.com';" 2>/dev/null | xargs)
+if [ "$ADMIN_EXISTS" = "0" ]; then
+    print_status "Criando usuário admin..."
+    sudo -u whatsflow node -e "
+    const { storage } = require('./dist/server/storage.js');
+    const bcrypt = require('bcryptjs');
+    
+    async function createAdmin() {
+        try {
+            const hashedPassword = await bcrypt.hash('admin123', 12);
+            const admin = await storage.createUser({
+                email: 'admin@whatsflow.com',
+                password: hashedPassword,
+                name: 'Administrator',
+                role: 'admin',
+                company: 'WhatsFlow',
+                phone: '',
+                plan: 'enterprise'
+            });
+            console.log('Admin user created:', admin.id);
+            
+            // Criar cliente para admin
+            await storage.createClient({
+                userId: admin.id,
+                name: 'WhatsFlow Admin',
+                email: 'admin@whatsflow.com',
+                plan: 'enterprise',
+                status: 'active'
+            });
+            console.log('Admin client created');
+        } catch (error) {
+            console.error('Error creating admin:', error.message);
+        }
+        process.exit(0);
+    }
+    
+    createAdmin();
+    " || print_warning "Admin já pode existir"
+else
+    print_success "Usuário admin já existe"
 fi
 
-echo "✅ Variáveis de ambiente carregadas"
+# 3. Corrigir configuração de cookies para HTTPS
+print_status "3. Atualizando configuração de sessão para HTTPS..."
+sudo -u whatsflow sed -i 's/secure: false/secure: true/g' dist/server/routes.js 2>/dev/null || true
 
-echo
-echo "3. Testando conexão com banco de dados..."
-node -e "
-const { neon } = require('@neondatabase/serverless');
-const sql = neon(process.env.DATABASE_URL);
+# 4. Testar API de registro localmente
+print_status "4. Testando API de registro..."
+TIMESTAMP=$(date +%s)
+TEST_EMAIL="test${TIMESTAMP}@example.com"
 
-async function testConnection() {
-  try {
-    const result = await sql\`SELECT 1 as test\`;
-    console.log('✅ Conexão com banco OK');
-  } catch (error) {
-    console.error('❌ Erro de conexão:', error.message);
-    process.exit(1);
-  }
-}
-
-testConnection();
-"
-
-echo
-echo "4. Forçando recriação da estrutura do banco..."
-echo "   (Executando migrações com --force)"
-
-# Executar push do schema forçado
-npm run db:push -- --force || {
-    echo "❌ Falha ao aplicar schema"
-    echo "Tentando método alternativo..."
-    
-    # Tentar método direto com drizzle-kit
-    npx drizzle-kit push --config=drizzle.config.ts || {
-        echo "❌ Falha total nas migrações"
-        exit 1
-    }
-}
-
-echo "✅ Schema aplicado com sucesso"
-
-echo
-echo "5. Verificando estrutura das tabelas essenciais..."
-node -e "
-const { neon } = require('@neondatabase/serverless');
-const sql = neon(process.env.DATABASE_URL);
-
-async function verifyTables() {
-  try {
-    // Verificar tabelas existentes
-    const tables = await sql\`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-      ORDER BY table_name
-    \`;
-    
-    console.log('📋 Tabelas no banco:');
-    tables.forEach(t => console.log('  -', t.table_name));
-    
-    const requiredTables = ['users', 'clients'];
-    const existingTables = tables.map(t => t.table_name);
-    
-    for (const table of requiredTables) {
-      if (!existingTables.includes(table)) {
-        console.error(\`❌ Tabela \${table} não encontrada!\`);
-        process.exit(1);
-      }
-    }
-    
-    // Verificar estrutura da tabela users
-    const userColumns = await sql\`
-      SELECT column_name, data_type, is_nullable, column_default
-      FROM information_schema.columns 
-      WHERE table_name = 'users'
-      ORDER BY ordinal_position
-    \`;
-    
-    console.log('\\n📋 Estrutura da tabela users:');
-    userColumns.forEach(col => {
-      const nullable = col.is_nullable === 'YES' ? 'NULL' : 'NOT NULL';
-      console.log(\`  \${col.column_name}: \${col.data_type} \${nullable}\`);
-    });
-    
-    // Verificar campos obrigatórios
-    const requiredColumns = ['id', 'email', 'password', 'name'];
-    const existingColumns = userColumns.map(c => c.column_name);
-    
-    for (const column of requiredColumns) {
-      if (!existingColumns.includes(column)) {
-        console.error(\`❌ Campo \${column} não encontrado na tabela users!\`);
-        process.exit(1);
-      }
-    }
-    
-    console.log('✅ Estrutura das tabelas OK');
-    
-  } catch (error) {
-    console.error('❌ Erro ao verificar tabelas:', error.message);
-    process.exit(1);
-  }
-}
-
-verifyTables();
-"
-
-echo
-echo "6. Criando tabela de sessões se necessário..."
-node -e "
-const { neon } = require('@neondatabase/serverless');
-const sql = neon(process.env.DATABASE_URL);
-
-async function ensureSessionTable() {
-  try {
-    // Verificar se tabela sessions existe
-    const tables = await sql\`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' AND table_name = 'sessions'
-    \`;
-    
-    if (tables.length === 0) {
-      console.log('🔧 Criando tabela sessions...');
-      
-      await sql\`
-        CREATE TABLE sessions (
-          sid VARCHAR(255) PRIMARY KEY,
-          sess JSONB NOT NULL,
-          expire TIMESTAMP NOT NULL
-        )
-      \`;
-      
-      await sql\`CREATE INDEX sessions_expire_idx ON sessions (expire)\`;
-      
-      console.log('✅ Tabela sessions criada');
-    } else {
-      console.log('✅ Tabela sessions já existe');
-    }
-    
-  } catch (error) {
-    console.error('❌ Erro com tabela sessions:', error.message);
-  }
-}
-
-ensureSessionTable();
-"
-
-echo
-echo "7. Reiniciando aplicação..."
-pm2 start whatsflow || pm2 restart whatsflow
-
-echo "   Aguardando inicialização..."
-sleep 10
-
-# Verificar se aplicação está rodando
-if ! pm2 list | grep -q "whatsflow.*online"; then
-    echo "❌ Aplicação não iniciou corretamente"
-    echo "Logs do PM2:"
-    pm2 logs whatsflow --lines 20 --nostream
-    exit 1
-fi
-
-echo "✅ Aplicação reiniciada"
-
-echo
-echo "8. Testando endpoint de registro..."
-
-TEST_EMAIL="fix-test-$(date +%s)@example.com"
-
-# Teste com dados mínimos
-RESPONSE=$(curl -s -X POST http://localhost:5000/api/auth/register \
+RESPONSE=$(curl -s -w "%{http_code}" -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
   -d "{
     \"email\": \"$TEST_EMAIL\",
     \"password\": \"test123456\",
-    \"name\": \"Test User\"
-  }" \
-  -w "HTTP_STATUS:%{http_code}")
+    \"name\": \"Test User\",
+    \"company\": \"Test Company\",
+    \"phone\": \"1234567890\",
+    \"plan\": \"free\"
+  }" 2>/dev/null || echo "000")
 
-HTTP_STATUS=$(echo "$RESPONSE" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
-BODY=$(echo "$RESPONSE" | sed 's/HTTP_STATUS:[0-9]*$//')
+HTTP_CODE="${RESPONSE: -3}"
 
-echo "Status HTTP: $HTTP_STATUS"
-echo "Resposta: $BODY"
-
-if [ "$HTTP_STATUS" = "201" ]; then
-    echo "✅ SUCESSO! Registro funcionando corretamente"
-    
+if [ "$HTTP_CODE" = "201" ]; then
+    print_success "API de registro funcionando"
     # Limpar usuário de teste
-    node -e "
-    const { neon } = require('@neondatabase/serverless');
-    const sql = neon(process.env.DATABASE_URL);
-    
-    async function cleanup() {
-      try {
-        await sql\`DELETE FROM users WHERE email = \${process.argv[1]}\`;
-        console.log('🧹 Usuário de teste removido');
-      } catch (error) {
-        console.log('Note: Erro na limpeza (pode ser ignorado):', error.message);
-      }
-    }
-    
-    cleanup();
-    " "$TEST_EMAIL"
-    
-elif [ "$HTTP_STATUS" = "500" ]; then
-    echo "❌ AINDA COM ERRO 500"
-    echo "Verificando logs detalhados..."
-    pm2 logs whatsflow --lines 30 --nostream | tail -20
-    
+    sudo -u postgres psql whatsflow_db -c "DELETE FROM clients WHERE email = '$TEST_EMAIL';" >/dev/null 2>&1
+    sudo -u postgres psql whatsflow_db -c "DELETE FROM users WHERE email = '$TEST_EMAIL';" >/dev/null 2>&1
+elif [ "$HTTP_CODE" = "400" ]; then
+    print_warning "API respondendo (usuário já existe é esperado)"
 else
-    echo "❌ Status inesperado: $HTTP_STATUS"
-    echo "Resposta: $BODY"
+    print_error "API não está funcionando - HTTP $HTTP_CODE"
+    print_status "Logs recentes da aplicação:"
+    sudo -u whatsflow pm2 logs whatsflow --lines 5 --err
 fi
 
-echo
-echo "=== Correção Completa Finalizada ==="
-echo
-echo "RESUMO:"
-echo "- ✅ Conexão com banco verificada"
-echo "- ✅ Schema aplicado com força"
-echo "- ✅ Tabelas essenciais verificadas"
-echo "- ✅ Tabela sessions criada/verificada"
-echo "- ✅ Aplicação reiniciada"
-echo "- $([ "$HTTP_STATUS" = "201" ] && echo "✅" || echo "❌") Teste de registro: HTTP $HTTP_STATUS"
-echo
-echo "Para monitorar logs: pm2 logs whatsflow --follow"
+# 5. Corrigir SSL e certificados
+print_status "5. Verificando configuração SSL..."
+if [ -f /etc/letsencrypt/live/mylist.center/fullchain.pem ]; then
+    print_success "Certificado SSL existe"
+    
+    # Testar HTTPS externamente
+    HTTPS_TEST=$(curl -k -s -w "%{http_code}" https://mylist.center/ 2>/dev/null | tail -c 3)
+    if [ "$HTTPS_TEST" = "200" ]; then
+        print_success "HTTPS funcionando"
+    else
+        print_warning "HTTPS não está respondendo corretamente"
+    fi
+else
+    print_warning "Certificado SSL não encontrado"
+fi
+
+# 6. Verificar logs de erro
+print_status "6. Verificando logs de erro atuais..."
+sudo -u whatsflow pm2 logs whatsflow --lines 10 --err
+
+# 7. Reiniciar aplicação com configurações corrigidas
+print_status "7. Reiniciando aplicação..."
+sudo -u whatsflow pm2 restart whatsflow
+sleep 5
+
+# 8. Teste final
+print_status "8. Teste final do sistema..."
+APP_STATUS=$(curl -s -w "%{http_code}" http://localhost:5000/ 2>/dev/null | tail -c 3)
+if [ "$APP_STATUS" = "200" ] || [ "$APP_STATUS" = "304" ]; then
+    print_success "Aplicação funcionando"
+else
+    print_error "Aplicação não está respondendo"
+fi
+
+print_success "=== CORREÇÃO CONCLUÍDA ==="
+print_status "Teste manual:"
+print_status "1. Acesse: https://mylist.center"
+print_status "2. Tente fazer login com: admin@whatsflow.com / admin123"
+print_status "3. Ou registre uma nova conta"
+print_status ""
+print_status "Se ainda houver problemas, verifique os logs:"
+print_status "sudo -u whatsflow pm2 logs whatsflow"

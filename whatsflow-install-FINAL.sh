@@ -43,12 +43,9 @@ detect_os() {
     print_status "Detected OS: $OS $VERSION"
 }
 
-# Detectar IP público para usar como domínio padrão
+# Configurar domínio padrão
 detect_domain() {
-    # Tentar detectar IP público
-    PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || curl -s icanhazip.com 2>/dev/null || echo "localhost")
-    
-    # Usar localhost por padrão (mais seguro para testes)
+    # Usar localhost sempre (zero configuração)
     DOMAIN="localhost"
     
     print_status "Using domain: $DOMAIN"

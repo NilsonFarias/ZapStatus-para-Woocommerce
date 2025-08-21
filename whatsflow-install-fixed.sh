@@ -250,11 +250,15 @@ configure_application() {
     
     # CORREÇÃO: .env com placeholders válidos que permitem inicialização
     sudo -u whatsflow tee .env > /dev/null << EOF
-# Database
+# Database - LOCAL PostgreSQL
 DATABASE_URL="${DB_URL}"
 
 # Session
 SESSION_SECRET="$(openssl rand -base64 32)"
+
+# Domain Configuration (CORREÇÃO: usar domínio correto)
+DOMAIN="${DOMAIN}"
+BASE_URL="https://${DOMAIN}"
 
 # Stripe (CORREÇÃO: placeholders válidos)
 STRIPE_SECRET_KEY="sk_test_placeholder_$(openssl rand -hex 24)"
@@ -264,6 +268,10 @@ VITE_STRIPE_PUBLIC_KEY="pk_test_placeholder_$(openssl rand -hex 24)"
 STRIPE_BASIC_PRICE_ID="price_basic_placeholder"
 STRIPE_PRO_PRICE_ID="price_pro_placeholder"
 STRIPE_ENTERPRISE_PRICE_ID="price_enterprise_placeholder"
+
+# Evolution API (placeholders)
+EVOLUTION_API_KEY="placeholder_key"
+EVOLUTION_API_URL="https://${DOMAIN}/v2"
 
 # Evolution API (CORREÇÃO: placeholders válidos)
 EVOLUTION_API_KEY="placeholder_$(openssl rand -hex 16)"
@@ -335,6 +343,8 @@ module.exports = {
       NODE_ENV: 'production',
       PORT: '5000',
       DATABASE_URL: '${DB_URL}',
+      DOMAIN: '${DOMAIN}',
+      BASE_URL: 'https://${DOMAIN}',
       SESSION_SECRET: '$(grep SESSION_SECRET .env | cut -d= -f2)',
       STRIPE_SECRET_KEY: '$(grep STRIPE_SECRET_KEY .env | cut -d= -f2)',
       VITE_STRIPE_PUBLIC_KEY: '$(grep VITE_STRIPE_PUBLIC_KEY .env | cut -d= -f2)',

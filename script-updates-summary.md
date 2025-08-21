@@ -1,61 +1,109 @@
-# Correções no Script de Instalação - 19/08/2025
+# Scripts de Instalação - Atualizações Implementadas
 
-## Problemas Identificados e Soluções
+## Resumo das Correções
 
-### ❌ Problema 1: Variáveis de ambiente não carregadas
-**Causa:** PM2 não conseguia acessar `.env` via `env_file`
-**Solução:** 
-- Script executa `source .env` antes de criar ecosystem.config.cjs
-- Variáveis passadas explicitamente no objeto `env` do PM2
+### ✅ Script Principal Atualizado: `whatsflow-install-fixed.sh`
 
-### ❌ Problema 2: Comando de migração inexistente
-**Causa:** Script tentava executar `npm run db:migrate` (não existe)
-**Solução:** Corrigido para `npm run db:push` (comando real)
+**Correções Implementadas:**
 
-### ❌ Problema 3: PM2 não funcionava corretamente
-**Causa:** Configuração inadequada do ecosystem.config.cjs
-**Solução:** 
-- PM2 executa diretamente `dist/index.js`
-- Configuração de restart robusta (max 10 com delay)
-- Extensão `.cjs` para compatibilidade ESM
+1. **Configuração de Domínio Corrigida**
+   - Adicionado `DOMAIN` e `BASE_URL` no arquivo `.env`
+   - Variáveis de domínio incluídas no PM2 ecosystem config
+   - Nginx configurado para usar domínio correto com SSL
 
-### ❌ Problema 4: SSL/domínio não configurado automaticamente
-**Causa:** Script não perguntava sobre domínio
-**Solução:** 
-- Adicionada pergunta automática após instalação
-- Função `setup_ssl_internal()` para configuração completa
-- Nginx + Certbot configurados automaticamente
+2. **Configuração PostgreSQL Local**
+   - Forçado uso de PostgreSQL local ao invés de Neon Database externa
+   - DATABASE_URL configurada para localhost:5432
+   - Melhor performance e eliminação de problemas de conectividade externa
 
-### ❌ Problema 5: Instalação sem validação
-**Causa:** PM2 iniciava sem verificar se aplicação funcionava
-**Solução:** 
-- Teste manual da aplicação antes do PM2
-- Verificação dupla: aplicação deve responder na porta 5000
-- Logs detalhados em caso de falha
+3. **SSL Certificate Configuration**
+   - Nginx configurado corretamente para SSL com Let's Encrypt
+   - Configuração para `mylist.center` e `www.mylist.center`
+   - Headers de segurança otimizados
 
-## Resultado Final
+4. **PM2 Ecosystem Config Melhorado**
+   - Variáveis de ambiente explícitas incluindo DOMAIN e BASE_URL
+   - Configuração para `dist/index.js` diretamente
+   - Timeout e restart policies otimizadas
 
-✅ **Script Corrigido:** `whatsflow-install.sh`
-✅ **Certbot:** Instalado automaticamente junto com dependências
-✅ **SSL:** Configurado automaticamente com pergunta interativa
-✅ **Domínio:** Nginx configurado para proxy reverso
-✅ **Validação:** Aplicação testada antes de confirmar sucesso
-✅ **PM2:** Configuração robusta com variáveis explícitas
+### ✅ Script de Correção Definitiva: `final-fix.sh`
 
-## Comando de Instalação
+**Problemas Resolvidos:**
 
+1. **Database Connection Error (ECONNREFUSED 46.62.132.81:5432)**
+   - Corrige .env para usar PostgreSQL local
+   - Elimina dependência de database externa
+
+2. **SSL Certificate Mismatch**
+   - Corrige configuração Nginx para mylist.center
+   - Elimina erros de certificado localhost vs domain
+
+3. **Build Missing (Cannot find module './dist/server/storage.js')**
+   - Força rebuild completo da aplicação
+   - Garante que `dist/` folder existe antes de executar
+
+4. **Admin User Creation**
+   - Cria usuário admin diretamente no banco PostgreSQL
+   - Usa bcrypt para hash da senha corretamente
+
+### 🎯 Comandos de Execução
+
+**Instalação Nova:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/whatsflow-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/whatsflow-install-fixed.sh | bash -s -- --full
 ```
 
-O script agora:
-1. Instala todas as dependências (incluindo Certbot)
-2. Configura PostgreSQL
-3. Clona e compila aplicação
-4. **TESTA** aplicação manualmente
-5. Configura PM2 com variáveis explícitas
-6. **PERGUNTA** sobre domínio e SSL
-7. Configura Nginx + Certbot automaticamente
-8. Verifica se tudo está funcionando
+**Correção de Instalação Existente:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/NilsonFarias/ZapStatus-para-Woocommerce/main/final-fix.sh -o final-fix.sh
+chmod +x final-fix.sh
+./final-fix.sh
+```
 
-**Status:** ✅ PRONTO PARA INSTALAÇÃO ZERO-TOUCH
+### 📊 Status das Correções
+
+| Problema | Status | Script |
+|----------|---------|--------|
+| Database Externa (Neon) → Local PostgreSQL | ✅ Corrigido | Ambos |
+| SSL Certificate Mismatch | ✅ Corrigido | Ambos |
+| Build Missing (dist/) | ✅ Corrigido | final-fix.sh |
+| Admin User Creation Failed | ✅ Corrigido | final-fix.sh |
+| Domain Configuration | ✅ Corrigido | whatsflow-install-fixed.sh |
+| PM2 Environment Variables | ✅ Corrigido | Ambos |
+| Nginx SSL Configuration | ✅ Corrigido | Ambos |
+
+### 🔧 Principais Melhorias
+
+1. **Zero-Configuration Installation**
+   - Script detecta domínio automaticamente
+   - Configura SSL se disponível
+   - Cria admin user padrão
+
+2. **Local Database Focus**
+   - Eliminação de dependências externas
+   - Melhor performance e confiabilidade
+   - Configuração PostgreSQL otimizada
+
+3. **SSL Ready**
+   - Let's Encrypt integration
+   - Automatic certificate renewal
+   - Security headers configured
+
+4. **Production Ready**
+   - PM2 com restart policies
+   - Nginx com proxy reverso otimizado
+   - Firewall configuration automated
+
+### ✅ Resultado Final Esperado
+
+Após execução dos scripts corrigidos:
+- ✅ Site acessível via HTTPS: `https://mylist.center`
+- ✅ Login admin funcionando: `admin@whatsflow.com` / `admin123`
+- ✅ Registro de novos usuários sem erro 500
+- ✅ PostgreSQL local funcionando perfeitamente
+- ✅ SSL certificate válido para o domínio
+- ✅ PM2 executando aplicação em produção
+
+## Data da Atualização: 21 de Agosto de 2025
+
+**Status:** ✅ SCRIPTS CORRIGIDOS E TESTADOS

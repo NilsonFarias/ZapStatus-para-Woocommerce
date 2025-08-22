@@ -79,7 +79,7 @@ export const webhookLogs = pgTable("webhook_logs", {
 
 export const messageQueue = pgTable("message_queue", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  instanceId: varchar("instance_id").notNull().references(() => whatsappInstances.id),
+  instanceId: varchar("instance_id").references(() => whatsappInstances.id), // Made nullable for deleted instances
   templateId: varchar("template_id").notNull().references(() => messageTemplates.id),
   recipientPhone: text("recipient_phone").notNull(),
   message: text("message").notNull(),

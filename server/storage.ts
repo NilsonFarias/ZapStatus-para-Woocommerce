@@ -281,10 +281,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteInstance(id: string): Promise<void> {
-    // First, delete all messages in the queue that reference this instance
-    await db.delete(messageQueue).where(eq(messageQueue.instanceId, id));
+    // First, delete only PENDING messages from the queue (preserve sent messages for billing)
+    await db.delete(messageQueue)
+      .where(
+        and(
+          eq(messageQueue.instanceId, id),
+          eq(messageQueue.status, 'pending')
+        )
+      );
     
-    // Then delete the instance itself
+    // Update remaining messages to set instanceId as null (preserve sent messages for billing)
+    await db.update(messageQueue)
+      .set({ instanceId: null })
+      .where(eq(messageQueue.instanceId, id));
+    
+    // Finally, delete the instance itself
     await db.delete(whatsappInstances).where(eq(whatsappInstances.id, id));
   }
 

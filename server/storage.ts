@@ -468,11 +468,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQueuedMessage(message: Omit<MessageQueueItem, 'id' | 'createdAt'>): Promise<MessageQueueItem> {
-    const [newMessage] = await db.insert(messageQueue).values({
-      ...message,
-      createdAt: new Date(),
-    }).returning();
-    return newMessage;
+    try {
+      const [newMessage] = await db.insert(messageQueue).values({
+        ...message,
+        createdAt: new Date(),
+      }).returning();
+      return newMessage;
+    } catch (error: any) {
+      // Check if error is due to unique constraint violation (duplicate message)
+      if (error.code === '23505' && error.constraint === 'unique_message_constraint') {
+        console.log(`Duplicate message blocked: template=${message.templateId}, phone=${message.recipientPhone}, time=${new Date()}`);
+        
+        // Return existing message instead of throwing error
+        const existingMessage = await db
+          .select()
+          .from(messageQueue)
+          .where(
+            and(
+              eq(messageQueue.templateId, message.templateId),
+              eq(messageQueue.recipientPhone, message.recipientPhone),
+              sql`MD5(${messageQueue.message}) = MD5(${message.message})`,
+              sql`DATE_TRUNC('minute', ${messageQueue.createdAt}) = DATE_TRUNC('minute', ${new Date()})`
+            )
+          )
+          .limit(1);
+
+        if (existingMessage.length > 0) {
+          console.log(`Returning existing message ${existingMessage[0].id} instead of creating duplicate`);
+          return existingMessage[0];
+        }
+      }
+      
+      // If it's not a duplicate constraint error, re-throw
+      throw error;
+    }
   }
 
   async updateQueuedMessage(id: string, updates: Partial<MessageQueueItem>): Promise<MessageQueueItem> {

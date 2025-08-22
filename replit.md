@@ -164,3 +164,20 @@ The architecture prioritizes reusability and maintainability through shared Type
 - **Auto-Correção**: Detecta e corrige constraints críticas
 **Resultado**: Sistema robusto que aplica qualquer migração futura automaticamente
 **Status**: Update.sh agora gerencia migrações de forma inteligente e segura
+
+#### Solução Definitiva para Mensagens Duplicadas - CONCLUÍDO ✅
+**Problema**: Dois handlers de webhook processando mesmas requisições causando mensagens duplicadas
+**Abordagem**: Constraint única no banco para bloquear duplicatas automaticamente
+**Solução Implementada**:
+- **Índice Único**: Baseado em templateId + recipientPhone + hash(message) + minuto
+- **Migração 0012**: Script para aplicar constraint em produção
+- **Handling Gracioso**: createQueuedMessage detecta e ignora duplicatas
+- **Log Detalhado**: Duplicatas bloqueadas são logadas para monitoramento
+- **Retorno Inteligente**: Retorna mensagem existente ao invés de erro
+**Como Funciona**:
+- Constraint previne inserção de mensagem idêntica no mesmo minuto
+- Permite mensagens diferentes para mesmo número
+- Mantém ambos handlers funcionais (não quebra integrações)
+- Sistema automaticamente resolve duplicatas sem intervenção
+**Resultado**: Zero mensagens duplicadas sem alterar fluxo de webhooks
+**Status**: Solução robusta aplicada no desenvolvimento e pronta para VPS

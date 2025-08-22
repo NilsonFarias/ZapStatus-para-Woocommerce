@@ -174,9 +174,21 @@ rebuild_application() {
 update_database() {
     print_status "Verificando atualizações do banco de dados..."
     
-    # Executar migrations se necessário
+    # Aplicar migração específica para instanceId nullable
+    if [ -f "migrations/0011_make_instance_id_nullable.sql" ]; then
+        print_status "Aplicando migração crítica 0011_make_instance_id_nullable.sql..."
+        if sudo -u postgres psql -d whatsflow_db -f migrations/0011_make_instance_id_nullable.sql >/dev/null 2>&1; then
+            print_success "Migração de constraint aplicada com sucesso!"
+        else
+            print_warning "Migração já aplicada ou erro não crítico - continuando"
+        fi
+    else
+        print_warning "Arquivo de migração específico não encontrado - pode já estar aplicada"
+    fi
+    
+    # Executar migrations padrão se necessário
     if [ -f "drizzle.config.ts" ]; then
-        print_status "Executando migrations..."
+        print_status "Executando migrations padrão..."
         
         # Executar com timeout para evitar travamento
         timeout 30 npx drizzle-kit push 2>&1 | grep -E "(error|Error|pushed|No schema changes|changes detected)" || {

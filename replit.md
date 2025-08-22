@@ -121,6 +121,7 @@ The architecture prioritizes reusability and maintainability through shared Type
 - **Billing Protegido**: Mensagens enviadas mantidas para integridade de cobrança
 - **Contagem Corrigida**: Métodos usam templateId ao invés de instanceId para contar mensagens
 - **Migração**: Script 0011_make_instance_id_nullable.sql aplicado
+- **Update.sh**: Modificado para aplicar migração automaticamente na VPS
 **Resultado**: Clientes podem excluir instâncias sem afetar billing ou métricas
 **Status**: Problema de constraint resolvido com segurança para billing
 

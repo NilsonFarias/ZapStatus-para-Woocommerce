@@ -126,7 +126,13 @@ export class EvolutionApiService {
   async deleteInstance(instanceName: string): Promise<void> {
     try {
       await this.client.delete(`/instance/delete/${instanceName}`);
+      console.log(`Instance ${instanceName} deleted successfully from Evolution API`);
     } catch (error: any) {
+      // If instance doesn't exist (404), it's already gone - don't throw error
+      if (error.response?.status === 404) {
+        console.log(`Warning: Failed to delete instance ${instanceName} from Evolution API: ${error.message}`);
+        return; // Don't throw error for 404
+      }
       console.error('Error deleting Evolution API instance:', error.message);
       throw new Error(`Failed to delete instance: ${error.message}`);
     }
@@ -269,7 +275,7 @@ export class EvolutionApiService {
     }
   }
 
-  async getInstanceInfo(instanceName: string): Promise<InstanceInfo> {
+  async getInstanceInfo(instanceName: string): Promise<InstanceInfo | null> {
     try {
       // Get all instances and find the specific one
       const response = await this.client.get('/instance/fetchInstances');
@@ -288,6 +294,11 @@ export class EvolutionApiService {
         phoneNumber: instance.number
       };
     } catch (error: any) {
+      // If instance doesn't exist (404), return empty info instead of throwing
+      if (error.response?.status === 404) {
+        console.log(`Error getting instance info: Instance ${instanceName} not found`);
+        return null; // Return null instead of throwing
+      }
       console.error('Error getting instance info:', error.message);
       throw new Error(`Failed to get instance info: ${error.message}`);
     }

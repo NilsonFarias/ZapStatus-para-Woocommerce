@@ -53,7 +53,7 @@ The architecture prioritizes reusability and maintainability through shared Type
 - **Node-cron**: Used for scheduling recurring tasks, such as managing the message queue.
 - **connect-pg-simple**: PostgreSQL session store for robust session management.
 
-### Recent Updates (August 21, 2025)
+### Recent Updates (August 22, 2025)
 
 #### CRÍTICO: Correção de Segurança no Fluxo de Pagamento - CONCLUÍDO
 **Problema de Segurança Identificado**: Sistema atualizava plano do cliente ANTES da confirmação de pagamento
@@ -133,3 +133,17 @@ The architecture prioritizes reusability and maintainability through shared Type
 **Scripts Removidos**: 25+ scripts antigos de debugging, correção e instalação
 **Documentação**: Criado README.md limpo com instruções claras
 **Status**: Repositório limpo e organizado, apenas scripts essenciais mantidos
+
+#### Correção de Erros 404 da Evolution API - CONCLUÍDO ✅
+**Problemas Identificados na VPS**: 
+- Evolution API retornando 404 ao deletar instâncias já inexistentes
+- Arquivo dist/public/index.html não encontrado após build
+**Correções Implementadas**:
+- **Evolution API**: Métodos deleteInstance() e getInstanceInfo() tolerantes a 404
+- **Log Melhorado**: Warnings ao invés de erros para instâncias não encontradas
+- **Build Fix**: Script fix-vps-build.sh para corrigir estrutura de arquivos estáticos
+- **Tipagem**: getInstanceInfo() retorna InstanceInfo | null
+**Scripts Criados**:
+- **fix-vps-build.sh**: Corrige estrutura dist/public/index.html na VPS
+**Resultado**: VPS funcional sem erros 404 desnecessários
+**Status**: Erros de Evolution API e build resolvidos para VPS

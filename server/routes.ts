@@ -543,6 +543,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const evolutionInfo = await evolutionApi.getInstanceInfo(instance.instanceId);
           
+          // If instance not found in Evolution API, mark as disconnected
+          if (!evolutionInfo) {
+            console.log(`Instance ${instance.instanceId} not found in Evolution API, marking as disconnected`);
+            if (instance.status !== 'disconnected') {
+              await storage.updateInstance(instance.id, { status: 'disconnected' });
+              instance.status = 'disconnected';
+            }
+            continue;
+          }
+          
           // Map Evolution API status to our status system
           let mappedStatus = 'pending';
           if (evolutionInfo.status === 'open') {
@@ -648,6 +658,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const instance of instances) {
         try {
           const evolutionInfo = await evolutionApi.getInstanceInfo(instance.instanceId);
+          
+          // If instance not found in Evolution API, mark as disconnected
+          if (!evolutionInfo) {
+            console.log(`Instance ${instance.instanceId} not found in Evolution API, marking as disconnected`);
+            if (instance.status !== 'disconnected') {
+              await storage.updateInstance(instance.id, { status: 'disconnected' });
+              instance.status = 'disconnected';
+            }
+            continue;
+          }
           
           // Map Evolution API status to our status system
           let mappedStatus = 'pending';

@@ -1383,7 +1383,174 @@ Sua instancia esta funcionando perfeitamente!`;
     res.status(200).end();
   });
 
-  // Client-specific webhook removed - using only generic endpoint /api/webhook/woocommerce with x-client-id header
+  // Client-specific WooCommerce webhook endpoint
+  app.post("/api/webhook/woocommerce/:clientId", async (req, res) => {
+    try {
+      // Set response headers first
+      res.set({
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'Content-Type, x-client-id'
+      });
+
+      const clientId = req.params.clientId;
+
+      console.log(`=== CLIENT-SPECIFIC WEBHOOK DEBUG ===`);
+      console.log(`ClientId from URL: ${clientId}`);
+      console.log(`Request body:`, JSON.stringify(req.body, null, 2));
+
+      // Always respond with success regardless of format
+      const response = { 
+        success: true, 
+        message: "Webhook received successfully",
+        clientId,
+        timestamp: new Date().toISOString()
+      };
+
+      // Handle webhook processing
+      let event = 'webhook.received';
+      let data = req.body || {};
+
+      // Determine event type from various formats
+      if (req.body?.event) {
+        event = req.body.event;
+        data = req.body.data || req.body;
+      } else if (req.body?.id && req.body?.status) {
+        event = `order.${req.body.status}`;
+        data = req.body;
+      } else if (req.body && typeof req.body === 'object') {
+        // Generic object - try to detect order events
+        if (req.body.order_id || req.body.id) {
+          event = 'order.updated';
+        }
+        data = req.body;
+      }
+
+      console.log(`Event: ${event}, ClientId: ${clientId}`);
+      
+      // Log the webhook asynchronously (don't block response)
+      try {
+        await storage.createWebhookLog({
+          clientId,
+          event,
+          status: 'received',
+          response: '200 OK',
+        });
+
+        console.log(`Webhook logged. Processing event: ${event}`);
+        
+        // Process the webhook based on event type (async)
+        if (event.startsWith('order.')) {
+          console.log(`Processing order event: ${event}`);
+          const { order_id, id, status, customer_phone, customer_name, billing, customer } = data;
+          const orderId = order_id || id;
+          
+          if (orderId) {
+            // Extract customer info from WooCommerce format
+            let clientName = customer_name;
+            let clientPhone = customer_phone;
+            
+            // Try WooCommerce billing format
+            if (billing) {
+              if (!clientName && (billing.first_name || billing.last_name)) {
+                clientName = `${billing.first_name || ''} ${billing.last_name || ''}`.trim();
+              }
+              if (!clientPhone && billing.phone) {
+                clientPhone = billing.phone;
+                // Clean and format Brazilian phone number
+                clientPhone = clientPhone.replace(/\D/g, ''); // Remove all non-digits
+                if (!clientPhone.startsWith('55') && clientPhone.length === 11) {
+                  clientPhone = '55' + clientPhone; // Add country code if missing
+                }
+                clientPhone = '+' + clientPhone; // Add + prefix
+              }
+            }
+            
+            // Try WooCommerce customer format
+            if (customer && !clientName && (customer.first_name || customer.last_name)) {
+              clientName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+            }
+            
+            // Default values
+            clientName = clientName || 'Cliente';
+            clientPhone = clientPhone || '+5511999999999';
+            
+            console.log(`Processing order ${orderId} for ${clientName} (${clientPhone}) - Status: ${status}`);
+            
+            // Get templates for this order status
+            console.log(`Looking for templates - clientId: ${clientId}, status: ${status}`);
+            const templates = await storage.getTemplates(clientId, status);
+            console.log(`Found ${templates.length} templates:`, templates.map(t => ({ id: t.id, status: t.orderStatus, content: t.content.substring(0, 50) })));
+            
+            // Get client's WhatsApp instance
+            const instances = await storage.getInstances(clientId);
+            console.log(`Found ${instances.length} instances:`, instances.map(i => ({ id: i.id, status: i.status, name: i.name })));
+            const activeInstance = instances.find(i => i.status === 'connected');
+            console.log(`Active instance:`, activeInstance ? { id: activeInstance.id, status: activeInstance.status } : 'none');
+            
+            if (activeInstance && templates.length > 0) {
+              console.log(`Found ${templates.length} templates and active instance for ${clientName}`);
+              
+              // Schedule messages
+              for (const template of templates) {
+                const message = template.content
+                  .replace('{{nome_cliente}}', clientName)
+                  .replace('{{numero_pedido}}', orderId)
+                  .replace('{{status_pedido}}', status || 'atualizado');
+                
+                console.log(`Scheduling message - Instance: ${activeInstance.id}, Template: ${template.id}, Phone: ${clientPhone}, Message: ${message.substring(0, 50)}...`);
+                
+                try {
+                  const scheduledMessage = await messageQueue.scheduleMessage(
+                    activeInstance.id,
+                    template.id,
+                    clientPhone,
+                    message,
+                    template.delayMinutes || 0
+                  );
+                  console.log(`Message scheduled successfully:`, scheduledMessage.id);
+                } catch (scheduleError) {
+                  console.error(`Error scheduling message:`, scheduleError);
+                }
+                
+                console.log(`Message scheduled for ${clientName} via template "${template.content.substring(0, 50)}..."`);
+              }
+            } else {
+              console.log(`No templates or active instance found for client ${clientId}, status ${status}`);
+              console.log(`Templates available: ${templates.length}, Active instance: ${!!activeInstance}`);
+            }
+          }
+        }
+      } catch (processingError) {
+        console.error('Webhook processing error (non-critical):', processingError);
+      }
+      
+      // Always return success immediately to WooCommerce
+      res.json(response);
+    } catch (error: any) {
+      console.error('Webhook error:', error);
+      
+      // Try to log error if possible
+      try {
+        const errorClientId = req.params.clientId || 'unknown';
+        await storage.createWebhookLog({
+          clientId: errorClientId,
+          event: req.body?.event || 'unknown',
+          status: 'error',
+          response: error.message,
+        });
+      } catch (logError) {
+        console.error('Failed to log webhook error:', logError);
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
 
   // WooCommerce webhook endpoint - Accept any format (legacy)
   app.post("/api/webhook/woocommerce", async (req, res) => {

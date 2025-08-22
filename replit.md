@@ -102,15 +102,14 @@ The architecture prioritizes reusability and maintainability through shared Type
 - **Verificação Completa**: Testa aplicação após atualização
 **Status**: Sistema de atualização automática funcional para manter VPS sincronizada
 
-#### Correção de Mensagens Duplicadas - SEGUNDA TENTATIVA
+#### Correção de Mensagens Duplicadas - AMBAS TENTATIVAS FALHARAM ⚠️
 **Problema Original**: Sistema enviava mensagens duplicadas por ter dois handlers de webhook idênticos
-**Primeira Tentativa**: Remoção de `/api/webhook/woocommerce` (genérico) - Falhou
-**Segunda Tentativa**: Remoção de `/api/webhook/woocommerce/:clientId` (específico) - Em teste
-**Abordagem Atual**: 
-- **Mantido**: Handler genérico `/api/webhook/woocommerce` (usa x-client-id header)
-- **Removido**: Handler específico `/api/webhook/woocommerce/:clientId` 
-- **Vantagem**: Handler genérico é mais flexível e menos propenso a conflitos
-**Status**: Aguardando teste na VPS para validar eficácia ⏳
+**Primeira Tentativa**: Remoção de `/api/webhook/woocommerce` (genérico) - FALHOU (parou envios)
+**Segunda Tentativa**: Remoção de `/api/webhook/woocommerce/:clientId` (específico) - FALHOU (parou envios)
+**Estado Atual**: Sistema restaurado com ambos handlers funcionando
+**Conclusão**: Ambos handlers são necessários para funcionamento - problema de duplicatas persiste
+**Próxima Abordagem**: Necessária solução alternativa que não remova handlers
+**Status**: Sistema funcional novamente, duplicatas não resolvidas - REVERTIDO COMPLETO ✅
 
 #### Limpeza de Scripts Antigos - CONCLUÍDO
 **Ação**: Removidos todos os scripts de debugging e correção antigos

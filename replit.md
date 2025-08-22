@@ -102,6 +102,19 @@ The architecture prioritizes reusability and maintainability through shared Type
 - **Verificação Completa**: Testa aplicação após atualização
 **Status**: Sistema de atualização automática funcional para manter VPS sincronizada
 
+#### Correção Crítica: Mensagens Duplicadas - CONCLUÍDO
+**Problema Identificado**: Sistema enviava mensagens duplicadas mesmo mostrando apenas 1 na fila
+**Causa Raiz**: Dois webhook handlers idênticos processando o mesmo evento WooCommerce
+- `/api/webhook/woocommerce/:clientId` (principal)
+- `/api/webhook/woocommerce` (legacy duplicado)
+**Correções Implementadas**:
+- **Handler Duplicado Removido**: Eliminado webhook legacy que causava duplicação
+- **Proteção Anti-Duplicata**: Sistema de hash MD5 para detectar mensagens idênticas
+- **Verificação Temporal**: Bloqueia mensagens similares em janela de 5 minutos
+- **Logs Melhorados**: Identificação clara de mensagens bloqueadas vs enviadas
+**Impacto**: Clientes agora recebem apenas 1 mensagem por evento WooCommerce
+**Status**: Problema de duplicação completamente resolvido ✅
+
 #### Limpeza de Scripts Antigos - CONCLUÍDO
 **Ação**: Removidos todos os scripts de debugging e correção antigos
 **Scripts Mantidos**:

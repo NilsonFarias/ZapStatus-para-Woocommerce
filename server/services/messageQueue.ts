@@ -101,6 +101,29 @@ export class MessageQueueService {
       throw new Error('Instance not found');
     }
 
+    // Create unique hash to prevent duplicates
+    const crypto = require('crypto');
+    const messageHash = crypto.createHash('md5')
+      .update(`${instanceId}-${templateId}-${recipientPhone}-${message}`)
+      .digest('hex');
+    
+    // Check if a similar message was scheduled recently (within 5 minutes)
+    const recentMessages = await storage.getAllQueuedMessages();
+    const recentDuplicate = recentMessages.find(msg => {
+      const msgTime = new Date(msg.scheduledFor);
+      const timeDiff = Math.abs(new Date().getTime() - msgTime.getTime());
+      const isSameContent = msg.instanceId === instanceId && 
+                          msg.templateId === templateId && 
+                          msg.recipientPhone === recipientPhone &&
+                          msg.message === message;
+      return isSameContent && timeDiff < 5 * 60 * 1000; // 5 minutes
+    });
+    
+    if (recentDuplicate) {
+      console.log(`🚫 Duplicate message detected and prevented: ${messageHash.substring(0, 8)}`);
+      return recentDuplicate; // Return existing message instead of creating duplicate
+    }
+
     // Check message limits for this client
     const limits = await storage.checkMessageLimits(instance.clientId);
     if (!limits.allowed) {
@@ -110,6 +133,8 @@ export class MessageQueueService {
     const scheduledFor = new Date();
     scheduledFor.setMinutes(scheduledFor.getMinutes() + delayMinutes);
 
+    console.log(`✅ Scheduling new message: ${messageHash.substring(0, 8)}`);
+    
     return await storage.createQueuedMessage({
       instanceId,
       templateId,

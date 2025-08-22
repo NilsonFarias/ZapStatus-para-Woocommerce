@@ -95,16 +95,33 @@ update_code() {
         exit 1
     fi
     
-    # Fazer stash de mudanças locais se existirem
-    if ! git diff-index --quiet HEAD --; then
+    # Lidar com arquivos não rastreados que podem causar conflito
+    if [ -f "force-apply-migration.sh" ] && ! git ls-files --error-unmatch force-apply-migration.sh >/dev/null 2>&1; then
+        print_status "Removendo arquivo conflitante force-apply-migration.sh..."
+        rm -f force-apply-migration.sh
+    fi
+    
+    # Fazer stash de mudanças locais se existirem (incluindo arquivos não rastreados)
+    if ! git diff-index --quiet HEAD -- || git status --porcelain | grep -q "^??"; then
         print_warning "Salvando mudanças locais temporariamente..."
-        git stash push -m "Auto-stash before update $(date)"
+        git add -A  # Adiciona arquivos não rastreados também
+        git stash push -m "Auto-stash before update $(date)" --include-untracked
     fi
     
     # Atualizar código
     print_status "Puxando última versão do GitHub..."
     if git pull origin main; then
         print_success "Código atualizado com sucesso"
+        
+        # Restaurar mudanças locais se houver (exceto arquivos que causaram conflito)
+        if git stash list | grep -q "Auto-stash before update"; then
+            print_status "Restaurando mudanças locais..."
+            git stash pop || {
+                print_warning "Conflito ao restaurar mudanças. Limpando stash..."
+                git reset --hard HEAD
+                git stash drop || true
+            }
+        fi
     else
         print_error "Falha ao atualizar código do repositório"
         print_warning "Verifique sua conexão com a internet e permissões"

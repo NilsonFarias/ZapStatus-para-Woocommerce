@@ -117,9 +117,10 @@ The architecture prioritizes reusability and maintainability through shared Type
 **Correção Implementada**:
 - **Schema Atualizado**: instanceId na messageQueue agora é nullable
 - **Constraint Modificada**: ON DELETE SET NULL preserva mensagens órfãs
-- **Storage.deleteInstance()**: Remove apenas mensagens pendentes, preserva enviadas
+- **Storage.deleteInstance()**: Simplesmente deleta instância, constraint cuida do resto
 - **Billing Protegido**: Mensagens enviadas mantidas para integridade de cobrança
-- **Migração**: Script 0011_make_instance_id_nullable.sql criado
+- **Contagem Corrigida**: Métodos usam templateId ao invés de instanceId para contar mensagens
+- **Migração**: Script 0011_make_instance_id_nullable.sql aplicado
 **Resultado**: Clientes podem excluir instâncias sem afetar billing ou métricas
 **Status**: Problema de constraint resolvido com segurança para billing
 

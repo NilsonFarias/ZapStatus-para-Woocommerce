@@ -281,22 +281,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteInstance(id: string): Promise<void> {
-    // First, delete only PENDING messages from the queue (preserve sent messages for billing)
-    await db.delete(messageQueue)
-      .where(
-        and(
-          eq(messageQueue.instanceId, id),
-          eq(messageQueue.status, 'pending')
-        )
-      );
+    // Strategy: Let the database handle the constraint with ON DELETE SET NULL
+    // This preserves ALL messages (including sent ones for billing integrity)
+    // and simply nullifies the instance reference
     
-    // Update remaining messages to set instanceId as null (preserve sent messages for billing)
-    await db.update(messageQueue)
-      .set({ instanceId: null })
-      .where(eq(messageQueue.instanceId, id));
-    
-    // Finally, delete the instance itself
     await db.delete(whatsappInstances).where(eq(whatsappInstances.id, id));
+    
+    // The ON DELETE SET NULL constraint will automatically:
+    // 1. Set instanceId to null for all messages referencing this instance
+    // 2. Preserve all sent messages for accurate billing
+    // 3. Keep pending messages (they just won't be processed)
   }
 
   async getWhatsappInstances(): Promise<WhatsappInstance[]> {
@@ -312,6 +306,7 @@ export class DatabaseStorage implements IStorage {
 
   async getQueuedMessagesByUser(userId: string): Promise<MessageQueueItem[]> {
     console.log(`Executing getQueuedMessagesByUser query for user: ${userId}...`);
+    // Use LEFT JOIN to include orphan messages from deleted instances
     const result = await db
       .select({
         id: messageQueue.id,
@@ -326,8 +321,9 @@ export class DatabaseStorage implements IStorage {
         createdAt: messageQueue.createdAt,
       })
       .from(messageQueue)
-      .innerJoin(whatsappInstances, eq(messageQueue.instanceId, whatsappInstances.id))
-      .innerJoin(clients, eq(whatsappInstances.clientId, clients.id))
+      .innerJoin(messageTemplates, eq(messageQueue.templateId, messageTemplates.id))
+      .innerJoin(clients, eq(messageTemplates.clientId, clients.id))
+      .leftJoin(whatsappInstances, eq(messageQueue.instanceId, whatsappInstances.id))
       .where(eq(clients.userId, userId))
       .orderBy(desc(messageQueue.createdAt));
     
@@ -339,15 +335,16 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
+    // Count messages using templateId to trace back to client (includes orphan messages)
     const result = await db
       .select({
         count: sql<number>`count(*)`
       })
       .from(messageQueue)
-      .innerJoin(whatsappInstances, eq(messageQueue.instanceId, whatsappInstances.id))
+      .innerJoin(messageTemplates, eq(messageQueue.templateId, messageTemplates.id))
       .where(
         and(
-          eq(whatsappInstances.clientId, clientId),
+          eq(messageTemplates.clientId, clientId),
           eq(messageQueue.status, 'sent'),
           gte(messageQueue.sentAt, firstDayOfMonth)
         )

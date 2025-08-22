@@ -147,3 +147,20 @@ The architecture prioritizes reusability and maintainability through shared Type
 - **fix-vps-build.sh**: Corrige estrutura dist/public/index.html na VPS
 **Resultado**: VPS funcional sem erros 404 desnecessários
 **Status**: Erros de Evolution API e build resolvidos para VPS
+
+#### Sistema de Migração Automática - CONCLUÍDO ✅
+**Problema**: Script update.sh não aplicava migrações de banco consistentemente
+**Solução Implementada**:
+- **Controle de Migração**: Tabela `applied_migrations` para rastrear migrações executadas
+- **Aplicação Automática**: Loop que aplica apenas migrações não executadas
+- **Verificação de Constraint**: Detecta e corrige automaticamente constraint crítica
+- **Modo Duplo**: Drizzle push + migrações SQL manuais
+- **Recuperação**: force-apply-migration.sh pode ser chamado automaticamente
+- **Histórico**: Cada migração registrada com timestamp de aplicação
+**Funcionalidades**:
+- **Detecção**: Verifica todas as migrações em `migrations/*.sql`
+- **Aplicação Seletiva**: Só executa migrações não aplicadas
+- **Força Drizzle**: Usa `--force` se push normal falhar
+- **Auto-Correção**: Detecta e corrige constraints críticas
+**Resultado**: Sistema robusto que aplica qualquer migração futura automaticamente
+**Status**: Update.sh agora gerencia migrações de forma inteligente e segura

@@ -5,6 +5,12 @@
 
 echo "🔧 Forçando aplicação da migração de constraint na VPS..."
 
+# Verificar se foi chamado automaticamente
+AUTO_MODE=false
+if [ "$1" = "--auto" ]; then
+    AUTO_MODE=true
+fi
+
 # Verificar se está no diretório correto
 if [ ! -f "package.json" ]; then
     echo "❌ Execute este script no diretório raiz da aplicação"
@@ -60,9 +66,11 @@ fi
 echo ""
 echo "⚠️  Migração precisa ser aplicada. Aplicando agora..."
 
-# Parar aplicação
-echo "⏹️  Parando aplicação..."
-sudo -u whatsflow pm2 stop whatsflow 2>/dev/null || true
+# Parar aplicação apenas se não for modo automático
+if [ "$AUTO_MODE" = false ]; then
+    echo "⏹️  Parando aplicação..."
+    sudo -u whatsflow pm2 stop whatsflow 2>/dev/null || true
+fi
 
 echo ""
 echo "🔧 Aplicando migração SQL..."
@@ -144,20 +152,24 @@ else
     exit 1
 fi
 
-# Reiniciar aplicação
-echo ""
-echo "🚀 Reiniciando aplicação..."
-sudo -u whatsflow pm2 start ecosystem.config.cjs 2>/dev/null || sudo -u whatsflow pm2 restart whatsflow
+# Reiniciar aplicação apenas se não for modo automático
+if [ "$AUTO_MODE" = false ]; then
+    echo ""
+    echo "🚀 Reiniciando aplicação..."
+    sudo -u whatsflow pm2 start ecosystem.config.cjs 2>/dev/null || sudo -u whatsflow pm2 restart whatsflow
 
-# Aguardar inicialização
-sleep 5
+    # Aguardar inicialização
+    sleep 5
 
-# Verificar status
-if sudo -u whatsflow pm2 describe whatsflow | grep -q "online"; then
-    echo "✅ Aplicação reiniciada com sucesso!"
+    # Verificar status
+    if sudo -u whatsflow pm2 describe whatsflow | grep -q "online"; then
+        echo "✅ Aplicação reiniciada com sucesso!"
+    else
+        echo "⚠️  Verificar status da aplicação manualmente"
+    fi
+
+    echo ""
+    echo "🎉 Migração concluída! Teste excluir uma instância agora."
 else
-    echo "⚠️  Verificar status da aplicação manualmente"
+    echo "✅ Migração aplicada em modo automático"
 fi
-
-echo ""
-echo "🎉 Migração concluída! Teste excluir uma instância agora."

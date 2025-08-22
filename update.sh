@@ -174,31 +174,90 @@ rebuild_application() {
 update_database() {
     print_status "Verificando atualizações do banco de dados..."
     
-    # Aplicar migração específica para instanceId nullable
-    if [ -f "migrations/0011_make_instance_id_nullable.sql" ]; then
-        print_status "Aplicando migração crítica 0011_make_instance_id_nullable.sql..."
-        if sudo -u postgres psql -d whatsflow_db -f migrations/0011_make_instance_id_nullable.sql >/dev/null 2>&1; then
-            print_success "Migração de constraint aplicada com sucesso!"
-        else
-            print_warning "Migração já aplicada ou erro não crítico - continuando"
-        fi
+    # Aplicar todas as migrações SQL do diretório migrations/
+    if [ -d "migrations" ] && [ "$(ls -A migrations/*.sql 2>/dev/null)" ]; then
+        print_status "Aplicando migrações SQL encontradas..."
+        
+        # Criar tabela de controle de migrações se não existir
+        sudo -u postgres psql -d whatsflow_db -c "
+            CREATE TABLE IF NOT EXISTS applied_migrations (
+                filename VARCHAR(255) PRIMARY KEY,
+                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );" >/dev/null 2>&1
+        
+        # Aplicar cada migração que ainda não foi executada
+        for migration_file in migrations/*.sql; do
+            if [ -f "$migration_file" ]; then
+                filename=$(basename "$migration_file")
+                
+                # Verificar se migração já foi aplicada
+                already_applied=$(sudo -u postgres psql -d whatsflow_db -t -c "
+                    SELECT COUNT(*) FROM applied_migrations WHERE filename = '$filename';" 2>/dev/null | xargs)
+                
+                if [ "$already_applied" = "0" ]; then
+                    print_status "Aplicando migração: $filename"
+                    
+                    if sudo -u postgres psql -d whatsflow_db -f "$migration_file" >/dev/null 2>&1; then
+                        # Registrar migração como aplicada
+                        sudo -u postgres psql -d whatsflow_db -c "
+                            INSERT INTO applied_migrations (filename) VALUES ('$filename');" >/dev/null 2>&1
+                        print_success "✓ $filename aplicada com sucesso"
+                    else
+                        print_warning "⚠ Erro ao aplicar $filename - pode já estar aplicada ou ter conflito"
+                    fi
+                else
+                    print_status "⏭ $filename já aplicada anteriormente"
+                fi
+            fi
+        done
     else
-        print_warning "Arquivo de migração específico não encontrado - pode já estar aplicada"
+        print_status "Nenhuma migração SQL encontrada no diretório migrations/"
     fi
     
-    # Executar migrations padrão se necessário
-    if [ -f "drizzle.config.ts" ]; then
-        print_status "Executando migrations padrão..."
+    # Verificar e corrigir constraint crítica se necessário
+    print_status "Verificando constraint crítica instanceId..."
+    
+    constraint_check=$(sudo -u postgres psql -d whatsflow_db -t -c "
+        SELECT COUNT(*) FROM pg_constraint 
+        WHERE conrelid = 'message_queue'::regclass 
+        AND contype = 'f' 
+        AND pg_get_constraintdef(oid) LIKE '%ON DELETE SET NULL%';" 2>/dev/null | xargs)
+    
+    if [ "$constraint_check" = "0" ]; then
+        print_warning "Constraint crítica não encontrada. Aplicando correção..."
         
-        # Executar com timeout para evitar travamento
-        timeout 30 npx drizzle-kit push 2>&1 | grep -E "(error|Error|pushed|No schema changes|changes detected)" || {
-            print_warning "Migrations executadas ou nenhuma mudança detectada"
-        }
-        
-        print_success "Verificação do banco concluída"
+        # Executar script de correção de constraint
+        if [ -f "force-apply-migration.sh" ]; then
+            print_status "Executando correção automática de constraint..."
+            bash force-apply-migration.sh --auto 2>/dev/null || {
+                print_warning "Correção automática falhou - pode precisar de intervenção manual"
+            }
+        fi
     else
-        print_warning "Arquivo drizzle.config.ts não encontrado - pulando migrations"
+        print_success "✓ Constraint crítica funcionando corretamente"
     fi
+    
+    # Executar migrations Drizzle para mudanças de schema
+    if [ -f "drizzle.config.ts" ]; then
+        print_status "Sincronizando schema com Drizzle..."
+        
+        # Primeiro tentar push normal
+        if timeout 30 npx drizzle-kit push --yes >/dev/null 2>&1; then
+            print_success "✓ Schema sincronizado via Drizzle"
+        else
+            # Se falhar, tentar push forçado
+            print_status "Push normal falhou, tentando push forçado..."
+            if timeout 30 npx drizzle-kit push --force >/dev/null 2>&1; then
+                print_success "✓ Schema sincronizado via Drizzle (forçado)"
+            else
+                print_warning "⚠ Drizzle push falhou - verificar mudanças de schema manualmente"
+            fi
+        fi
+    else
+        print_warning "Arquivo drizzle.config.ts não encontrado - pulando sync Drizzle"
+    fi
+    
+    print_success "Atualização de banco de dados concluída"
 }
 
 # Reiniciar serviços

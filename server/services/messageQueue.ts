@@ -101,16 +101,6 @@ export class MessageQueueService {
       throw new Error('Instance not found');
     }
 
-    // Create unique hash for logging
-    const crypto = require('crypto');
-    const messageHash = crypto.createHash('md5')
-      .update(`${instanceId}-${templateId}-${recipientPhone}-${message}`)
-      .digest('hex');
-    
-    // Temporarily disable duplicate checking to debug message sending issues
-    // TODO: Re-enable after confirming messages are being sent properly
-    console.log(`📝 Message will be scheduled: ${messageHash.substring(0, 8)} for ${recipientPhone}`);
-
     // Check message limits for this client
     const limits = await storage.checkMessageLimits(instance.clientId);
     if (!limits.allowed) {
@@ -120,9 +110,7 @@ export class MessageQueueService {
     const scheduledFor = new Date();
     scheduledFor.setMinutes(scheduledFor.getMinutes() + delayMinutes);
 
-    console.log(`✅ Scheduling new message: ${messageHash.substring(0, 8)} for ${recipientPhone}`);
-    
-    const queuedMessage = await storage.createQueuedMessage({
+    return await storage.createQueuedMessage({
       instanceId,
       templateId,
       recipientPhone,
@@ -132,9 +120,6 @@ export class MessageQueueService {
       sentAt: null,
       error: null,
     });
-    
-    console.log(`📬 Message queued successfully: ID=${queuedMessage.id}`);
-    return queuedMessage;
   }
 
   async scheduleMessageInSeconds(

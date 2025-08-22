@@ -97,7 +97,7 @@ update_code() {
     
     # Lidar com arquivos não rastreados que podem causar conflito
     if [ -f "force-apply-migration.sh" ] && ! git ls-files --error-unmatch force-apply-migration.sh >/dev/null 2>&1; then
-        print_status "Removendo arquivo conflitante force-apply-migration.sh..."
+        print_status "Removendo arquivo obsoleto force-apply-migration.sh..."
         rm -f force-apply-migration.sh
     fi
     
@@ -242,14 +242,7 @@ update_database() {
     
     if [ "$constraint_check" = "0" ]; then
         print_warning "Constraint crítica não encontrada. Aplicando correção..."
-        
-        # Executar script de correção de constraint
-        if [ -f "force-apply-migration.sh" ]; then
-            print_status "Executando correção automática de constraint..."
-            bash force-apply-migration.sh --auto 2>/dev/null || {
-                print_warning "Correção automática falhou - pode precisar de intervenção manual"
-            }
-        fi
+        apply_instance_constraint_fix
     else
         print_success "✓ Constraint crítica funcionando corretamente"
     fi
@@ -275,6 +268,61 @@ update_database() {
     fi
     
     print_success "Atualização de banco de dados concluída"
+}
+
+# Aplicar correção da constraint instanceId (integrada do force-apply-migration.sh)
+apply_instance_constraint_fix() {
+    print_status "Aplicando correção de constraint instanceId..."
+    
+    # Verificar constraint atual
+    print_status "Verificando constraint atual..."
+    constraint_exists=$(sudo -u postgres psql -d whatsflow_db -t -c "
+        SELECT COUNT(*) FROM pg_constraint 
+        WHERE conrelid = 'message_queue'::regclass 
+        AND contype = 'f' 
+        AND pg_get_constraintdef(oid) LIKE '%ON DELETE SET NULL%';" 2>/dev/null | xargs)
+    
+    if [ "$constraint_exists" != "0" ]; then
+        print_success "✓ Constraint já está correta"
+        return 0
+    fi
+    
+    print_status "Aplicando correção SQL..."
+    
+    # SQL para corrigir constraint
+    sudo -u postgres psql -d whatsflow_db >/dev/null 2>&1 << 'EOF'
+-- Remover constraint antiga se existir
+ALTER TABLE message_queue DROP CONSTRAINT IF EXISTS message_queue_instance_id_whatsapp_instances_id_fk;
+
+-- Recriar constraint com ON DELETE SET NULL
+ALTER TABLE message_queue 
+ADD CONSTRAINT message_queue_instance_id_whatsapp_instances_id_fk 
+FOREIGN KEY (instance_id) 
+REFERENCES whatsapp_instances(id) 
+ON DELETE SET NULL;
+EOF
+    
+    if [ $? -eq 0 ]; then
+        print_success "✓ Constraint corrigida com sucesso"
+        
+        # Verificar se funcionou
+        final_check=$(sudo -u postgres psql -d whatsflow_db -t -c "
+            SELECT COUNT(*) FROM pg_constraint 
+            WHERE conrelid = 'message_queue'::regclass 
+            AND contype = 'f' 
+            AND pg_get_constraintdef(oid) LIKE '%ON DELETE SET NULL%';" 2>/dev/null | xargs)
+            
+        if [ "$final_check" = "1" ]; then
+            print_success "✅ Verificação final: constraint funcionando"
+            return 0
+        else
+            print_warning "⚠ Constraint aplicada mas verificação final falhou"
+            return 1
+        fi
+    else
+        print_warning "⚠ Falha na aplicação da constraint"
+        return 1
+    fi
 }
 
 # Reiniciar serviços

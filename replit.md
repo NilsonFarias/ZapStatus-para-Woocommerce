@@ -165,6 +165,21 @@ The architecture prioritizes reusability and maintainability through shared Type
 **Resultado**: Sistema robusto que aplica qualquer migração futura automaticamente
 **Status**: Update.sh agora gerencia migrações de forma inteligente e segura
 
+#### Consolidação de Scripts de Migração - CONCLUÍDO ✅
+**Problema**: Script update.sh dependia do force-apply-migration.sh externo causando conflitos Git
+**Solução Implementada**:
+- **Integração Completa**: Funções de correção movidas para dentro do update.sh
+- **Eliminação de Dependência**: Não precisa mais do force-apply-migration.sh
+- **Aplicação Direta**: Correção de constraint executada internamente
+- **Limpeza Automática**: Remove arquivos obsoletos durante update
+**Vantagens**:
+- **Zero Conflitos**: Não há mais arquivos externos para causar problemas Git
+- **Manutenção Simplificada**: Tudo em um único script
+- **Execução Mais Rápida**: Sem dependências externas
+- **Menos Arquivos**: Repositório mais limpo
+**Resultado**: Sistema de atualização totalmente autocontido
+**Status**: Scripts consolidados, force-apply-migration.sh removido ✅
+
 #### Solução Definitiva para Mensagens Duplicadas - CONCLUÍDO ✅
 **Problema**: Dois handlers de webhook processando mesmas requisições causando mensagens duplicadas
 **Abordagem**: Constraint única no banco para bloquear duplicatas automaticamente

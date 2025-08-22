@@ -113,7 +113,7 @@ The architecture prioritizes reusability and maintainability through shared Type
 - **Verificação Temporal**: Bloqueia mensagens similares em janela de 5 minutos
 - **Logs Melhorados**: Identificação clara de mensagens bloqueadas vs enviadas
 **Impacto**: Clientes agora recebem apenas 1 mensagem por evento WooCommerce
-**Status**: Problema de duplicação completamente resolvido ✅
+**Status**: Correção aplicada, proteção anti-duplicata temporariamente desabilitada para debug ⚠️
 
 #### Limpeza de Scripts Antigos - CONCLUÍDO
 **Ação**: Removidos todos os scripts de debugging e correção antigos

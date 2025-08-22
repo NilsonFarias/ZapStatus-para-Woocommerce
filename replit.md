@@ -111,6 +111,16 @@ The architecture prioritizes reusability and maintainability through shared Type
 **Próxima Abordagem**: Necessária solução alternativa que não remova handlers
 **Status**: Sistema funcional novamente, duplicatas não resolvidas - REVERTIDO COMPLETO ✅
 
+#### Correção de Exclusão de Instâncias WhatsApp - CONCLUÍDO ✅
+**Problema**: Instâncias desconectadas não podiam ser excluídas devido à constraint de chave estrangeira
+**Erro**: `violates foreign key constraint "message_queue_instance_id_whatsapp_instances_id"` 
+**Correção Implementada**:
+- **Storage.deleteInstance()**: Modificado para excluir mensagens da fila ANTES da instância
+- **Ordem Correta**: Primeiro `DELETE FROM message_queue`, depois `DELETE FROM whatsapp_instances`
+- **Constraint Respeitada**: Não viola mais a integridade referencial
+**Resultado**: Clientes agora podem excluir instâncias desconectadas sem erro
+**Status**: Problema de constraint resolvido definitivamente
+
 #### Limpeza de Scripts Antigos - CONCLUÍDO
 **Ação**: Removidos todos os scripts de debugging e correção antigos
 **Scripts Mantidos**:

@@ -52,3 +52,31 @@ The architecture prioritizes reusability and maintainability through shared Type
 - **Wouter**: Lightweight client-side routing library for React.
 - **Node-cron**: Used for scheduling recurring tasks, such as managing the message queue.
 - **connect-pg-simple**: PostgreSQL session store for robust session management.
+
+### Lista de Implementações Futuras
+
+#### Sistema de Gift Cards
+**Funcionalidade**: Envio de Gift Cards/Vale Presente via WhatsApp
+**Tipos Possíveis**:
+- **Texto com Código**: Mensagem com código do gift card e instruções de uso
+- **Imagem Personalizada**: Geração de imagem do gift card com design customizado
+- **Link Web**: Envio de link para página do gift card
+- **Integração WooCommerce**: Conectar com plugins de gift cards existentes
+**Tecnologias**: Evolution API suporta texto, imagem e links
+**Status**: Planejado para implementação futura
+
+#### Integração com Telegram
+**Funcionalidade**: Suporte para envio de mensagens via Telegram Bot API
+**Recursos Disponíveis**:
+- **Mensagens de Texto**: Com formatação Markdown/HTML
+- **Mídia**: Envio de imagens, documentos e arquivos
+- **Botões Interativos**: Inline keyboards para interação
+- **Grupos e Canais**: Além de mensagens diretas privadas
+- **Webhooks Bidirecionais**: Para receber respostas dos usuários
+**Implementação**:
+- **Bot Token**: Configuração via BotFather (gratuito)
+- **Estrutura Paralela**: Reutilizar templates, fila e webhooks existentes
+- **Interface Unificada**: Gerenciar instâncias WhatsApp e Telegram no mesmo painel
+- **WooCommerce**: Mesma integração de eventos de pedido
+**Tecnologias**: Telegram Bot API, estrutura atual de mensageria
+**Status**: Planejado para implementação futura
